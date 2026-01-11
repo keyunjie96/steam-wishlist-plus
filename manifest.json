@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Steam Cross-Platform Wishlist",
-  "version": "0.3.0",
-  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox) on Steam wishlist pages using IGDB data",
+  "version": "0.4.0",
+  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox) on Steam wishlist pages using Wikidata",
   "permissions": ["storage"],
   "host_permissions": [
     "https://store.steampowered.com/*",
+    "https://query.wikidata.org/*",
     "https://id.twitch.tv/*",
     "https://api.igdb.com/*"
   ],

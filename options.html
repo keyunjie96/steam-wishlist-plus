@@ -54,6 +54,25 @@
       border-bottom: 1px solid #3d4f5f;
     }
 
+    .section-title .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+      font-weight: normal;
+      vertical-align: middle;
+    }
+
+    .badge-active {
+      background: #22c55e;
+      color: #ffffff;
+    }
+
+    .badge-optional {
+      background: #3d4f5f;
+      color: #8f98a0;
+    }
+
     .form-group {
       margin-bottom: 16px;
     }
@@ -200,17 +219,25 @@
       color: #8f98a0;
     }
 
-    .privacy-notice {
+    .info-box {
       background: #1e3a46;
       border: 1px solid #3d4f5f;
       border-radius: 4px;
       padding: 12px 16px;
-      margin-top: 16px;
       font-size: 13px;
     }
 
-    .privacy-notice strong {
+    .info-box strong {
       color: #67d0f4;
+    }
+
+    .info-box.success-box {
+      background: #1e4620;
+      border-color: #22c55e;
+    }
+
+    .info-box.success-box strong {
+      color: #4ade80;
     }
 
     .loading {
@@ -228,6 +255,32 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    .collapsible-header {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .collapsible-header::after {
+      content: '+';
+      font-size: 1.2rem;
+      color: #8f98a0;
+    }
+
+    .collapsible-header.expanded::after {
+      content: '-';
+    }
+
+    .collapsible-content {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .collapsible-content.expanded {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -237,41 +290,61 @@
     </svg>
     Steam Cross-Platform Wishlist
   </h1>
-  <p class="subtitle">Configure IGDB integration for accurate platform availability data</p>
+  <p class="subtitle">Extension settings and data source configuration</p>
 
   <div class="section">
-    <h2 class="section-title">Twitch/IGDB Credentials</h2>
-    <p class="help-text" style="margin-top: 0; margin-bottom: 16px;">
-      IGDB uses Twitch authentication. You'll need a Twitch Developer application.
-      <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer" class="help-link">Create one here</a>.
-    </p>
+    <h2 class="section-title">
+      Data Source: Wikidata
+      <span class="badge badge-active">Active</span>
+    </h2>
+    <div class="info-box success-box">
+      <strong>Works out of the box!</strong>
+      <p style="margin: 8px 0 0 0;">
+        This extension uses <a href="https://www.wikidata.org" target="_blank" rel="noopener noreferrer" class="help-link">Wikidata</a>
+        to look up platform availability. No configuration required.
+      </p>
+    </div>
+  </div>
 
-    <form id="credentials-form">
-      <div class="form-group">
-        <label for="client-id">Client ID</label>
-        <input type="text" id="client-id" name="clientId" placeholder="Enter your Twitch Client ID" autocomplete="off">
-      </div>
+  <div class="section">
+    <h2 class="section-title collapsible-header" id="igdb-header">
+      Enhanced Mode: IGDB
+      <span class="badge badge-optional">Optional</span>
+    </h2>
+    <div class="collapsible-content" id="igdb-content">
+      <p class="help-text" style="margin-top: 0; margin-bottom: 16px;">
+        For games not found in Wikidata, IGDB can provide additional coverage.
+        This requires a free Twitch Developer application.
+        <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer" class="help-link">Create one here</a>.
+      </p>
 
-      <div class="form-group">
-        <label for="client-secret">Client Secret</label>
-        <input type="password" id="client-secret" name="clientSecret" placeholder="Enter your Twitch Client Secret" autocomplete="off">
-        <p class="help-text">Your credentials are stored locally and never transmitted except to Twitch/IGDB.</p>
-      </div>
+      <form id="credentials-form">
+        <div class="form-group">
+          <label for="client-id">Client ID</label>
+          <input type="text" id="client-id" name="clientId" placeholder="Enter your Twitch Client ID" autocomplete="off">
+        </div>
 
-      <div class="button-group">
-        <button type="submit" class="btn-primary" id="save-btn">Save Credentials</button>
-        <button type="button" class="btn-secondary" id="test-btn">Test Connection</button>
-        <button type="button" class="btn-danger" id="clear-btn">Clear</button>
-      </div>
-    </form>
+        <div class="form-group">
+          <label for="client-secret">Client Secret</label>
+          <input type="password" id="client-secret" name="clientSecret" placeholder="Enter your Twitch Client Secret" autocomplete="off">
+          <p class="help-text">Credentials are stored locally and only sent to Twitch/IGDB.</p>
+        </div>
 
-    <div id="status" class="status"></div>
+        <div class="button-group">
+          <button type="submit" class="btn-primary" id="save-btn">Save</button>
+          <button type="button" class="btn-secondary" id="test-btn">Test Connection</button>
+          <button type="button" class="btn-danger" id="clear-btn">Clear</button>
+        </div>
+      </form>
+
+      <div id="status" class="status"></div>
+    </div>
   </div>
 
   <div class="section">
     <h2 class="section-title">Cache Management</h2>
     <p class="help-text" style="margin-top: 0;">
-      Platform availability data is cached for 7 days to minimize API requests.
+      Platform availability data is cached for 7 days to minimize requests.
     </p>
 
     <div class="stats">
@@ -293,10 +366,10 @@
 
   <div class="section">
     <h2 class="section-title">Privacy</h2>
-    <div class="privacy-notice">
+    <div class="info-box">
       <strong>This extension:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-        <li>Only communicates with Steam, id.twitch.tv, and api.igdb.com</li>
+        <li>Only communicates with Steam, Wikidata, and optionally Twitch/IGDB</li>
         <li>Does not log or transmit your wishlist contents</li>
         <li>Stores all data locally in your browser</li>
         <li>Contains no telemetry or analytics</li>

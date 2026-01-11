@@ -24,16 +24,17 @@
 
 /**
  * Data source for platform availability
- * @typedef {'igdb' | 'manual' | 'fallback' | 'none'} DataSource
+ * @typedef {'wikidata' | 'igdb' | 'manual' | 'fallback' | 'none'} DataSource
  */
 
 /**
  * Cache entry for a Steam appid
  * @typedef {Object} CacheEntry
  * @property {string} appid - Steam application ID
- * @property {string} gameName - Game name (extracted from Steam or IGDB)
+ * @property {string} gameName - Game name (extracted from Steam or data source)
  * @property {Record<Platform, PlatformData>} platforms - Platform availability data
- * @property {DataSource} [source] - Where the data came from (Stage 2+)
+ * @property {DataSource} [source] - Where the data came from
+ * @property {string | null} [wikidataId] - Wikidata QID if resolved via Wikidata
  * @property {number | null} [igdbId] - IGDB game ID if resolved via IGDB
  * @property {number} resolvedAt - Unix timestamp when data was resolved
  * @property {number} ttlDays - Time-to-live in days

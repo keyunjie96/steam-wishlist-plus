@@ -4,11 +4,12 @@
  * Handles messaging between content scripts and manages the platform data resolution.
  * Runs as a service worker in MV3 - can be terminated at any time by Chrome.
  *
- * Stage 2: Integrates with IGDB for platform availability data.
+ * Uses Wikidata as primary data source (no auth required).
+ * IGDB available as optional enhanced mode for additional coverage.
  */
 
 // Import dependencies (must be at top level for service worker)
-importScripts('types.js', 'cache.js', 'tokenManager.js', 'igdbClient.js', 'resolver.js');
+importScripts('types.js', 'cache.js', 'wikidataClient.js', 'tokenManager.js', 'igdbClient.js', 'resolver.js');
 
 const LOG_PREFIX = '[XCPW Background]';
 
@@ -220,7 +221,7 @@ async function handleClearCache(sendResponse) {
 chrome.runtime.onMessage.addListener(handleMessage);
 
 // Log when service worker starts
-console.log(`${LOG_PREFIX} Service worker initialized (Stage 2 with IGDB integration)`);
+console.log(`${LOG_PREFIX} Service worker initialized (Wikidata primary, IGDB optional)`);
 
 // Log when service worker is about to be suspended (useful for debugging)
 self.addEventListener('activate', () => {

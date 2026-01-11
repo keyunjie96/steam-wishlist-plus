@@ -20,6 +20,24 @@ const cacheCountEl = document.getElementById('cache-count');
 const cacheAgeEl = document.getElementById('cache-age');
 const refreshStatsBtn = document.getElementById('refresh-stats-btn');
 const clearCacheBtn = document.getElementById('clear-cache-btn');
+const igdbHeader = document.getElementById('igdb-header');
+const igdbContent = document.getElementById('igdb-content');
+
+/**
+ * Toggles the IGDB collapsible section
+ */
+function toggleIGDBSection() {
+  igdbHeader.classList.toggle('expanded');
+  igdbContent.classList.toggle('expanded');
+}
+
+/**
+ * Expands the IGDB section
+ */
+function expandIGDBSection() {
+  igdbHeader.classList.add('expanded');
+  igdbContent.classList.add('expanded');
+}
 
 /**
  * Shows a status message
@@ -56,6 +74,7 @@ function setButtonLoading(button, loading) {
 
 /**
  * Loads saved credentials into the form
+ * Also expands the IGDB section if credentials exist
  */
 async function loadCredentials() {
   try {
@@ -64,9 +83,10 @@ async function loadCredentials() {
 
     if (creds?.clientId) {
       clientIdInput.value = creds.clientId;
+      // Expand section if credentials exist
+      expandIGDBSection();
     }
     if (creds?.clientSecret) {
-      // Show masked secret
       clientSecretInput.value = creds.clientSecret;
     }
   } catch (error) {
@@ -256,6 +276,7 @@ testBtn.addEventListener('click', testConnection);
 clearBtn.addEventListener('click', clearCredentials);
 refreshStatsBtn.addEventListener('click', loadCacheStats);
 clearCacheBtn.addEventListener('click', clearCache);
+igdbHeader.addEventListener('click', toggleIGDBSection);
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
