@@ -19,23 +19,22 @@
  * Platform data with store link
  * @typedef {Object} PlatformData
  * @property {PlatformStatus} status - Availability status
- * @property {string | null} storeUrl - URL to the store page (search URL for Stage 1)
+ * @property {string | null} storeUrl - URL to the store page or search URL
  */
 
 /**
  * Data source for platform availability
- * @typedef {'wikidata' | 'igdb' | 'manual' | 'fallback' | 'none'} DataSource
+ * @typedef {'wikidata' | 'manual' | 'fallback' | 'none'} DataSource
  */
 
 /**
  * Cache entry for a Steam appid
  * @typedef {Object} CacheEntry
  * @property {string} appid - Steam application ID
- * @property {string} gameName - Game name (extracted from Steam or data source)
+ * @property {string} gameName - Game name (extracted from Steam or Wikidata)
  * @property {Record<Platform, PlatformData>} platforms - Platform availability data
  * @property {DataSource} [source] - Where the data came from
  * @property {string | null} [wikidataId] - Wikidata QID if resolved via Wikidata
- * @property {number | null} [igdbId] - IGDB game ID if resolved via IGDB
  * @property {number} resolvedAt - Unix timestamp when data was resolved
  * @property {number} ttlDays - Time-to-live in days
  */
@@ -66,31 +65,11 @@
  */
 
 /**
- * Request to update cache (from content script observation)
+ * Request to update cache (force refresh)
  * @typedef {Object} UpdateCacheRequest
  * @property {'UPDATE_CACHE'} type
  * @property {string} appid
  * @property {string} gameName
- */
-
-/**
- * Request to save Twitch credentials
- * @typedef {Object} SaveCredentialsRequest
- * @property {'SAVE_CREDENTIALS'} type
- * @property {string} clientId
- * @property {string} clientSecret
- */
-
-/**
- * Request to test IGDB connection
- * @typedef {Object} TestConnectionRequest
- * @property {'TEST_CONNECTION'} type
- */
-
-/**
- * Request to clear credentials
- * @typedef {Object} ClearCredentialsRequest
- * @property {'CLEAR_CREDENTIALS'} type
  */
 
 /**
@@ -107,7 +86,7 @@
 
 /**
  * Generic message types
- * @typedef {GetPlatformDataRequest | UpdateCacheRequest | SaveCredentialsRequest | TestConnectionRequest | ClearCredentialsRequest | GetCacheStatsRequest | ClearCacheRequest} ExtensionMessage
+ * @typedef {GetPlatformDataRequest | UpdateCacheRequest | GetCacheStatsRequest | ClearCacheRequest} ExtensionMessage
  */
 
 // ============================================================================

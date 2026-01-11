@@ -54,59 +54,6 @@
       border-bottom: 1px solid #3d4f5f;
     }
 
-    .section-title .badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-left: 8px;
-      font-weight: normal;
-      vertical-align: middle;
-    }
-
-    .badge-active {
-      background: #22c55e;
-      color: #ffffff;
-    }
-
-    .badge-optional {
-      background: #3d4f5f;
-      color: #8f98a0;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 6px;
-      color: #c7d5e0;
-      font-weight: 500;
-    }
-
-    input[type="text"],
-    input[type="password"] {
-      width: 100%;
-      padding: 10px 12px;
-      background: #1b2838;
-      border: 1px solid #3d4f5f;
-      border-radius: 4px;
-      color: #ffffff;
-      font-size: 14px;
-      transition: border-color 0.15s;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus {
-      outline: none;
-      border-color: #66c0f4;
-    }
-
-    input[type="text"]::placeholder,
-    input[type="password"]::placeholder {
-      color: #6c7b8b;
-    }
-
     .button-group {
       display: flex;
       gap: 12px;
@@ -126,15 +73,6 @@
     button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: #1a9fff;
-      color: #ffffff;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      background: #47bfff;
     }
 
     .btn-secondary {
@@ -174,13 +112,6 @@
       background: #461e1e;
       color: #f87171;
       border: 1px solid #dc2626;
-    }
-
-    .status.info {
-      display: block;
-      background: #1e3a46;
-      color: #67d0f4;
-      border: 1px solid #0ea5e9;
     }
 
     .help-text {
@@ -255,32 +186,6 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-
-    .collapsible-header {
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .collapsible-header::after {
-      content: '+';
-      font-size: 1.2rem;
-      color: #8f98a0;
-    }
-
-    .collapsible-header.expanded::after {
-      content: '-';
-    }
-
-    .collapsible-content {
-      display: none;
-      margin-top: 16px;
-    }
-
-    .collapsible-content.expanded {
-      display: block;
-    }
   </style>
 </head>
 <body>
@@ -290,54 +195,16 @@
     </svg>
     Steam Cross-Platform Wishlist
   </h1>
-  <p class="subtitle">Extension settings and data source configuration</p>
+  <p class="subtitle">Extension settings</p>
 
   <div class="section">
-    <h2 class="section-title">
-      Data Source: Wikidata
-      <span class="badge badge-active">Active</span>
-    </h2>
+    <h2 class="section-title">Data Source</h2>
     <div class="info-box success-box">
-      <strong>Works out of the box!</strong>
+      <strong>Powered by Wikidata</strong>
       <p style="margin: 8px 0 0 0;">
         This extension uses <a href="https://www.wikidata.org" target="_blank" rel="noopener noreferrer" class="help-link">Wikidata</a>
         to look up platform availability. No configuration required.
       </p>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2 class="section-title collapsible-header" id="igdb-header">
-      Enhanced Mode: IGDB
-      <span class="badge badge-optional">Optional</span>
-    </h2>
-    <div class="collapsible-content" id="igdb-content">
-      <p class="help-text" style="margin-top: 0; margin-bottom: 16px;">
-        For games not found in Wikidata, IGDB can provide additional coverage.
-        This requires a free Twitch Developer application.
-        <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer" class="help-link">Create one here</a>.
-      </p>
-
-      <form id="credentials-form">
-        <div class="form-group">
-          <label for="client-id">Client ID</label>
-          <input type="text" id="client-id" name="clientId" placeholder="Enter your Twitch Client ID" autocomplete="off">
-        </div>
-
-        <div class="form-group">
-          <label for="client-secret">Client Secret</label>
-          <input type="password" id="client-secret" name="clientSecret" placeholder="Enter your Twitch Client Secret" autocomplete="off">
-          <p class="help-text">Credentials are stored locally and only sent to Twitch/IGDB.</p>
-        </div>
-
-        <div class="button-group">
-          <button type="submit" class="btn-primary" id="save-btn">Save</button>
-          <button type="button" class="btn-secondary" id="test-btn">Test Connection</button>
-          <button type="button" class="btn-danger" id="clear-btn">Clear</button>
-        </div>
-      </form>
-
-      <div id="status" class="status"></div>
     </div>
   </div>
 
@@ -362,6 +229,8 @@
       <button type="button" class="btn-secondary" id="refresh-stats-btn">Refresh Stats</button>
       <button type="button" class="btn-danger" id="clear-cache-btn">Clear Cache</button>
     </div>
+
+    <div id="status" class="status"></div>
   </div>
 
   <div class="section">
@@ -369,7 +238,7 @@
     <div class="info-box">
       <strong>This extension:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-        <li>Only communicates with Steam, Wikidata, and optionally Twitch/IGDB</li>
+        <li>Only communicates with Steam and Wikidata</li>
         <li>Does not log or transmit your wishlist contents</li>
         <li>Stores all data locally in your browser</li>
         <li>Contains no telemetry or analytics</li>

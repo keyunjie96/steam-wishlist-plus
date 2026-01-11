@@ -4,12 +4,11 @@
  * Handles messaging between content scripts and manages the platform data resolution.
  * Runs as a service worker in MV3 - can be terminated at any time by Chrome.
  *
- * Uses Wikidata as primary data source (no auth required).
- * IGDB available as optional enhanced mode for additional coverage.
+ * Uses Wikidata as data source (no auth required).
  */
 
 // Import dependencies (must be at top level for service worker)
-importScripts('types.js', 'cache.js', 'wikidataClient.js', 'tokenManager.js', 'igdbClient.js', 'resolver.js');
+importScripts('types.js', 'cache.js', 'wikidataClient.js', 'resolver.js');
 
 const LOG_PREFIX = '[XCPW Background]';
 
@@ -35,18 +34,6 @@ function handleMessage(message, sender, sendResponse) {
       handleUpdateCache(message, sendResponse);
       return true; // Async response
 
-    case 'SAVE_CREDENTIALS':
-      handleSaveCredentials(message, sendResponse);
-      return true; // Async response
-
-    case 'TEST_CONNECTION':
-      handleTestConnection(sendResponse);
-      return true; // Async response
-
-    case 'CLEAR_CREDENTIALS':
-      handleClearCredentials(sendResponse);
-      return true; // Async response
-
     case 'GET_CACHE_STATS':
       handleGetCacheStats(sendResponse);
       return true; // Async response
@@ -63,7 +50,7 @@ function handleMessage(message, sender, sendResponse) {
 
 /**
  * Handles GET_PLATFORM_DATA request
- * Uses the resolver to get platform data from IGDB or cache
+ * Uses the resolver to get platform data from Wikidata or cache
  * @param {import('./types.js').GetPlatformDataRequest} message
  * @param {(response: import('./types.js').GetPlatformDataResponse) => void} sendResponse
  */
@@ -106,80 +93,13 @@ async function handleUpdateCache(message, sendResponse) {
       return;
     }
 
-    // Force refresh from IGDB
+    // Force refresh from Wikidata
     await globalThis.XCPW_Resolver.forceRefresh(appid, gameName);
 
     console.log(`${LOG_PREFIX} Cache updated for appid ${appid}`);
     sendResponse({ success: true });
   } catch (error) {
     console.error(`${LOG_PREFIX} Error handling UPDATE_CACHE:`, error);
-    sendResponse({ success: false });
-  }
-}
-
-/**
- * Handles SAVE_CREDENTIALS request from options page
- * @param {import('./types.js').SaveCredentialsRequest} message
- * @param {(response: {success: boolean, error?: string}) => void} sendResponse
- */
-async function handleSaveCredentials(message, sendResponse) {
-  try {
-    const { clientId, clientSecret } = message;
-
-    if (!clientId || !clientSecret) {
-      sendResponse({ success: false, error: 'Client ID and Secret are required' });
-      return;
-    }
-
-    await globalThis.XCPW_TokenManager.saveCredentials(clientId, clientSecret);
-    console.log(`${LOG_PREFIX} Credentials saved`);
-    sendResponse({ success: true });
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error saving credentials:`, error);
-    sendResponse({ success: false, error: 'Failed to save credentials' });
-  }
-}
-
-/**
- * Handles TEST_CONNECTION request from options page
- * @param {(response: {success: boolean, message: string}) => void} sendResponse
- */
-async function handleTestConnection(sendResponse) {
-  try {
-    // First test token acquisition
-    const tokenResult = await globalThis.XCPW_TokenManager.testConnection();
-
-    if (!tokenResult.success) {
-      sendResponse(tokenResult);
-      return;
-    }
-
-    // Then test IGDB connection
-    const token = await globalThis.XCPW_TokenManager.getValidToken();
-    if (!token) {
-      sendResponse({ success: false, message: 'Failed to get access token' });
-      return;
-    }
-
-    const igdbResult = await globalThis.XCPW_IGDBClient.testConnection(token.accessToken, token.clientId);
-    sendResponse(igdbResult);
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error testing connection:`, error);
-    sendResponse({ success: false, message: 'Connection test failed' });
-  }
-}
-
-/**
- * Handles CLEAR_CREDENTIALS request from options page
- * @param {(response: {success: boolean}) => void} sendResponse
- */
-async function handleClearCredentials(sendResponse) {
-  try {
-    await globalThis.XCPW_TokenManager.clearCredentials();
-    console.log(`${LOG_PREFIX} Credentials cleared`);
-    sendResponse({ success: true });
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error clearing credentials:`, error);
     sendResponse({ success: false });
   }
 }
@@ -221,7 +141,7 @@ async function handleClearCache(sendResponse) {
 chrome.runtime.onMessage.addListener(handleMessage);
 
 // Log when service worker starts
-console.log(`${LOG_PREFIX} Service worker initialized (Wikidata primary, IGDB optional)`);
+console.log(`${LOG_PREFIX} Service worker initialized (Wikidata)`);
 
 // Log when service worker is about to be suspended (useful for debugging)
 self.addEventListener('activate', () => {
