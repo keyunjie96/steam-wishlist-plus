@@ -12,7 +12,8 @@
 const RESOLVER_LOG_PREFIX = '[XCPW Resolver]';
 const RESOLVER_DEBUG = false;
 
-const PLATFORMS = ['nintendo', 'playstation', 'xbox'];
+// Get PLATFORMS from cache module (avoids duplicate const declaration in service worker)
+const PLATFORMS = globalThis.XCPW_Cache?.PLATFORMS || ['nintendo', 'playstation', 'xbox'];
 
 /**
  * Checks if a string looks like a Wikidata QID (e.g., "Q123456")

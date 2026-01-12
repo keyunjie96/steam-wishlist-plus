@@ -198,5 +198,6 @@ globalThis.XCPW_Cache = {
   clearCache,
   getCacheStats,
   isCacheValid,
-  MANUAL_OVERRIDES
+  MANUAL_OVERRIDES,
+  PLATFORMS
 };
