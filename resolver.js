@@ -219,16 +219,20 @@ async function resolvePlatformData(appid, gameName) {
       console.log(`${RESOLVER_LOG_PREFIX} Resolved via Wikidata: ${appid}`);
       return { entry, fromCache: false };
     } else {
+      // Game genuinely not in Wikidata - cache this result so we don't keep querying
       if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Wikidata found no match for appid ${appid}`);
+      const entry = createFallbackEntry(appid, gameName);
+      await Cache.saveToCache(entry);
+      return { entry, fromCache: false };
     }
   } catch (error) {
-    // Wikidata query failed - fall back silently
+    // Wikidata query failed (network error, 429, etc.)
+    // DON'T cache - allow retry on next page load
+    console.warn(`${RESOLVER_LOG_PREFIX} Wikidata query failed for ${appid}, will retry later:`, error.message);
+    const entry = createFallbackEntry(appid, gameName);
+    // Return without caching so next page load can retry
+    return { entry, fromCache: false };
   }
-
-  // 4. Fallback - no data available, will retry on next page load
-  const entry = createFallbackEntry(appid, gameName);
-  await Cache.saveToCache(entry);
-  return { entry, fromCache: false };
 }
 
 /**
@@ -313,12 +317,13 @@ async function batchResolvePlatformData(games) {
 
     console.log(`${RESOLVER_LOG_PREFIX} Wikidata batch resolved ${needsResolution.length} games`);
   } catch (error) {
-    console.error(`${RESOLVER_LOG_PREFIX} Batch Wikidata resolution failed:`, error);
-    // Fallback for all remaining
+    // Batch Wikidata query failed (network error, 429, etc.)
+    // DON'T cache - allow retry on next page load
+    console.warn(`${RESOLVER_LOG_PREFIX} Batch Wikidata resolution failed, will retry later:`, error.message);
     for (const { appid, gameName } of needsResolution) {
       if (!results.has(appid)) {
         const entry = createFallbackEntry(appid, gameName);
-        await Cache.saveToCache(entry);
+        // Return without caching so next page load can retry
         results.set(appid, { entry, fromCache: false });
       }
     }

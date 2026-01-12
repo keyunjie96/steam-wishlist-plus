@@ -15,7 +15,10 @@ const WIKIDATA_DEBUG = false; // Set to true for verbose debugging
 const REQUEST_DELAY_MS = 500; // 500ms between requests
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000; // 1 second initial backoff for 429
-let lastRequestTime = 0;
+
+// Request queue to serialize concurrent requests and prevent bursts
+// Each request waits for the previous one to complete + delay
+let requestQueue = Promise.resolve();
 
 // Wikidata Platform QIDs
 const PLATFORM_QIDS = {
@@ -122,20 +125,21 @@ const STORE_URL_BUILDERS = {
  */
 
 /**
- * Delays execution to respect rate limits
+ * Serializes requests through a queue to prevent concurrent bursts.
+ * Each request waits for the previous one to complete + enforced delay.
  * @returns {Promise<void>}
  */
 async function rateLimit() {
-  const now = Date.now();
-  const timeSinceLastRequest = now - lastRequestTime;
+  // Chain this request onto the queue - ensures serialization
+  const myTurn = requestQueue.then(async () => {
+    await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
+  });
 
-  if (timeSinceLastRequest < REQUEST_DELAY_MS) {
-    await new Promise(resolve =>
-      setTimeout(resolve, REQUEST_DELAY_MS - timeSinceLastRequest)
-    );
-  }
+  // Update queue to include this request (don't await yet)
+  requestQueue = myTurn.catch(() => {});  // Prevent queue from breaking on errors
 
-  lastRequestTime = Date.now();
+  // Now wait for our turn
+  await myTurn;
 }
 
 /**
