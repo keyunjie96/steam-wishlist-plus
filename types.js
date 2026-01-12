@@ -1,48 +1,35 @@
 /**
  * Steam Cross-Platform Wishlist - Type Definitions
  *
- * This file contains JSDoc type definitions for type safety without TypeScript.
- * These types are used across the extension for messaging and caching.
+ * JSDoc type definitions for type safety without TypeScript.
  */
 
-/**
- * Platform identifiers
- * @typedef {'nintendo' | 'playstation' | 'xbox'} Platform
- */
+/** @typedef {'nintendo' | 'playstation' | 'xbox'} Platform */
+
+/** @typedef {'available' | 'unavailable' | 'unknown'} PlatformStatus */
 
 /**
- * Platform availability status
- * @typedef {'available' | 'unavailable' | 'unknown'} PlatformStatus
- */
-
-/**
- * Platform data with store link
  * @typedef {Object} PlatformData
- * @property {PlatformStatus} status - Availability status
- * @property {string | null} storeUrl - URL to the store page (search URL for Stage 1)
+ * @property {PlatformStatus} status
+ * @property {string | null} storeUrl
  */
 
+/** @typedef {'wikidata' | 'manual' | 'fallback' | 'none'} DataSource */
+
 /**
- * Cache entry for a Steam appid
  * @typedef {Object} CacheEntry
- * @property {string} appid - Steam application ID
- * @property {string} gameName - Game name (extracted from Steam)
- * @property {Record<Platform, PlatformData>} platforms - Platform availability data
- * @property {number} resolvedAt - Unix timestamp when data was resolved
- * @property {number} ttlDays - Time-to-live in days
+ * @property {string} appid
+ * @property {string} gameName
+ * @property {Record<Platform, PlatformData>} platforms
+ * @property {DataSource} [source]
+ * @property {string | null} [wikidataId]
+ * @property {number} resolvedAt
+ * @property {number} ttlDays
  */
 
-/**
- * Cache storage structure (keyed by appid)
- * @typedef {Record<string, CacheEntry>} CacheStorage
- */
-
-// ============================================================================
-// Message Types
-// ============================================================================
+/** @typedef {Record<string, CacheEntry>} CacheStorage */
 
 /**
- * Request to get platform data for an appid
  * @typedef {Object} GetPlatformDataRequest
  * @property {'GET_PLATFORM_DATA'} type
  * @property {string} appid
@@ -50,15 +37,13 @@
  */
 
 /**
- * Response with platform data
  * @typedef {Object} GetPlatformDataResponse
  * @property {boolean} success
  * @property {CacheEntry | null} data
- * @property {boolean} fromCache - Whether data was served from cache
+ * @property {boolean} fromCache
  */
 
 /**
- * Request to update cache (from content script observation)
  * @typedef {Object} UpdateCacheRequest
  * @property {'UPDATE_CACHE'} type
  * @property {string} appid
@@ -66,48 +51,38 @@
  */
 
 /**
- * Generic message types
- * @typedef {GetPlatformDataRequest | UpdateCacheRequest} ExtensionMessage
+ * @typedef {Object} GetCacheStatsRequest
+ * @property {'GET_CACHE_STATS'} type
  */
-
-// ============================================================================
-// Store URL Builders
-// ============================================================================
 
 /**
- * Builds search URLs for each platform's US store
+ * @typedef {Object} ClearCacheRequest
+ * @property {'CLEAR_CACHE'} type
+ */
+
+/** @typedef {GetPlatformDataRequest | UpdateCacheRequest | GetCacheStatsRequest | ClearCacheRequest} ExtensionMessage */
+
+/**
+ * Store search URL builders (fallback when no direct link available).
+ * Region-agnostic - stores redirect to user's local version.
  */
 const StoreUrls = {
-  /**
-   * Nintendo US eShop search URL
-   * @param {string} gameName
-   * @returns {string}
-   */
+  /** @param {string} gameName */
   nintendo: (gameName) =>
-    `https://www.nintendo.com/us/search/#q=${encodeURIComponent(gameName)}&sort=df&f=corePlatforms&corePlatforms=Nintendo+Switch`,
+    `https://www.nintendo.com/search/#q=${encodeURIComponent(gameName)}&sort=df&f=corePlatforms&corePlatforms=Nintendo+Switch`,
 
-  /**
-   * PlayStation US store search URL
-   * @param {string} gameName
-   * @returns {string}
-   */
+  /** @param {string} gameName */
   playstation: (gameName) =>
-    `https://store.playstation.com/en-us/search/${encodeURIComponent(gameName)}`,
+    `https://store.playstation.com/search/${encodeURIComponent(gameName)}`,
 
-  /**
-   * Xbox US store search URL
-   * @param {string} gameName
-   * @returns {string}
-   */
+  /** @param {string} gameName */
   xbox: (gameName) =>
-    `https://www.xbox.com/en-US/search?q=${encodeURIComponent(gameName)}`
+    `https://www.xbox.com/search?q=${encodeURIComponent(gameName)}`
 };
 
-// Export for use in other modules (ES module style won't work in content scripts)
-// These are defined globally and imported via manifest
-if (typeof window !== 'undefined') {
-  window.XCPW_StoreUrls = StoreUrls;
-}
+// Export globally for content scripts (ES modules not supported)
 if (typeof globalThis !== 'undefined') {
   globalThis.XCPW_StoreUrls = StoreUrls;
+} else if (typeof window !== 'undefined') {
+  window.XCPW_StoreUrls = StoreUrls;
 }
