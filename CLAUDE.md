@@ -18,29 +18,22 @@
 │ - Extract appids    │     response with platform data    │ - Message routing    │
 │ - Inject icons      │                                    │ - Cache coordination │
 │ - Handle scroll     │                                    │                      │
-└─────────────────────┘                                    └──────────┬───────────┘
-                                                                      │
-                                                           ┌──────────▼───────────┐
-                                                           │   Resolver           │
-                                                           │   (resolver.js)      │
-                                                           │                      │
-                                                           │ Priority:            │
-                                                           │ 1. Cache             │
-                                                           │ 2. Manual Overrides  │
-                                                           │ 3. Wikidata Query    │
-                                                           │ 4. Unknown Fallback  │
-                                                           └──────────┬───────────┘
-                                                                      │
-                                    ┌─────────────────────────────────┴─────────────────────────────────┐
-                                    │                                                                   │
-                             ┌──────▼──────┐                                                     ┌──────▼──────────┐
-                             │ Cache       │                                                     │ WikidataClient  │
-                             │ (cache.js)  │                                                     │ (wikidata       │
-                             │             │                                                     │  Client.js)     │
-                             │ chrome.     │                                                     │                 │
-                             │ storage.    │                                                     │ SPARQL queries  │
-                             │ local       │                                                     │ Retry logic     │
-                             └─────────────┘                                                     └─────────────────┘
+└──────────┬──────────┘                                    └──────────┬───────────┘
+           │                                                          │
+   ┌───────▼───────────┐                                   ┌──────────▼───────────┐
+   │ SteamDeckClient   │                                   │   Resolver           │
+   │ (steamDeck        │                                   │   (resolver.js)      │
+   │  Client.js)       │                                   │                      │
+   │                   │                                   └──────────┬───────────┘
+   │ - Inject Page     │                                              │
+   │   Script          │                    ┌─────────────────────────┴─────────────────────────┐
+   │ - Read DOM        │                    │                                                   │
+   └───────┬───────────┘             ┌──────▼──────┐                                     ┌──────▼──────────┐
+           │                         │ Cache       │                                     │ WikidataClient  │
+   ┌───────▼────────────┐            │ (cache.js)  │                                     │ (wikidata       │
+   │ SteamDeckPageScript│            │             │                                     │  Client.js)     │
+   │ (Injected Script)  │            └─────────────┘                                     └─────────────────┘
+   └────────────────────┘
 ```
 
 ## Directory Structure
@@ -173,6 +166,7 @@ Set to `true` for verbose logging during development.
 | src/wikidataClient.js | 90% | 90% |
 | src/background.js | 90% | 80% |
 | src/options.js | 100% | 100% |
+| src/steamDeckClient.js | 80% | 75% |
 
 ## Known Limitations
 
