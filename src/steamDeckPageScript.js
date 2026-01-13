@@ -23,7 +23,7 @@
     function isDeckCompatQuery(query) {
         return query.queryKey &&
             query.queryKey[0] === 'StoreItem' &&
-            query.queryKey[2] === 'include_platforms' &&
+            query.queryKey.includes('include_platforms') &&
             query.state?.data?.steam_deck_compat_category !== undefined;
     }
 

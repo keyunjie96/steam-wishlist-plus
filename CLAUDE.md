@@ -166,7 +166,7 @@ Set to `true` for verbose logging during development.
 | src/wikidataClient.js | 90% | 90% |
 | src/background.js | 90% | 80% |
 | src/options.js | 100% | 100% |
-| src/steamDeckClient.js | 80% | 75% |
+| src/steamDeckClient.js | 90% | 90% |
 
 ## Known Limitations
 
