@@ -26,7 +26,7 @@ let protondbRequestQueue = Promise.resolve();
  * @property {string | null} bestReportedTier - Best tier from user reports
  */
 
-const EMPTY_RESULT = {
+const PROTONDB_EMPTY_RESULT = {
   found: false,
   tier: 'unknown',
   confidence: 0,
@@ -54,7 +54,7 @@ async function rateLimit() {
  */
 async function queryByAppId(steamAppId) {
   if (!steamAppId) {
-    return { ...EMPTY_RESULT };
+    return { ...PROTONDB_EMPTY_RESULT };
   }
 
   await rateLimit();
@@ -77,7 +77,7 @@ async function queryByAppId(steamAppId) {
       if (response.status === 404) {
         // Game not in ProtonDB (no reports yet)
         console.log(`${PROTONDB_LOG_PREFIX} No data for ${steamAppId}`);
-        return { ...EMPTY_RESULT, tier: 'pending' };
+        return { ...PROTONDB_EMPTY_RESULT, tier: 'pending' };
       }
       throw new Error(`HTTP ${response.status}`);
     }
@@ -97,7 +97,7 @@ async function queryByAppId(steamAppId) {
     return result;
   } catch (error) {
     console.error(`${PROTONDB_LOG_PREFIX} Query failed for ${steamAppId}:`, error.message);
-    return { ...EMPTY_RESULT };
+    return { ...PROTONDB_EMPTY_RESULT };
   }
 }
 
