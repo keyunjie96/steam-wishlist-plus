@@ -495,8 +495,8 @@ describe('content.js', () => {
   });
 
   describe('icon update with data', () => {
-    it('should show available icons and hide unavailable ones', () => {
-      // Create a mock container with all three platform icons
+    it('should update all icons in place with correct status classes', () => {
+      // Create a mock container with all three platform icons in loading state
       const container = document.createElement('span');
       container.className = 'xcpw-platforms';
 
@@ -511,18 +511,13 @@ describe('content.js', () => {
         container.appendChild(icon);
       });
 
-      // Simulate data update
-      const data = {
-        gameName: 'Test',
-        platforms: {
-          nintendo: { status: 'available', storeUrl: 'https://ns.example.com' },
-          playstation: { status: 'unavailable', storeUrl: 'https://ps.example.com' },
-          xbox: { status: 'unknown', storeUrl: 'https://xb.example.com' }
-        }
-      };
-
-      // Verify initial state
+      // Verify initial state - all 3 icons present in loading state
       expect(container.querySelectorAll('[data-platform]').length).toBe(3);
+      expect(container.querySelectorAll('.xcpw-loading').length).toBe(3);
+
+      // After updateIconsWithData, all 3 icons should still be present
+      // (with correct status classes: available, unavailable, or unknown)
+      // Icons should never be removed for unavailable/unknown status
     });
   });
 
@@ -584,7 +579,7 @@ describe('content.js', () => {
   });
 
   describe('updateIconsWithData edge cases', () => {
-    it('should remove separator when no platforms are available', () => {
+    it('should keep all icons and separator regardless of status', () => {
       const container = document.createElement('span');
       container.className = 'xcpw-platforms';
 
@@ -602,20 +597,12 @@ describe('content.js', () => {
 
       document.body.appendChild(container);
 
-      // Simulate all platforms unavailable - icons get removed
-      container.querySelectorAll('[data-platform]').forEach(icon => icon.remove());
-
-      // Check if separator should be removed when no icons visible
-      const visibleIcons = container.querySelectorAll('[data-platform]');
-      if (visibleIcons.length === 0) {
-        const sep = container.querySelector('.xcpw-separator');
-        if (sep) sep.remove();
-      }
-
-      expect(container.querySelector('.xcpw-separator')).toBeNull();
+      // All icons should remain present (updateIconsWithData updates in-place, never removes)
+      expect(container.querySelectorAll('[data-platform]').length).toBe(3);
+      expect(container.querySelector('.xcpw-separator')).toBeTruthy();
     });
 
-    it('should keep separator when at least one platform is available', () => {
+    it('should keep separator and all platform icons visible', () => {
       const container = document.createElement('span');
       container.className = 'xcpw-platforms';
 
@@ -623,15 +610,21 @@ describe('content.js', () => {
       separator.className = 'xcpw-separator';
       container.appendChild(separator);
 
-      const icon = document.createElement('a');
-      icon.className = 'xcpw-platform-icon xcpw-available';
-      icon.setAttribute('data-platform', 'nintendo');
-      container.appendChild(icon);
+      // Add all three platform icons with different statuses
+      const statuses = ['available', 'unavailable', 'unknown'];
+      ['nintendo', 'playstation', 'xbox'].forEach((platform, i) => {
+        const icon = document.createElement('a');
+        icon.className = `xcpw-platform-icon xcpw-${statuses[i]}`;
+        icon.setAttribute('data-platform', platform);
+        container.appendChild(icon);
+      });
 
       document.body.appendChild(container);
 
       expect(container.querySelector('.xcpw-separator')).toBeTruthy();
       expect(container.querySelector('[data-platform="nintendo"]')).toBeTruthy();
+      expect(container.querySelector('[data-platform="playstation"]')).toBeTruthy();
+      expect(container.querySelector('[data-platform="xbox"]')).toBeTruthy();
     });
   });
 

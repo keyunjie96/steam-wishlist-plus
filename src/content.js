@@ -307,14 +307,15 @@ function createPlatformIcon(platform, status, gameName, storeUrl) {
 
 /**
  * Updates the icons container with platform data from cache.
- * Only shows icons for platforms where the game is available.
- * Hides icons for unavailable or unknown platforms.
+ * Updates each icon in-place with the correct status class and tooltip:
+ * - available: Full opacity, clickable - opens store page
+ * - unavailable: Dimmed (35% opacity), not clickable
+ * - unknown: Full opacity, clickable - opens search
  * @param {HTMLElement} container
  * @param {Object} data - Cache entry with platform data
  */
 function updateIconsWithData(container, data) {
   const gameName = data.gameName;
-  let hasVisibleIcons = false;
 
   for (const platform of PLATFORMS) {
     const oldIcon = container.querySelector(`[data-platform="${platform}"]`);
@@ -324,21 +325,9 @@ function updateIconsWithData(container, data) {
     const status = platformData?.status || 'unknown';
     const storeUrl = platformData?.storeUrl;
 
-    // Only show icons for available platforms
-    if (status === 'available') {
-      const newIcon = createPlatformIcon(platform, status, gameName, storeUrl);
-      oldIcon.replaceWith(newIcon);
-      hasVisibleIcons = true;
-    } else {
-      // Hide unavailable/unknown platforms
-      oldIcon.remove();
-    }
-  }
-
-  // If no platforms are available, also hide the separator
-  if (!hasVisibleIcons) {
-    const separator = container.querySelector('.xcpw-separator');
-    if (separator) separator.remove();
+    // Update icon in-place with correct status
+    const newIcon = createPlatformIcon(platform, status, gameName, storeUrl);
+    oldIcon.replaceWith(newIcon);
   }
 }
 
