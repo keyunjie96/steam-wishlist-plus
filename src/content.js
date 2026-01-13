@@ -694,3 +694,15 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+// Export internal functions for testing (not used in production)
+if (typeof globalThis !== 'undefined') {
+  globalThis.XCPW_ContentTestExports = {
+    queueForBatchResolution,
+    processPendingBatch,
+    pendingItems,
+    updateIconsWithData,
+    createIconsContainer,
+    createPlatformIcon
+  };
+}
