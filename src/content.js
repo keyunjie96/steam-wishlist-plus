@@ -20,7 +20,7 @@ const processedAppIds = new Set();
 const PLATFORMS = ['nintendo', 'playstation', 'xbox'];
 
 // Definitions loaded from types.js and icons.js
-const StoreUrls = globalThis.XCPW_StoreUrls;
+// Note: StoreUrls is declared in types.js, access via globalThis to avoid redeclaration
 const PLATFORM_ICONS = globalThis.XCPW_Icons;
 const PLATFORM_INFO = globalThis.XCPW_PlatformInfo;
 const STATUS_INFO = globalThis.XCPW_StatusInfo;
@@ -158,7 +158,7 @@ function createIconsContainer(appid, gameName) {
  * @returns {HTMLElement}
  */
 function createPlatformIcon(platform, status, gameName, storeUrl) {
-  const url = storeUrl || StoreUrls[platform](gameName);
+  const url = storeUrl || globalThis.XCPW_StoreUrls[platform](gameName);
   const isClickable = status !== 'unavailable';
   const icon = document.createElement(isClickable ? 'a' : 'span');
 
