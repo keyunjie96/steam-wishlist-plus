@@ -587,6 +587,12 @@ if (typeof globalThis !== 'undefined') {
     pendingItems,
     updateIconsWithData,
     createIconsContainer,
-    createPlatformIcon
+    createPlatformIcon,
+    extractAppId,
+    extractGameName,
+    parseSvg,
+    removeLoadingState,
+    findInjectionPoint,
+    requestPlatformData
   };
 }
