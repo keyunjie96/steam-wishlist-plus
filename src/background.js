@@ -7,7 +7,12 @@
  * Uses Wikidata as data source (no auth required).
  */
 
-importScripts('types.js', 'cache.js', 'wikidataClient.js', 'resolver.js');
+// In MV3 service workers, importScripts paths are relative to extension root
+try {
+  importScripts('src/types.js', 'src/cache.js', 'src/wikidataClient.js', 'src/resolver.js');
+} catch (e) {
+  console.error('Failed to load scripts:', e);
+}
 
 const LOG_PREFIX = '[XCPW Background]';
 
