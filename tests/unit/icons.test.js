@@ -200,40 +200,38 @@ describe('icons.js', () => {
     });
   });
 
-  describe('PROTONDB_TIERS', () => {
-    it('should export PROTONDB_TIERS to window', () => {
-      expect(window.XCPW_ProtonDBTiers).toBeDefined();
-      expect(typeof window.XCPW_ProtonDBTiers).toBe('object');
+  describe('STEAM_DECK_TIERS', () => {
+    it('should export STEAM_DECK_TIERS to window', () => {
+      expect(window.XCPW_SteamDeckTiers).toBeDefined();
+      expect(typeof window.XCPW_SteamDeckTiers).toBe('object');
     });
 
     it('should have all tier levels', () => {
-      const tiers = window.XCPW_ProtonDBTiers;
-      const expectedTiers = ['native', 'platinum', 'gold', 'silver', 'bronze', 'borked', 'pending', 'unknown'];
+      const tiers = window.XCPW_SteamDeckTiers;
+      const expectedTiers = ['verified', 'playable', 'unsupported', 'unknown'];
 
       expectedTiers.forEach(tier => {
         expect(tiers[tier]).toBeDefined();
       });
     });
 
-    it('should have label, color, and tooltip for each tier', () => {
-      const tiers = window.XCPW_ProtonDBTiers;
+    it('should have label and tooltip for each tier', () => {
+      const tiers = window.XCPW_SteamDeckTiers;
 
       Object.keys(tiers).forEach(tier => {
         expect(tiers[tier].label).toBeDefined();
         expect(typeof tiers[tier].label).toBe('string');
-        expect(tiers[tier].color).toBeDefined();
-        expect(tiers[tier].color).toMatch(/^#[0-9a-fA-F]{6}$/);
         expect(tiers[tier].tooltip).toBeDefined();
         expect(typeof tiers[tier].tooltip).toBe('string');
       });
     });
 
-    it('should have correct colors for key tiers', () => {
-      const tiers = window.XCPW_ProtonDBTiers;
-      expect(tiers.native.color).toBe('#5cba5c');  // Green
-      expect(tiers.platinum.color).toBe('#b4c7dc');  // Platinum
-      expect(tiers.gold.color).toBe('#cfb53b');  // Gold
-      expect(tiers.borked.color).toBe('#ff0000');  // Red
+    it('should have correct labels for key tiers', () => {
+      const tiers = window.XCPW_SteamDeckTiers;
+      expect(tiers.verified.label).toBe('Verified');
+      expect(tiers.playable.label).toBe('Playable');
+      expect(tiers.unsupported.label).toBe('Unsupported');
+      expect(tiers.unknown.label).toBe('Unknown');
     });
   });
 });

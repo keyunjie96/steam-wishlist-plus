@@ -10,6 +10,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft != true
 
     steps:
       - name: Checkout
@@ -38,6 +39,7 @@ jobs:
   integration-tests:
     name: Integration Tests (Wikidata)
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft != true
     # Integration tests can be slower due to rate limiting
     timeout-minutes: 10
 
@@ -62,6 +64,7 @@ jobs:
   lint:
     name: Lint Check
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft != true
 
     steps:
       - name: Checkout
