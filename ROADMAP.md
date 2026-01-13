@@ -45,6 +45,17 @@
 
 ## Feature Enhancements
 
+### UX-1: Refine icon loading state
+**Priority:** P2 (Visual Polish)
+**Files:** `src/content.js`, `src/styles.css`
+**Issue:** When page loads, all 4 platform icons appear in "loading" (dimmed) state, then snap to reality. This causes visual noise and layout shift.
+**Fix:**
+1. Default to hidden or single subtle loader instead of 4 placeholders.
+2. Only render specific platform icons once data is resolved.
+3. Update `createIconsContainer` to return empty/loading container.
+4. Update `updateIconsWithData` to inject icons dynamically.
+**Risk:** Low - purely restart of rendering logic.
+
 ### FEAT-9: ChromeOS support via ProtonDB
 **Priority:** P3 (Low Value)
 **Files:** New `src/protondbClient.js`, `src/content.js`, `src/icons.js`
@@ -172,6 +183,7 @@ Features below were evaluated and declined because established extensions (Augme
 
 | ID | Item | Necessity | Confidence | Score | Effort |
 |----|------|-----------|------------|-------|--------|
+| UX-1 | Improve loading state | 7 | 10 | 70 | Low |
 | FEAT-2 | User preferences | 6 | 9 | 54 | Low |
 | FEAT-8 | Firefox/Edge | 5 | 6 | 30 | Medium |
 | FEAT-9 | ChromeOS/ProtonDB | 4 | 5 | 20 | Medium |
