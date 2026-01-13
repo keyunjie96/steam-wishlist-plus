@@ -81,6 +81,8 @@ const runtimeMock = {
     });
   }),
 
+  getURL: jest.fn((path) => `chrome-extension://test-id/${path}`),
+
   onMessage: {
     addListener: jest.fn(),
     removeListener: jest.fn(),

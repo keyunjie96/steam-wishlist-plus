@@ -7,6 +7,7 @@
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const MS_PER_DAY = MS_PER_HOUR * 24;
+const LOG_PREFIX = '[XCPW Options]';
 
 // DOM Elements
 const statusEl = document.getElementById('status');
@@ -78,7 +79,7 @@ async function loadSettings() {
       showSteamDeckCheckbox.checked = settings.showSteamDeck;
     }
   } catch (error) {
-    console.error('Error loading settings:', error);
+    console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
 }
 
@@ -91,7 +92,7 @@ async function saveSettings(settings) {
     await chrome.storage.sync.set({ xcpwSettings: settings });
     showSettingsStatus('Settings saved', 'success');
   } catch (error) {
-    console.error('Error saving settings:', error);
+    console.error(`${LOG_PREFIX} Error saving settings:`, error);
     showSettingsStatus('Failed to save settings', 'error');
   }
 }
@@ -135,7 +136,7 @@ async function loadCacheStats() {
         : '-';
     }
   } catch (error) {
-    console.error('Error loading cache stats:', error);
+    console.error(`${LOG_PREFIX} Error loading cache stats:`, error);
     cacheCountEl.textContent = '?';
     cacheAgeEl.textContent = '?';
   }
@@ -162,7 +163,7 @@ async function clearCache() {
       showStatus('Failed to clear cache.', 'error');
     }
   } catch (error) {
-    console.error('Error clearing cache:', error);
+    console.error(`${LOG_PREFIX} Error clearing cache:`, error);
     showStatus('Failed to clear cache.', 'error');
   } finally {
     setButtonLoading(clearCacheBtn, false);

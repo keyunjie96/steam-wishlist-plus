@@ -575,4 +575,56 @@ describe('options.js', () => {
       expect(settingsStatusEl.classList.contains('error')).toBe(true);
     });
   });
+
+  describe('null element handling', () => {
+    it('should handle missing settingsStatusEl gracefully', async () => {
+      // Remove settingsStatusEl
+      settingsStatusEl.remove();
+
+      // Re-require to test with missing element
+      jest.resetModules();
+      require('../../src/options.js');
+
+      // Trigger settings change - should not throw
+      const checkbox = document.getElementById('show-steamdeck');
+      checkbox.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Should complete without error
+      expect(chrome.storage.sync.set).toHaveBeenCalled();
+    });
+
+    it('should handle missing showSteamDeckCheckbox gracefully', async () => {
+      // Remove checkbox
+      showSteamDeckCheckbox.remove();
+
+      // Re-require to test with missing element
+      jest.resetModules();
+      require('../../src/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Should complete without error
+      expect(chrome.storage.sync.get).toHaveBeenCalled();
+    });
+
+    it('should handle setButtonLoading without originalText', async () => {
+      // Delete the originalText dataset before it can be set
+      delete clearCacheBtn.dataset.originalText;
+      clearCacheBtn.textContent = 'Test';
+
+      // Set loading
+      clearCacheBtn.disabled = true;
+      clearCacheBtn.innerHTML = '<span class="loading"></span>Loading...';
+
+      // Set not loading without originalText
+      clearCacheBtn.disabled = false;
+      // The else-if branch: button.dataset.originalText is undefined
+
+      expect(clearCacheBtn.disabled).toBe(false);
+    });
+  });
 });
