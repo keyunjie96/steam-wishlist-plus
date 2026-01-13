@@ -68,10 +68,58 @@ const STATUS_INFO = {
   unknown: createStatusInfo('unknown', 'Unknown - Click to search')
 };
 
+/**
+ * ProtonDB tier information for Steam Deck compatibility
+ * Colors follow ProtonDB's official color scheme
+ */
+const PROTONDB_TIERS = {
+  native: {
+    label: 'Native',
+    color: '#5cba5c',  // Green
+    tooltip: 'Runs natively on Linux/Steam Deck'
+  },
+  platinum: {
+    label: 'Platinum',
+    color: '#b4c7dc',  // Platinum/silver-blue
+    tooltip: 'Runs perfectly with Proton'
+  },
+  gold: {
+    label: 'Gold',
+    color: '#cfb53b',  // Gold
+    tooltip: 'Runs great with minor tweaks'
+  },
+  silver: {
+    label: 'Silver',
+    color: '#a6a6a6',  // Silver
+    tooltip: 'Runs with some issues'
+  },
+  bronze: {
+    label: 'Bronze',
+    color: '#cd7f32',  // Bronze
+    tooltip: 'Runs with significant issues'
+  },
+  borked: {
+    label: 'Borked',
+    color: '#ff0000',  // Red
+    tooltip: 'Does not run on Steam Deck'
+  },
+  pending: {
+    label: 'Pending',
+    color: '#666666',  // Gray
+    tooltip: 'No reports yet - Click to check'
+  },
+  unknown: {
+    label: 'Unknown',
+    color: '#666666',  // Gray
+    tooltip: 'Unknown - Click to check'
+  }
+};
+
 // Export for content script
 if (typeof window !== 'undefined') {
   window.XCPW_Icons = PLATFORM_ICONS;
   window.XCPW_PlatformInfo = PLATFORM_INFO;
   window.XCPW_StatusInfo = STATUS_INFO;
+  window.XCPW_ProtonDBTiers = PROTONDB_TIERS;
 }
 })();

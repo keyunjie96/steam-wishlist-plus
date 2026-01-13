@@ -68,7 +68,7 @@ describe('background.js', () => {
 
     it('should call importScripts for dependencies', () => {
       expect(globalThis.importScripts).toHaveBeenCalledWith(
-        'types.js', 'cache.js', 'wikidataClient.js', 'resolver.js'
+        'types.js', 'cache.js', 'wikidataClient.js', 'protondbClient.js', 'resolver.js'
       );
     });
   });

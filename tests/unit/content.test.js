@@ -46,8 +46,12 @@ describe('content.js', () => {
     globalThis.XCPW_StoreUrls = {
       nintendo: (gameName) => `https://www.nintendo.com/search/#q=${encodeURIComponent(gameName)}`,
       playstation: (gameName) => `https://store.playstation.com/search/${encodeURIComponent(gameName)}`,
-      xbox: (gameName) => `https://www.xbox.com/search?q=${encodeURIComponent(gameName)}`
+      xbox: (gameName) => `https://www.xbox.com/search?q=${encodeURIComponent(gameName)}`,
+      steamdeck: (gameName) => `https://store.steampowered.com/search/?term=${encodeURIComponent(gameName)}`
     };
+
+    // Mock chrome.storage.sync for user settings
+    chrome.storage.sync.get.mockResolvedValue({ xcpwSettings: { showSteamDeck: true } });
 
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage = jest.fn().mockResolvedValue({
@@ -1525,7 +1529,7 @@ describe('content.js', () => {
 
       expect(container.classList.contains('xcpw-platforms')).toBe(true);
       expect(container.getAttribute('data-appid')).toBe('12345');
-      expect(container.querySelectorAll('.xcpw-loading').length).toBe(3);
+      expect(container.querySelectorAll('.xcpw-loading').length).toBe(4);
       expect(container.querySelector('.xcpw-separator')).toBeTruthy();
     });
 

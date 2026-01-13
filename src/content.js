@@ -16,14 +16,48 @@ const DEBUG = false; // Set to true for verbose debugging
 /** Set of appids that have been processed to avoid duplicate logging */
 const processedAppIds = new Set();
 
-/** Platforms in display order */
-const PLATFORMS = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
+/** All available platforms in display order */
+const ALL_PLATFORMS = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
+
+/** User settings (loaded from storage) */
+let userSettings = {
+  showSteamDeck: true
+};
+
+/**
+ * Gets the list of enabled platforms based on user settings
+ * @returns {string[]}
+ */
+function getEnabledPlatforms() {
+  return ALL_PLATFORMS.filter(platform => {
+    if (platform === 'steamdeck') {
+      return userSettings.showSteamDeck;
+    }
+    return true; // Other platforms always shown
+  });
+}
+
+/**
+ * Loads user settings from chrome.storage.sync
+ */
+async function loadUserSettings() {
+  try {
+    const result = await chrome.storage.sync.get('xcpwSettings');
+    if (result.xcpwSettings) {
+      userSettings = { ...userSettings, ...result.xcpwSettings };
+    }
+    if (DEBUG) console.log(`${LOG_PREFIX} Loaded settings:`, userSettings);
+  } catch (error) {
+    console.error(`${LOG_PREFIX} Error loading settings:`, error);
+  }
+}
 
 // Definitions loaded from types.js and icons.js
 // Note: StoreUrls is declared in types.js, access via globalThis to avoid redeclaration
 const PLATFORM_ICONS = globalThis.XCPW_Icons;
 const PLATFORM_INFO = globalThis.XCPW_PlatformInfo;
 const STATUS_INFO = globalThis.XCPW_StatusInfo;
+const PROTONDB_TIERS = globalThis.XCPW_ProtonDBTiers;
 
 // ============================================================================
 // Appid Extraction
@@ -139,8 +173,9 @@ function createIconsContainer(appid, gameName) {
   separator.className = 'xcpw-separator';
   container.appendChild(separator);
 
-  // Add platform icons in loading state
-  for (const platform of PLATFORMS) {
+  // Add platform icons in loading state (only enabled platforms)
+  const enabledPlatforms = getEnabledPlatforms();
+  for (const platform of enabledPlatforms) {
     const icon = createPlatformIcon(platform, 'unknown', gameName);
     icon.classList.add('xcpw-loading');
     container.appendChild(icon);
@@ -151,20 +186,30 @@ function createIconsContainer(appid, gameName) {
 
 /**
  * Creates a single platform icon element
- * @param {string} platform - 'nintendo' | 'playstation' | 'xbox'
+ * @param {string} platform - 'nintendo' | 'playstation' | 'xbox' | 'steamdeck'
  * @param {string} status - 'available' | 'unavailable' | 'unknown'
  * @param {string} gameName - Game name for search URL
  * @param {string} [storeUrl] - Optional direct store URL
+ * @param {string} [tier] - Optional ProtonDB tier for Steam Deck
  * @returns {HTMLElement}
  */
-function createPlatformIcon(platform, status, gameName, storeUrl) {
+function createPlatformIcon(platform, status, gameName, storeUrl, tier) {
   const url = storeUrl || globalThis.XCPW_StoreUrls[platform](gameName);
   const isClickable = status !== 'unavailable';
   const icon = document.createElement(isClickable ? 'a' : 'span');
 
   icon.className = `xcpw-platform-icon xcpw-${status}`;
   icon.setAttribute('data-platform', platform);
-  icon.setAttribute('title', STATUS_INFO[status].tooltip(platform));
+
+  // Special handling for Steam Deck tier-based tooltip and color
+  if (platform === 'steamdeck' && tier && PROTONDB_TIERS && PROTONDB_TIERS[tier]) {
+    const tierInfo = PROTONDB_TIERS[tier];
+    icon.setAttribute('title', `Steam Deck: ${tierInfo.label} - ${tierInfo.tooltip}`);
+    icon.setAttribute('data-tier', tier);
+    icon.style.color = tierInfo.color;
+  } else {
+    icon.setAttribute('title', STATUS_INFO[status].tooltip(platform));
+  }
 
   const svg = parseSvg(PLATFORM_ICONS[platform]);
   if (svg) {
@@ -192,18 +237,20 @@ function createPlatformIcon(platform, status, gameName, storeUrl) {
 function updateIconsWithData(container, data) {
   const gameName = data.gameName;
   let hasVisibleIcons = false;
+  const enabledPlatforms = getEnabledPlatforms();
 
-  for (const platform of PLATFORMS) {
+  for (const platform of enabledPlatforms) {
     const oldIcon = container.querySelector(`[data-platform="${platform}"]`);
     if (!oldIcon) continue;
 
     const platformData = data.platforms[platform];
     const status = platformData?.status || 'unknown';
     const storeUrl = platformData?.storeUrl;
+    const tier = platformData?.tier;  // ProtonDB tier for Steam Deck
 
     // Only show icons for available platforms
     if (status === 'available') {
-      const newIcon = createPlatformIcon(platform, status, gameName, storeUrl);
+      const newIcon = createPlatformIcon(platform, status, gameName, storeUrl, tier);
       oldIcon.replaceWith(newIcon);
       hasVisibleIcons = true;
     } else {
@@ -555,13 +602,16 @@ function setupObserver() {
 /**
  * Main initialization function.
  */
-function init() {
+async function init() {
   console.log(`${LOG_PREFIX} Initializing...`);
 
   if (!PLATFORM_ICONS || !PLATFORM_INFO || !STATUS_INFO) {
     console.error(`${LOG_PREFIX} Missing icon definitions (icons.js not loaded?)`);
     return;
   }
+
+  // Load user settings first
+  await loadUserSettings();
 
   // Process existing items
   processWishlistItems();

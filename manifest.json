@@ -2,11 +2,12 @@
   "manifest_version": 3,
   "name": "Steam Cross-Platform Wishlist",
   "version": "0.5.0",
-  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox) on Steam wishlist pages using Wikidata",
+  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox/Steam Deck) on Steam wishlist pages using Wikidata and ProtonDB",
   "permissions": ["storage"],
   "host_permissions": [
     "https://store.steampowered.com/*",
-    "https://query.wikidata.org/*"
+    "https://query.wikidata.org/*",
+    "https://www.protondb.com/*"
   ],
   "background": {
     "service_worker": "src/background.js"

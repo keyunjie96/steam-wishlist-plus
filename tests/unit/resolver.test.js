@@ -52,6 +52,22 @@ describe('resolver.js', () => {
     };
     globalThis.XCPW_StoreUrls = mockStoreUrls;
 
+    // Create mock ProtonDBClient
+    globalThis.XCPW_ProtonDBClient = {
+      queryByAppId: jest.fn().mockResolvedValue({
+        found: true,
+        tier: 'platinum',
+        confidence: 0.9,
+        bestReportedTier: 'platinum'
+      }),
+      getProtonDBUrl: jest.fn((appid) => `https://www.protondb.com/app/${appid}`),
+      tierToStatus: jest.fn((tier) => {
+        const mapping = { native: 'available', platinum: 'available', gold: 'available', silver: 'available', bronze: 'available', borked: 'unavailable' };
+        return mapping[tier] || 'unknown';
+      }),
+      normalizeTier: jest.fn((tier) => tier || 'unknown')
+    };
+
     // Load the resolver module
     require('../../src/resolver.js');
   });
@@ -60,6 +76,7 @@ describe('resolver.js', () => {
     delete globalThis.XCPW_Cache;
     delete globalThis.XCPW_WikidataClient;
     delete globalThis.XCPW_StoreUrls;
+    delete globalThis.XCPW_ProtonDBClient;
     delete globalThis.XCPW_Resolver;
   });
 

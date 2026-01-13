@@ -101,13 +101,51 @@ function createManualOverrideEntry(appid, gameName, override) {
 }
 
 /**
+ * Fetches Steam Deck compatibility from ProtonDB
+ * @param {string} appid - Steam app ID
+ * @returns {Promise<{status: string, storeUrl: string, tier?: string}>}
+ */
+async function getSteamDeckData(appid) {
+  const ProtonDBClient = globalThis.XCPW_ProtonDBClient;
+  const StoreUrls = globalThis.XCPW_StoreUrls;
+
+  if (!ProtonDBClient) {
+    if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} ProtonDB client not available, using fallback for Steam Deck`);
+    return {
+      status: 'unknown',
+      storeUrl: StoreUrls.steamdeck(''),
+      tier: 'unknown'
+    };
+  }
+
+  try {
+    const result = await ProtonDBClient.queryByAppId(appid);
+    const status = ProtonDBClient.tierToStatus(result.tier);
+
+    return {
+      status,
+      storeUrl: ProtonDBClient.getProtonDBUrl(appid),
+      tier: result.tier
+    };
+  } catch (error) {
+    console.warn(`${RESOLVER_LOG_PREFIX} ProtonDB query failed for ${appid}:`, error.message);
+    return {
+      status: 'unknown',
+      storeUrl: ProtonDBClient.getProtonDBUrl(appid),
+      tier: 'unknown'
+    };
+  }
+}
+
+/**
  * Converts Wikidata result to cache entry format
  * @param {string} appid
  * @param {string} gameName
  * @param {Object} wikidataResult - Result from Wikidata client
+ * @param {Object} [steamDeckData] - Optional Steam Deck data from ProtonDB
  * @returns {import('./types.js').CacheEntry}
  */
-function wikidataResultToCacheEntry(appid, gameName, wikidataResult) {
+function wikidataResultToCacheEntry(appid, gameName, wikidataResult, steamDeckData = null) {
   const StoreUrls = globalThis.XCPW_StoreUrls;
   const WikidataClient = globalThis.XCPW_WikidataClient;
 
@@ -125,17 +163,31 @@ function wikidataResultToCacheEntry(appid, gameName, wikidataResult) {
     return officialUrl || StoreUrls[platform](displayName);
   }
 
+  const platforms = createPlatformsObject((platform) => {
+    // Special handling for Steam Deck - use ProtonDB data
+    if (platform === 'steamdeck' && steamDeckData) {
+      return {
+        status: steamDeckData.status,
+        storeUrl: steamDeckData.storeUrl,
+        tier: steamDeckData.tier
+      };
+    }
+
+    return {
+      status: getPlatformStatus(wikidataResult.platforms[platform], wikidataResult.found),
+      storeUrl: getUrl(platform)
+    };
+  });
+
   return {
     appid,
     gameName: displayName,
-    platforms: createPlatformsObject((platform) => ({
-      status: getPlatformStatus(wikidataResult.platforms[platform], wikidataResult.found),
-      storeUrl: getUrl(platform)
-    })),
+    platforms,
     source: wikidataResult.found ? 'wikidata' : 'fallback',
     wikidataId: wikidataResult.wikidataId,
     resolvedAt: Date.now(),
-    ttlDays: 7
+    ttlDays: 7,
+    steamDeckTtlDays: 2  // Shorter TTL for Steam Deck data
   };
 }
 
@@ -207,10 +259,14 @@ async function resolvePlatformData(appid, gameName) {
     return { entry, fromCache: false };
   }
 
-  // 3. Try Wikidata
-  if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Querying Wikidata for appid ${appid}`);
+  // 3. Try Wikidata and ProtonDB in parallel
+  if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Querying Wikidata and ProtonDB for appid ${appid}`);
   try {
-    const wikidataResult = await WikidataClient.queryBySteamAppId(appid);
+    // Query both sources in parallel for efficiency
+    const [wikidataResult, steamDeckData] = await Promise.all([
+      WikidataClient.queryBySteamAppId(appid),
+      getSteamDeckData(appid)
+    ]);
 
     if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Wikidata result for ${appid}:`, {
       found: wikidataResult?.found,
@@ -218,11 +274,13 @@ async function resolvePlatformData(appid, gameName) {
       platforms: wikidataResult?.platforms
     });
 
-    const entry = wikidataResultToCacheEntry(appid, gameName, wikidataResult);
+    if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} ProtonDB result for ${appid}:`, steamDeckData);
+
+    const entry = wikidataResultToCacheEntry(appid, gameName, wikidataResult, steamDeckData);
 
     if (wikidataResult.found) {
       await Cache.saveToCache(entry);
-      console.log(`${RESOLVER_LOG_PREFIX} Resolved via Wikidata: ${appid}`);
+      console.log(`${RESOLVER_LOG_PREFIX} Resolved via Wikidata + ProtonDB: ${appid}`);
     } else {
       // Game genuinely not in Wikidata - cache this result so we don't keep querying
       if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Wikidata found no match for appid ${appid}`);
