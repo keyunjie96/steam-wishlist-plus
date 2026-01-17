@@ -5,8 +5,6 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.js",
-    "build:tsc": "tsc && node scripts/strip-commonjs.js",
-    "build:watch": "tsc --watch",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "test": "jest",
