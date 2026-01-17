@@ -4,7 +4,8 @@
   "description": "Chrome extension that adds platform availability icons to Steam wishlist",
   "private": true,
   "scripts": {
-    "build": "tsc && node scripts/strip-commonjs.js",
+    "build": "node scripts/build.js",
+    "build:tsc": "tsc && node scripts/strip-commonjs.js",
     "build:watch": "tsc --watch",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
