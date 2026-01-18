@@ -168,6 +168,8 @@ declare global {
       scheduleSteamDeckRefresh: (reason: string) => void;
       markMissingSteamDeckData: (appid: string) => void;
       getEnabledPlatforms: () => Platform[];
+      isAnyConsolePlatformEnabled: () => boolean;
+      setupSettingsChangeListener: () => void;
       getMissingSteamDeckAppIds: () => Set<string>;
       getSteamDeckRefreshAttempts: () => number;
       setSteamDeckRefreshAttempts: (val: number) => void;

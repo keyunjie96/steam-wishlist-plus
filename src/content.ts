@@ -130,6 +130,14 @@ function getEnabledPlatforms(): Platform[] {
 }
 
 /**
+ * Checks if any console platform (Nintendo, PlayStation, Xbox) is enabled.
+ * Used to skip Wikidata fetching when all consoles are disabled.
+ */
+function isAnyConsolePlatformEnabled(): boolean {
+  return userSettings.showNintendo || userSettings.showPlaystation || userSettings.showXbox;
+}
+
+/**
  * Loads user settings from chrome.storage.sync
  */
 async function loadUserSettings(): Promise<void> {
@@ -142,6 +150,79 @@ async function loadUserSettings(): Promise<void> {
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
+}
+
+/**
+ * Handles settings changes from the options page.
+ * Refreshes icons when platforms are re-enabled.
+ */
+function setupSettingsChangeListener(): void {
+  // Guard for test environment where chrome.storage.onChanged may not exist
+  if (!chrome?.storage?.onChanged) {
+    return;
+  }
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'sync' || !changes.xcpwSettings) {
+      return;
+    }
+
+    const oldSettings = changes.xcpwSettings.oldValue || {};
+    const newSettings = changes.xcpwSettings.newValue || {};
+
+    // Update local settings
+    userSettings = { ...userSettings, ...newSettings };
+    if (DEBUG) console.log(`${LOG_PREFIX} Settings changed:`, { old: oldSettings, new: newSettings });
+
+    // Check if any platform was just enabled
+    const platformsJustEnabled: Platform[] = [];
+
+    if (newSettings.showNintendo && !oldSettings.showNintendo) platformsJustEnabled.push('nintendo');
+    if (newSettings.showPlaystation && !oldSettings.showPlaystation) platformsJustEnabled.push('playstation');
+    if (newSettings.showXbox && !oldSettings.showXbox) platformsJustEnabled.push('xbox');
+    if (newSettings.showSteamDeck && !oldSettings.showSteamDeck) platformsJustEnabled.push('steamdeck');
+
+    // Check if any platform was just disabled
+    const platformsJustDisabled: Platform[] = [];
+
+    if (!newSettings.showNintendo && oldSettings.showNintendo) platformsJustDisabled.push('nintendo');
+    if (!newSettings.showPlaystation && oldSettings.showPlaystation) platformsJustDisabled.push('playstation');
+    if (!newSettings.showXbox && oldSettings.showXbox) platformsJustDisabled.push('xbox');
+    if (!newSettings.showSteamDeck && oldSettings.showSteamDeck) platformsJustDisabled.push('steamdeck');
+
+    if (platformsJustEnabled.length > 0 || platformsJustDisabled.length > 0) {
+      console.log(`${LOG_PREFIX} Platform settings changed - enabled: [${platformsJustEnabled.join(', ')}], disabled: [${platformsJustDisabled.join(', ')}]`);
+
+      // Refresh icons from cache for all visible containers
+      // This will show/hide icons based on new settings without re-fetching data
+      refreshIconsFromCache('settings-change');
+
+      // If Steam Deck was just enabled, fetch Steam Deck data
+      if (platformsJustEnabled.includes('steamdeck') && !steamDeckData) {
+        const SteamDeck = globalThis.XCPW_SteamDeck;
+        if (SteamDeck) {
+          SteamDeck.waitForDeckData().then((data: Map<string, DeckCategory>) => {
+            if (data.size > 0) {
+              steamDeckData = data;
+              refreshIconsFromCache('steamdeck-enabled');
+            }
+          });
+        }
+      }
+
+      // If console platforms were just enabled and we have no cached data, re-process items
+      const consolePlatformsJustEnabled = platformsJustEnabled.filter(p => p !== 'steamdeck');
+      if (consolePlatformsJustEnabled.length > 0) {
+        // Check if we need to fetch new data (items not in cache)
+        const needsFetch = Array.from(cachedEntriesByAppId.keys()).length === 0;
+        if (needsFetch) {
+          // Clear injected state and reprocess to trigger fetches
+          injectedAppIds.clear();
+          processWishlistItems();
+        }
+      }
+    }
+  });
 }
 
 /**
@@ -767,6 +848,33 @@ async function processPendingBatch(): Promise<void> {
   pendingItems.clear();
   batchDebounceTimer = null;
 
+  // Skip Wikidata fetch if all console platforms are disabled
+  // Just update icons with Steam Deck data (if enabled) or remove loading state
+  if (!isAnyConsolePlatformEnabled()) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Skipping batch request - all console platforms disabled`);
+    for (const [appid, { container }] of containerMap) {
+      // Update with Steam Deck data only if available and enabled
+      if (userSettings.showSteamDeck && steamDeckData) {
+        updateIconsWithData(container, {
+          appid,
+          gameName: containerMap.get(appid)!.gameName,
+          platforms: {
+            nintendo: { status: 'unknown', storeUrl: '' },
+            playstation: { status: 'unknown', storeUrl: '' },
+            xbox: { status: 'unknown', storeUrl: '' }
+          },
+          source: 'local',
+          wikidataId: null,
+          resolvedAt: Date.now(),
+          ttlDays: 7
+        });
+      } else {
+        removeLoadingState(container);
+      }
+    }
+    return;
+  }
+
   if (DEBUG) console.log(`${LOG_PREFIX} Sending batch request for ${games.length} games`);
 
   try {
@@ -1024,8 +1132,9 @@ async function init(): Promise<void> {
     return;
   }
 
-  // Load user settings first
+  // Load user settings first and set up change listener
   await loadUserSettings();
+  setupSettingsChangeListener();
 
   // Load Steam Deck data from page script (runs in MAIN world)
   const SteamDeck = globalThis.XCPW_SteamDeck;
@@ -1140,6 +1249,8 @@ if (typeof globalThis !== 'undefined') {
     scheduleSteamDeckRefresh,
     markMissingSteamDeckData,
     getEnabledPlatforms,
+    isAnyConsolePlatformEnabled,
+    setupSettingsChangeListener,
     getMissingSteamDeckAppIds: () => missingSteamDeckAppIds,
     getSteamDeckRefreshAttempts: () => steamDeckRefreshAttempts,
     setSteamDeckRefreshAttempts: (val: number) => { steamDeckRefreshAttempts = val; },
