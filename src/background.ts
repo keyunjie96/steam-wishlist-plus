@@ -10,7 +10,7 @@
 // Import dependencies via importScripts (Chrome extension service workers)
 // TypeScript will handle the types through the global declarations
 declare function importScripts(...urls: string[]): void;
-importScripts('types.js', 'cache.js', 'wikidataClient.js', 'resolver.js');
+importScripts('types.js', 'cache.js', 'wikidataClient.js', 'hltbClient.js', 'resolver.js');
 
 import type {
   ExtensionMessage,
@@ -19,19 +19,25 @@ import type {
   GetPlatformDataBatchRequest,
   GetPlatformDataBatchResponse,
   UpdateCacheRequest,
-  CacheEntry
+  CacheEntry,
+  HltbData,
+  GetHltbDataRequest,
+  GetHltbDataResponse,
+  GetHltbDataBatchRequest,
+  GetHltbDataBatchResponse
 } from './types';
 
 const LOG_PREFIX = '[XCPW Background]';
 
 interface AsyncResponse {
   success: boolean;
-  data?: CacheEntry | null;
+  data?: CacheEntry | HltbData | null;
   fromCache?: boolean;
   error?: string;
   count?: number;
   oldestEntry?: number | null;
   results?: Record<string, { data: CacheEntry; fromCache: boolean }>;
+  hltbResults?: Record<string, HltbData | null>;
 }
 
 /**
@@ -85,6 +91,14 @@ function handleMessage(
 
     case 'CLEAR_CACHE':
       handleAsync(() => handleClearCache(), sendResponse, { success: false });
+      return true;
+
+    case 'GET_HLTB_DATA':
+      handleAsync(() => getHltbData(message as GetHltbDataRequest), sendResponse, { success: false, data: null });
+      return true;
+
+    case 'GET_HLTB_DATA_BATCH':
+      handleAsync(() => getBatchHltbData(message as GetHltbDataBatchRequest), sendResponse, { success: false, hltbResults: {} });
       return true;
 
     default:
@@ -181,6 +195,115 @@ async function handleClearCache(): Promise<{ success: boolean }> {
   await globalThis.XCPW_Cache.clearCache();
   console.log(`${LOG_PREFIX} Cache cleared`);
   return { success: true };
+}
+
+/**
+ * Gets HLTB data for a single game
+ */
+async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResponse> {
+  const { appid, gameName } = message;
+
+  if (!appid || !gameName) {
+    return { success: false, data: null, error: 'Missing appid or gameName' };
+  }
+
+  if (!globalThis.XCPW_HltbClient) {
+    return { success: false, data: null, error: 'HLTB client not loaded' };
+  }
+
+  // Check if we have cached HLTB data first
+  const cached = await globalThis.XCPW_Cache.getFromCache(appid);
+  if (cached?.hltbData) {
+    console.log(`${LOG_PREFIX} HLTB cache hit for appid ${appid}`);
+    return { success: true, data: cached.hltbData };
+  }
+
+  // Query HLTB
+  try {
+    const result = await globalThis.XCPW_HltbClient.queryByGameName(gameName, appid);
+
+    if (result) {
+      // Update cache with HLTB data
+      if (cached) {
+        cached.hltbData = result.data;
+        await globalThis.XCPW_Cache.saveToCache(cached);
+      }
+      console.log(`${LOG_PREFIX} HLTB resolved for appid ${appid}: ${result.data.mainStory}h`);
+      return { success: true, data: result.data };
+    }
+
+    console.log(`${LOG_PREFIX} HLTB no match for appid ${appid}`);
+    return { success: true, data: null };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`${LOG_PREFIX} HLTB error for ${appid}:`, errorMessage);
+    return { success: false, data: null, error: errorMessage };
+  }
+}
+
+/**
+ * Gets HLTB data for multiple games in batch
+ */
+async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<AsyncResponse> {
+  const { games } = message;
+
+  if (!games || !Array.isArray(games) || games.length === 0) {
+    return { success: false, hltbResults: {} };
+  }
+
+  if (!globalThis.XCPW_HltbClient) {
+    return { success: false, hltbResults: {}, error: 'HLTB client not loaded' };
+  }
+
+  console.log(`${LOG_PREFIX} HLTB batch request for ${games.length} games`);
+
+  const hltbResults: Record<string, HltbData | null> = {};
+  const uncached: Array<{ appid: string; gameName: string }> = [];
+
+  // Check cache first
+  for (const { appid, gameName } of games) {
+    const cached = await globalThis.XCPW_Cache.getFromCache(appid);
+    if (cached?.hltbData) {
+      hltbResults[appid] = cached.hltbData;
+    } else {
+      uncached.push({ appid, gameName });
+    }
+  }
+
+  // Query HLTB for uncached games
+  if (uncached.length > 0) {
+    try {
+      const batchResults = await globalThis.XCPW_HltbClient.batchQueryByGameNames(uncached);
+
+      for (const { appid } of uncached) {
+        const hltbResult = batchResults.get(appid);
+        if (hltbResult) {
+          hltbResults[appid] = hltbResult.data;
+
+          // Update cache
+          const cached = await globalThis.XCPW_Cache.getFromCache(appid);
+          if (cached) {
+            cached.hltbData = hltbResult.data;
+            await globalThis.XCPW_Cache.saveToCache(cached);
+          }
+        } else {
+          hltbResults[appid] = null;
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`${LOG_PREFIX} HLTB batch error:`, errorMessage);
+      // Mark uncached as null
+      for (const { appid } of uncached) {
+        if (!(appid in hltbResults)) {
+          hltbResults[appid] = null;
+        }
+      }
+    }
+  }
+
+  console.log(`${LOG_PREFIX} HLTB batch complete: ${Object.keys(hltbResults).length} results`);
+  return { success: true, hltbResults };
 }
 
 chrome.runtime.onMessage.addListener(handleMessage);

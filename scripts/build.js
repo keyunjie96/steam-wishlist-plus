@@ -21,6 +21,7 @@ const files = [
   'icons.ts',
   'cache.ts',
   'wikidataClient.ts',
+  'hltbClient.ts',
   'steamDeckClient.ts',
   'steamDeckPageScript.ts',
   'resolver.ts',

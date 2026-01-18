@@ -47,6 +47,7 @@
 │   ├── cache.ts            # Cache module
 │   ├── resolver.ts         # Resolution orchestrator
 │   ├── wikidataClient.ts   # Wikidata SPARQL client
+│   ├── hltbClient.ts       # HLTB completion time client
 │   ├── steamDeckClient.ts  # Steam Deck data from page SSR
 │   ├── steamDeckPageScript.ts # Injected script for SSR access
 │   ├── icons.ts            # Icon definitions
@@ -69,6 +70,7 @@
 | `src/resolver.ts` | Orchestrates data resolution | `resolvePlatformData()` |
 | `src/cache.ts` | Chrome storage operations | `getFromCache()`, `saveToCache()`, `getOrCreatePlatformData()` |
 | `src/wikidataClient.ts` | Wikidata SPARQL queries | `queryBySteamAppId()`, `executeSparqlQuery()` |
+| `src/hltbClient.ts` | HLTB completion time queries | `queryByGameName()`, `batchQueryByGameNames()` |
 | `src/steamDeckClient.ts` | Steam Deck data extraction | `waitForDeckData()`, `getDeckStatus()` |
 | `src/steamDeckPageScript.ts` | Page script for SSR access | `extractDeckData()` (runs in MAIN world) |
 | `src/icons.ts` | SVG icons and platform info | `PLATFORM_ICONS`, `PLATFORM_INFO`, `STATUS_INFO` |
@@ -190,6 +192,7 @@ Each module has a debug flag at the top:
 const DEBUG = false;              // src/content.ts
 const RESOLVER_DEBUG = false;     // src/resolver.ts
 const WIKIDATA_DEBUG = false;     // src/wikidataClient.ts
+const HLTB_DEBUG = false;         // src/hltbClient.ts
 const CACHE_DEBUG = false;        // src/cache.ts (enables manual test overrides)
 const STEAM_DECK_DEBUG = false;   // src/steamDeckClient.ts
 ```

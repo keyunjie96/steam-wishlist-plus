@@ -215,3 +215,42 @@
     opacity: 0.4;
   }
 }
+
+/* HLTB (How Long To Beat) time badge */
+.xcpw-hltb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  margin-left: 4px;
+  background: rgba(102, 192, 244, 0.15);
+  border: 1px solid rgba(102, 192, 244, 0.3);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #66c0f4;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: default;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.xcpw-hltb-badge:hover {
+  background: rgba(102, 192, 244, 0.25);
+  border-color: rgba(102, 192, 244, 0.5);
+}
+
+/* High contrast mode support for HLTB badge */
+@media (prefers-contrast: high) {
+  .xcpw-hltb-badge {
+    background: rgba(102, 192, 244, 0.3);
+    border-color: #66c0f4;
+  }
+}
+
+/* Reduced motion support for HLTB badge */
+@media (prefers-reduced-motion: reduce) {
+  .xcpw-hltb-badge {
+    transition: none;
+  }
+}
