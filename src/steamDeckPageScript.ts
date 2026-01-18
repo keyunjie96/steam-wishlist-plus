@@ -35,7 +35,6 @@
   function isDeckCompatQuery(query: TanStackQuery): boolean {
     return !!(query.queryKey &&
       query.queryKey[0] === 'StoreItem' &&
-      query.queryKey.includes('include_platforms') &&
       query.state?.data?.steam_deck_compat_category !== undefined);
   }
 

@@ -104,7 +104,7 @@ describe('steamDeckPageScript.js', () => {
             expect(data['67890']).toBeUndefined();
         });
 
-        it('should skip queries with wrong queryKey format', () => {
+        it('should skip queries that are not StoreItem', () => {
             window.SSR = {
                 renderContext: {
                     queryData: JSON.stringify({
@@ -127,7 +127,8 @@ describe('steamDeckPageScript.js', () => {
             const dataEl = document.getElementById('xcpw-steamdeck-data');
             const data = JSON.parse(dataEl.textContent);
 
-            expect(Object.keys(data).length).toBe(0);
+            expect(data['12345']).toBeUndefined();
+            expect(data['67890']).toBe(2);
         });
 
         it('should handle missing SSR gracefully', () => {

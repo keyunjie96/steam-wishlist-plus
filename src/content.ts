@@ -43,12 +43,19 @@ function cleanupAllIcons(): void {
     batchDebounceTimer = null;
   }
 
+  if (steamDeckRefreshTimer) {
+    clearTimeout(steamDeckRefreshTimer);
+    steamDeckRefreshTimer = null;
+  }
+  steamDeckRefreshAttempts = 0;
+
   // Remove all icon containers from DOM
   document.querySelectorAll('.xcpw-platforms').forEach(el => el.remove());
 
   // Clear tracking state
   injectedAppIds.clear();
   processedAppIds.clear();
+  missingSteamDeckAppIds.clear();
 
   // Clear pending batch (stale container references)
   pendingItems.clear();
@@ -84,6 +91,16 @@ let userSettings = {
 /** Pre-extracted Steam Deck data from page SSR (Map of appId -> category) */
 let steamDeckData: Map<string, DeckCategory> | null = null;
 
+/** Cached platform data entries for refreshes */
+const cachedEntriesByAppId = new Map<string, CacheEntry>();
+
+/** Steam Deck refresh scheduling */
+const STEAM_DECK_REFRESH_DELAYS_MS = [800, 2000, 5000, 10000];
+let steamDeckRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+let steamDeckRefreshInFlight = false;
+let steamDeckRefreshAttempts = 0;
+const missingSteamDeckAppIds = new Set<string>();
+
 /**
  * Gets the list of enabled platforms based on user settings and current URL.
  * Hides Steam Deck icons when Steam's native Deck filter is active (deck_filters URL param)
@@ -114,6 +131,109 @@ async function loadUserSettings(): Promise<void> {
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
+}
+
+/**
+ * Compares two Steam Deck data maps for equality.
+ */
+function isSameDeckData(
+  left: Map<string, DeckCategory> | null,
+  right: Map<string, DeckCategory> | null
+): boolean {
+  if (!left || !right) return false;
+  if (left.size !== right.size) return false;
+  for (const [appid, category] of left) {
+    if (right.get(appid) !== category) return false;
+  }
+  return true;
+}
+
+/**
+ * Refreshes icons for containers using cached platform data.
+ */
+function refreshIconsFromCache(reason: string): void {
+  let refreshedCount = 0;
+
+  for (const [appid, data] of cachedEntriesByAppId) {
+    const container = document.querySelector<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+    if (!container || !document.body.contains(container)) continue;
+
+    updateIconsWithData(container, data);
+    refreshedCount++;
+
+    const gameName = data.gameName || container.getAttribute('data-game-name') || 'Unknown Game';
+    const iconSummary = getRenderedIconSummary(container);
+    console.log(`${LOG_PREFIX} Rendered (deck-refresh): ${appid} - ${gameName} [icons: ${iconSummary}]`);
+  }
+
+  if (DEBUG) console.log(`${LOG_PREFIX} Steam Deck refresh (${reason}) updated ${refreshedCount} items`);
+}
+
+/**
+ * Refreshes Steam Deck data and re-renders icons if new data arrives.
+ */
+async function refreshSteamDeckData(reason: string): Promise<void> {
+  if (steamDeckRefreshInFlight) return;
+  const SteamDeck = globalThis.XCPW_SteamDeck;
+  if (!SteamDeck || !userSettings.showSteamDeck) return;
+
+  steamDeckRefreshInFlight = true;
+  try {
+    const latest = await SteamDeck.waitForDeckData();
+    if (latest.size > 0) {
+      const previous = steamDeckData;
+      steamDeckData = latest;
+
+      if (missingSteamDeckAppIds.size > 0) {
+        for (const appid of missingSteamDeckAppIds) {
+          if (latest.has(appid)) {
+            missingSteamDeckAppIds.delete(appid);
+          }
+        }
+      }
+
+      if (!isSameDeckData(latest, previous)) {
+        refreshIconsFromCache(reason);
+      }
+    }
+  } finally {
+    steamDeckRefreshInFlight = false;
+    if (steamDeckRefreshAttempts < STEAM_DECK_REFRESH_DELAYS_MS.length && missingSteamDeckAppIds.size > 0) {
+      scheduleSteamDeckRefresh(reason);
+    }
+  }
+}
+
+/**
+ * Schedules a Steam Deck refresh after a short delay.
+ */
+function scheduleSteamDeckRefresh(reason: string): void {
+  if (!userSettings.showSteamDeck || !globalThis.XCPW_SteamDeck) return;
+  if (steamDeckRefreshAttempts >= STEAM_DECK_REFRESH_DELAYS_MS.length) return;
+  if (steamDeckRefreshTimer) return;
+
+  const delay = STEAM_DECK_REFRESH_DELAYS_MS[steamDeckRefreshAttempts];
+  steamDeckRefreshTimer = setTimeout(() => {
+    steamDeckRefreshTimer = null;
+    steamDeckRefreshAttempts++;
+    void refreshSteamDeckData(reason);
+  }, delay);
+}
+
+/**
+ * Tracks appids missing Steam Deck data and schedules a refresh.
+ */
+function markMissingSteamDeckData(appid: string): void {
+  if (!appid || !userSettings.showSteamDeck || !globalThis.XCPW_SteamDeck) return;
+
+  const wasEmpty = missingSteamDeckAppIds.size === 0;
+  missingSteamDeckAppIds.add(appid);
+
+  if (wasEmpty && steamDeckRefreshAttempts >= STEAM_DECK_REFRESH_DELAYS_MS.length) {
+    steamDeckRefreshAttempts = 0;
+  }
+
+  scheduleSteamDeckRefresh('missing-deck');
 }
 
 // Definitions loaded from types.js and icons.js
@@ -177,7 +297,7 @@ function findWishlistRow(link: Element): Element | null {
 }
 
 /**
- * Finds all unprocessed wishlist items using multiple strategies.
+ * Finds all wishlist items needing processing using multiple strategies.
  * Strategy 1: Unfiltered view (data-rfd-draggable-id attribute)
  * Strategy 2: Filtered view (walk up from app links)
  */
@@ -185,22 +305,29 @@ function findWishlistItems(root: Element | Document = document): Element[] {
   const items = new Map<string, Element>();
 
   // Strategy 1: Unfiltered view (existing selector - most reliable)
-  root.querySelectorAll(`[data-rfd-draggable-id^="WishlistItem-"]:not([${PROCESSED_ATTR}])`)
+  root.querySelectorAll(`[data-rfd-draggable-id^="WishlistItem-"]`)
     .forEach(item => {
       const appid = extractAppId(item);
-      if (appid) items.set(appid, item);
+      if (!appid) return;
+      const processedAppId = item.getAttribute(PROCESSED_ATTR);
+      const hasIcons = !!item.querySelector('.xcpw-platforms');
+      if (processedAppId === appid && hasIcons) return;
+      items.set(appid, item);
     });
 
   // Strategy 2: Filtered view - find app links and walk up to row
   root.querySelectorAll('a[href*="/app/"]').forEach(link => {
-    // Skip links that are inside already-processed items or our own icons
-    if (link.closest(`[${PROCESSED_ATTR}]`) || link.closest('.xcpw-platforms')) return;
+    // Skip links inside our own icons
+    if (link.closest('.xcpw-platforms')) return;
 
     const row = findWishlistRow(link);
-    if (row && !row.hasAttribute(PROCESSED_ATTR)) {
-      const appid = extractAppId(row);
-      if (appid && !items.has(appid)) items.set(appid, row);
-    }
+    if (!row) return;
+    const appid = extractAppId(row);
+    if (!appid) return;
+    const processedAppId = row.getAttribute(PROCESSED_ATTR);
+    const hasIcons = !!row.querySelector('.xcpw-platforms');
+    if (processedAppId === appid && hasIcons) return;
+    if (!items.has(appid)) items.set(appid, row);
   });
 
   return Array.from(items.values());
@@ -352,13 +479,30 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   const enabledPlatforms = getEnabledPlatforms();
   const iconsToAdd: HTMLElement[] = [];
 
+  // Reset previous icons to keep updates idempotent
+  container.querySelectorAll('.xcpw-platform-icon, .xcpw-separator').forEach(el => el.remove());
+
   // Get Steam Deck client if available
   const SteamDeck = globalThis.XCPW_SteamDeck;
 
   for (const platform of enabledPlatforms) {
     // Special handling for Steam Deck - use pre-extracted SSR data
-    if (platform === 'steamdeck' && SteamDeck && appid && steamDeckData) {
+    if (platform === 'steamdeck') {
+      if (!SteamDeck || !appid) {
+        continue;
+      }
+
+      if (!steamDeckData) {
+        markMissingSteamDeckData(appid);
+        continue;
+      }
+
       const deckResult = SteamDeck.getDeckStatus(steamDeckData, appid);
+      if (!deckResult.found) {
+        markMissingSteamDeckData(appid);
+      } else {
+        missingSteamDeckAppIds.delete(appid);
+      }
       const displayStatus = SteamDeck.statusToDisplayStatus(deckResult.status);
 
       // Skip unknown/unsupported Steam Deck games
@@ -395,6 +539,29 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
       container.appendChild(icon);
     }
   }
+}
+
+/**
+ * Creates a concise log string describing rendered icons for a container.
+ */
+function getRenderedIconSummary(container: HTMLElement): string {
+  const icons = Array.from(container.querySelectorAll('.xcpw-platform-icon'));
+  if (icons.length === 0) return 'none';
+
+  const summaries = icons.map(icon => {
+    const platform = icon.getAttribute('data-platform') || 'unknown';
+    const tier = icon.getAttribute('data-tier');
+    if (tier) return `${platform}:${tier}`;
+
+    const status = icon.classList.contains('xcpw-available')
+      ? 'available'
+      : icon.classList.contains('xcpw-unavailable')
+        ? 'unavailable'
+        : 'unknown';
+    return `${platform}:${status}`;
+  });
+
+  return summaries.join(', ');
 }
 
 /**
@@ -475,19 +642,60 @@ function findInjectionPoint(item: Element): InjectionPoint {
 // Message Passing
 // ============================================================================
 
+/** Retry configuration for service worker messages */
+const MESSAGE_MAX_RETRIES = 3;
+const MESSAGE_RETRY_DELAY_MS = 100;
+
+/**
+ * Sends a message to the service worker with retry logic.
+ * MV3 service workers can be terminated and may not respond on first attempt.
+ * Retries with exponential backoff to handle connection failures.
+ */
+async function sendMessageWithRetry<T>(message: object, maxRetries = MESSAGE_MAX_RETRIES): Promise<T | null> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await chrome.runtime.sendMessage(message);
+      return response as T;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if it's a connection error (service worker not ready or context invalid)
+      const isConnectionError = lastError.message.includes('Could not establish connection') ||
+                                lastError.message.includes('Receiving end does not exist') ||
+                                lastError.message.includes('Extension context invalidated');
+
+      if (isConnectionError && attempt < maxRetries) {
+        // Wait before retry with exponential backoff
+        const delay = MESSAGE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        if (DEBUG) console.log(`${LOG_PREFIX} Message retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      // Non-connection error or max retries reached
+      throw lastError;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Requests platform data from background service worker (legacy single-item)
  */
 async function requestPlatformData(appid: string, gameName: string): Promise<GetPlatformDataResponse | null> {
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendMessageWithRetry<GetPlatformDataResponse>({
       type: 'GET_PLATFORM_DATA',
       appid,
       gameName
     });
 
     if (response?.success && response.data) {
-      return response as GetPlatformDataResponse;
+      cachedEntriesByAppId.set(appid, response.data);
+      return response;
     }
     return null;
   } catch {
@@ -550,7 +758,7 @@ async function processPendingBatch(): Promise<void> {
   if (DEBUG) console.log(`${LOG_PREFIX} Sending batch request for ${games.length} games`);
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendMessageWithRetry<{ success: boolean; results: Record<string, { data: CacheEntry; fromCache: boolean }> }>({
       type: 'GET_PLATFORM_DATA_BATCH',
       games
     });
@@ -572,10 +780,12 @@ async function processPendingBatch(): Promise<void> {
 
         if (result.data) {
           if (DEBUG) console.log(`${LOG_PREFIX} Updating icons for appid ${appid}`);
+          cachedEntriesByAppId.set(appid, result.data);
           updateIconsWithData(container, result.data);
 
           const source = result.fromCache ? 'cache' : 'new';
-          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName}`);
+          const iconSummary = getRenderedIconSummary(container);
+          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]`);
         } else {
           // No data available - keep icons as unknown (still link to store search)
           removeLoadingState(container);
@@ -611,6 +821,21 @@ const INJECTION_MAX_RETRIES = 10;
 const INJECTION_BASE_DELAY_MS = 150;
 
 /**
+ * Clears stale per-item state when a row is reused for a different appid.
+ */
+function resetItemForReprocess(item: Element, previousAppId: string | null): void {
+  item.removeAttribute(PROCESSED_ATTR);
+  item.removeAttribute(ICONS_INJECTED_ATTR);
+  const existingIcons = item.querySelector('.xcpw-platforms');
+  if (existingIcons) existingIcons.remove();
+
+  if (previousAppId) {
+    injectedAppIds.delete(previousAppId);
+    pendingItems.delete(previousAppId);
+  }
+}
+
+/**
  * Waits for SVG icons to appear in lazy-loaded items before finding injection point.
  * Steam's virtualized list loads skeletons first, then adds icons slightly later.
  */
@@ -638,18 +863,27 @@ async function waitForInjectionPoint(item: Element): Promise<InjectionPoint | nu
  * Extracts appid, injects icons, and requests platform data.
  */
 async function processItem(item: Element): Promise<void> {
-  // Skip if already processed via attribute
-  if (item.hasAttribute(PROCESSED_ATTR)) {
-    return;
-  }
-
   const appId = extractAppId(item);
   if (!appId) {
     return;
   }
 
   // Check if icons actually exist in DOM for this item
-  const iconsExistInDom = item.querySelector('.xcpw-platforms');
+  let iconsExistInDom = item.querySelector('.xcpw-platforms');
+
+  const processedAppId = item.getAttribute(PROCESSED_ATTR);
+  if (processedAppId) {
+    if (processedAppId === appId) {
+      if (iconsExistInDom) {
+        return;
+      }
+      if (DEBUG) console.log(`${LOG_PREFIX} Icons missing, reprocessing ${appId}`);
+    } else if (DEBUG) {
+      console.log(`${LOG_PREFIX} Row reused, resetting ${processedAppId} -> ${appId}`);
+    }
+    resetItemForReprocess(item, processedAppId);
+    iconsExistInDom = null;
+  }
 
   // If injectedAppIds thinks icons exist, verify they're actually in DOM
   // React virtualization can destroy DOM elements, desync'ing our tracking state
@@ -657,7 +891,7 @@ async function processItem(item: Element): Promise<void> {
     if (iconsExistInDom) {
       // Icons actually exist - skip processing
       if (DEBUG) console.log(`${LOG_PREFIX} Skipping ${appId} - icons verified in DOM`);
-      item.setAttribute(PROCESSED_ATTR, 'true');
+      item.setAttribute(PROCESSED_ATTR, appId);
       return;
     } else {
       // State desync: injectedAppIds says injected, but icons are gone (React destroyed them)
@@ -669,12 +903,12 @@ async function processItem(item: Element): Promise<void> {
     // Icons exist but not tracked - sync our state
     if (DEBUG) console.log(`${LOG_PREFIX} Skipping ${appId} - icons already in DOM (syncing)`);
     injectedAppIds.add(appId);
-    item.setAttribute(PROCESSED_ATTR, 'true');
+    item.setAttribute(PROCESSED_ATTR, appId);
     return;
   }
 
   // Mark as processed immediately to prevent duplicate processing
-  item.setAttribute(PROCESSED_ATTR, 'true');
+  item.setAttribute(PROCESSED_ATTR, appId);
 
   // Log new appids (deduplicated) - only on first discovery
   const isNewAppId = !processedAppIds.has(appId);
@@ -732,9 +966,17 @@ function processWishlistItems(root: Element | Document = document): void {
  */
 function setupObserver(): void {
   const observer = new MutationObserver((mutations) => {
-    // Only process if there are actually new nodes added
-    const hasNewNodes = mutations.some(m => m.addedNodes.length > 0);
-    if (!hasNewNodes) return;
+    // Process when new nodes are added or rows are reused via attribute updates
+    const hasRelevantChanges = mutations.some(m => {
+      if (m.type === 'childList') {
+        return m.addedNodes.length > 0;
+      }
+      if (m.type === 'attributes') {
+        return m.attributeName === 'data-rfd-draggable-id' || m.attributeName === 'href';
+      }
+      return false;
+    });
+    if (!hasRelevantChanges) return;
 
     // Debounce to batch rapid updates during scroll/filter changes
     if (observerDebounceTimer) clearTimeout(observerDebounceTimer);
@@ -748,6 +990,8 @@ function setupObserver(): void {
   observer.observe(document.body, {
     childList: true,
     subtree: true,
+    attributes: true,
+    attributeFilter: ['data-rfd-draggable-id', 'href'],
   });
 
   console.log(`${LOG_PREFIX} MutationObserver attached`);
@@ -774,11 +1018,18 @@ async function init(): Promise<void> {
   // Load Steam Deck data from page script (runs in MAIN world)
   const SteamDeck = globalThis.XCPW_SteamDeck;
   if (SteamDeck && userSettings.showSteamDeck) {
-    steamDeckData = await SteamDeck.waitForDeckData();
+    const latestDeckData = await SteamDeck.waitForDeckData();
+    if (latestDeckData.size > 0) {
+      steamDeckData = latestDeckData;
+    }
   }
 
   // Process existing items
   processWishlistItems();
+
+  // Schedule a follow-up Steam Deck refresh in case SSR updates lag behind
+  steamDeckRefreshAttempts = 0;
+  scheduleSteamDeckRefresh('init');
 
   // Set up observer for dynamic content
   setupObserver();
@@ -808,11 +1059,17 @@ async function init(): Promise<void> {
         if (userSettings.showSteamDeck) {
           const SteamDeck = globalThis.XCPW_SteamDeck;
           if (SteamDeck) {
-            steamDeckData = await SteamDeck.waitForDeckData();
+            const latestDeckData = await SteamDeck.waitForDeckData();
+            if (latestDeckData.size > 0) {
+              steamDeckData = latestDeckData;
+            }
           }
         }
 
         processWishlistItems();
+
+        steamDeckRefreshAttempts = 0;
+        scheduleSteamDeckRefresh('url-change');
       }, URL_CHANGE_DEBOUNCE_MS);
     }
   }, 500);
@@ -842,6 +1099,9 @@ if (typeof globalThis !== 'undefined') {
     removeLoadingState,
     findInjectionPoint,
     requestPlatformData,
+    sendMessageWithRetry,
+    MESSAGE_MAX_RETRIES,
+    MESSAGE_RETRY_DELAY_MS,
     // New exports for BUG-3 fixes
     findWishlistRow,
     findWishlistItems,

@@ -1311,11 +1311,13 @@ describe('content.js', () => {
     });
 
     it('should return null and not throw when service worker errors', async () => {
-      const { requestPlatformData } = globalThis.XCPW_ContentTestExports;
+      const { requestPlatformData, MESSAGE_MAX_RETRIES } = globalThis.XCPW_ContentTestExports;
 
-      chrome.runtime.sendMessage.mockRejectedValueOnce(
-        new Error('Extension context invalidated')
-      );
+      // Mock all retry attempts (initial + MAX_RETRIES) to fail
+      const error = new Error('Extension context invalidated');
+      for (let i = 0; i <= MESSAGE_MAX_RETRIES; i++) {
+        chrome.runtime.sendMessage.mockRejectedValueOnce(error);
+      }
 
       const result = await requestPlatformData('12345', 'Test');
 
@@ -1645,7 +1647,10 @@ describe('content.js', () => {
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-11111-0');
-      item.setAttribute('data-xcpw-processed', 'true'); // Already processed
+      item.setAttribute('data-xcpw-processed', '11111'); // Already processed
+      const icons = document.createElement('span');
+      icons.className = 'xcpw-platforms';
+      item.appendChild(icons);
       const link = document.createElement('a');
       link.href = '/app/11111/Processed';
       item.appendChild(link);
@@ -2191,12 +2196,15 @@ describe('content.js', () => {
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-12345-0');
-      item.setAttribute('data-xcpw-processed', 'true'); // Already processed
+      item.setAttribute('data-xcpw-processed', '12345'); // Already processed
+      const icons = document.createElement('span');
+      icons.className = 'xcpw-platforms';
+      item.appendChild(icons);
 
       await processItem(item);
 
       // Should return early without doing anything
-      expect(item.querySelector('.xcpw-platforms')).toBeNull();
+      expect(item.querySelectorAll('.xcpw-platforms').length).toBe(1);
     });
 
     it('should skip items without appId', async () => {
