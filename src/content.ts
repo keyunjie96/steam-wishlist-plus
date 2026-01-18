@@ -900,16 +900,27 @@ async function processPendingBatch(): Promise<void> {
 
         const { container, gameName } = itemInfo;
 
+        // Always save data to in-memory cache first, even if container is stale
+        // This ensures data is available for cache-reuse when game reappears
+        if (result.data) {
+          cachedEntriesByAppId.set(appid, result.data);
+        }
+
         // Before updating, verify container is still in DOM (BUG-6, BUG-12)
         // Container may have been detached by React re-render or filter change
         if (!document.body.contains(container)) {
-          if (DEBUG) console.log(`${LOG_PREFIX} Skipping stale container for ${appid}`);
+          // Try to find fresh container by appid
+          const freshContainer = document.querySelector<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+          if (freshContainer && result.data) {
+            updateIconsWithData(freshContainer, result.data);
+            if (DEBUG) console.log(`${LOG_PREFIX} Updated fresh container for ${appid}`);
+          } else if (DEBUG) {
+            console.log(`${LOG_PREFIX} Container stale for ${appid}, data cached for reuse`);
+          }
           continue;
         }
 
         if (result.data) {
-          if (DEBUG) console.log(`${LOG_PREFIX} Updating icons for appid ${appid}`);
-          cachedEntriesByAppId.set(appid, result.data);
           updateIconsWithData(container, result.data);
 
           const source = result.fromCache ? 'cache' : 'new';
