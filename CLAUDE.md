@@ -92,6 +92,26 @@ npm run test:integration    # Integration tests (slow, ~5min)
 npm run test:coverage       # Full coverage report
 ```
 
+### Pre-Commit Testing Requirements
+
+**IMPORTANT:** Before creating any commit, you MUST:
+
+1. **Run unit tests**: `npm run test:unit`
+2. **Verify all tests pass**: No test failures allowed
+3. **Check coverage thresholds**: Coverage must meet or exceed thresholds in `jest.config.js`
+4. **Add tests for new code**: Any new functions or branches need corresponding tests
+
+If coverage thresholds are not met:
+- Add more tests to cover the missing branches/lines
+- Do NOT lower the coverage thresholds in `jest.config.js`
+- Focus on testing error handling paths and edge cases
+
+Current global thresholds:
+- Branches: 75%
+- Functions: 80%
+- Lines: 80%
+- Statements: 80%
+
 ### Loading the Extension
 1. Run `npm run build` to compile TypeScript
 2. Open `chrome://extensions/`

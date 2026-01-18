@@ -199,6 +199,16 @@ describe('steamDeckClient.js', () => {
             const SteamDeck = globalThis.XCPW_SteamDeck;
             expect(SteamDeck.statusToDisplayStatus('invalid')).toBe('unknown');
         });
+
+        it('should handle null input', () => {
+            const SteamDeck = globalThis.XCPW_SteamDeck;
+            expect(SteamDeck.statusToDisplayStatus(null)).toBe('unknown');
+        });
+
+        it('should handle undefined input', () => {
+            const SteamDeck = globalThis.XCPW_SteamDeck;
+            expect(SteamDeck.statusToDisplayStatus(undefined)).toBe('unknown');
+        });
     });
 
     describe('waitForDeckData', () => {
