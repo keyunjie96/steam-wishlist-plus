@@ -197,6 +197,15 @@ function setupSettingsChangeListener(): void {
       // This will show/hide icons based on new settings without re-fetching data
       refreshIconsFromCache('settings-change');
 
+      // Also update any pending containers that have loaders
+      // This handles lazy-loaded games that are waiting for batch resolution
+      for (const [appid, { container }] of pendingItems) {
+        // If all console platforms are disabled and Steam Deck is disabled, remove loader
+        if (!isAnyConsolePlatformEnabled() && !newSettings.showSteamDeck) {
+          removeLoadingState(container);
+        }
+      }
+
       // If Steam Deck was just enabled, fetch Steam Deck data
       if (platformsJustEnabled.includes('steamdeck') && !steamDeckData) {
         const SteamDeck = globalThis.XCPW_SteamDeck;
@@ -853,24 +862,24 @@ async function processPendingBatch(): Promise<void> {
   if (!isAnyConsolePlatformEnabled()) {
     if (DEBUG) console.log(`${LOG_PREFIX} Skipping batch request - all console platforms disabled`);
     for (const [appid, { container }] of containerMap) {
-      // Update with Steam Deck data only if available and enabled
-      if (userSettings.showSteamDeck && steamDeckData) {
-        updateIconsWithData(container, {
-          appid,
-          gameName: containerMap.get(appid)!.gameName,
-          platforms: {
-            nintendo: { status: 'unknown', storeUrl: '' },
-            playstation: { status: 'unknown', storeUrl: '' },
-            xbox: { status: 'unknown', storeUrl: '' }
-          },
-          source: 'local',
-          wikidataId: null,
-          resolvedAt: Date.now(),
-          ttlDays: 7
-        });
-      } else {
-        removeLoadingState(container);
-      }
+      // Create a minimal cache entry with no console platform data
+      const minimalEntry: CacheEntry = {
+        appid,
+        gameName: containerMap.get(appid)!.gameName,
+        platforms: {
+          nintendo: { status: 'unknown', storeUrl: '' },
+          playstation: { status: 'unknown', storeUrl: '' },
+          xbox: { status: 'unknown', storeUrl: '' }
+        },
+        source: 'local',
+        wikidataId: null,
+        resolvedAt: Date.now(),
+        ttlDays: 7
+      };
+
+      // Always call updateIconsWithData - it handles removing the loader
+      // and will show Steam Deck icons if enabled and data is available
+      updateIconsWithData(container, minimalEntry);
     }
     return;
   }
@@ -1060,6 +1069,17 @@ async function processItem(item: Element): Promise<void> {
   }
   item.setAttribute(ICONS_INJECTED_ATTR, 'true');
   injectedAppIds.add(appId);
+
+  // Check if we already have cached data for this game
+  // This happens when React re-renders and destroys/recreates DOM elements
+  const cachedEntry = cachedEntriesByAppId.get(appId);
+  if (cachedEntry) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Using cached data for appid ${appId}`);
+    updateIconsWithData(iconsContainer, cachedEntry);
+    const iconSummary = getRenderedIconSummary(iconsContainer);
+    console.log(`${LOG_PREFIX} Rendered (cache-reuse): ${appId} - ${gameName} [icons: ${iconSummary}]`);
+    return;
+  }
 
   // Queue for batch resolution instead of individual request
   // This dramatically reduces Wikidata API calls by batching multiple games together
