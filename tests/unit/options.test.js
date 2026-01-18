@@ -15,6 +15,7 @@ describe('options.js', () => {
   let showPlaystationCheckbox;
   let showXboxCheckbox;
   let showSteamDeckCheckbox;
+  let showHltbCheckbox;
 
   beforeEach(() => {
     jest.resetModules();
@@ -76,6 +77,12 @@ describe('options.js', () => {
     showSteamDeckCheckbox.id = 'show-steamdeck';
     showSteamDeckCheckbox.checked = true;
     document.body.appendChild(showSteamDeckCheckbox);
+
+    showHltbCheckbox = document.createElement('input');
+    showHltbCheckbox.type = 'checkbox';
+    showHltbCheckbox.id = 'show-hltb';
+    showHltbCheckbox.checked = true;
+    document.body.appendChild(showHltbCheckbox);
 
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
@@ -545,7 +552,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false }
+        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true }
       });
     });
 
@@ -556,7 +563,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true }
+        xcpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -567,7 +574,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true }
+        xcpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -578,7 +585,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true }
+        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -589,7 +596,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true }
+        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 

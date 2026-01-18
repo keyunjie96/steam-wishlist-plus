@@ -20,6 +20,7 @@ let showNintendoCheckbox: HTMLInputElement | null;
 let showPlaystationCheckbox: HTMLInputElement | null;
 let showXboxCheckbox: HTMLInputElement | null;
 let showSteamDeckCheckbox: HTMLInputElement | null;
+let showHltbCheckbox: HTMLInputElement | null;
 
 // Default settings
 interface Settings {
@@ -27,13 +28,15 @@ interface Settings {
   showPlaystation: boolean;
   showXbox: boolean;
   showSteamDeck: boolean;
+  showHltb: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   showNintendo: true,
   showPlaystation: true,
   showXbox: true,
-  showSteamDeck: true
+  showSteamDeck: true,
+  showHltb: true
 };
 
 /**
@@ -94,6 +97,9 @@ async function loadSettings(): Promise<void> {
     if (showSteamDeckCheckbox) {
       showSteamDeckCheckbox.checked = settings.showSteamDeck;
     }
+    if (showHltbCheckbox) {
+      showHltbCheckbox.checked = settings.showHltb;
+    }
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
@@ -120,7 +126,8 @@ function getCurrentSettings(): Settings {
     showNintendo: showNintendoCheckbox?.checked ?? DEFAULT_SETTINGS.showNintendo,
     showPlaystation: showPlaystationCheckbox?.checked ?? DEFAULT_SETTINGS.showPlaystation,
     showXbox: showXboxCheckbox?.checked ?? DEFAULT_SETTINGS.showXbox,
-    showSteamDeck: showSteamDeckCheckbox?.checked ?? DEFAULT_SETTINGS.showSteamDeck
+    showSteamDeck: showSteamDeckCheckbox?.checked ?? DEFAULT_SETTINGS.showSteamDeck,
+    showHltb: showHltbCheckbox?.checked ?? DEFAULT_SETTINGS.showHltb
   };
 }
 
@@ -218,6 +225,7 @@ function initializePage(): void {
   showPlaystationCheckbox = document.getElementById('show-playstation') as HTMLInputElement | null;
   showXboxCheckbox = document.getElementById('show-xbox') as HTMLInputElement | null;
   showSteamDeckCheckbox = document.getElementById('show-steamdeck') as HTMLInputElement | null;
+  showHltbCheckbox = document.getElementById('show-hltb') as HTMLInputElement | null;
 
   // Event Listeners
   refreshStatsBtn.addEventListener('click', loadCacheStats);
@@ -233,6 +241,9 @@ function initializePage(): void {
   }
   if (showSteamDeckCheckbox) {
     showSteamDeckCheckbox.addEventListener('change', handlePlatformToggle);
+  }
+  if (showHltbCheckbox) {
+    showHltbCheckbox.addEventListener('change', handlePlatformToggle);
   }
 
   // Load initial data, then reveal UI

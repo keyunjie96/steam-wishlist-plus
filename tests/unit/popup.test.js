@@ -13,6 +13,7 @@ describe('popup.js', () => {
   let showPlaystationCheckbox;
   let showXboxCheckbox;
   let showSteamDeckCheckbox;
+  let showHltbCheckbox;
 
   beforeEach(() => {
     jest.resetModules();
@@ -75,6 +76,11 @@ describe('popup.js', () => {
     showSteamDeckCheckbox.id = 'show-steamdeck';
     document.body.appendChild(showSteamDeckCheckbox);
 
+    showHltbCheckbox = document.createElement('input');
+    showHltbCheckbox.type = 'checkbox';
+    showHltbCheckbox.id = 'show-hltb';
+    document.body.appendChild(showHltbCheckbox);
+
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
     chrome.runtime.sendMessage.mockResolvedValue({
@@ -93,7 +99,8 @@ describe('popup.js', () => {
         showNintendo: true,
         showPlaystation: true,
         showXbox: false,
-        showSteamDeck: true
+        showSteamDeck: true,
+        showHltb: true
       }
     });
     chrome.storage.sync.set.mockClear();
@@ -579,7 +586,8 @@ describe('popup.js', () => {
           showNintendo: true,
           showPlaystation: false,
           showXbox: true,
-          showSteamDeck: false
+          showSteamDeck: false,
+          showHltb: true
         }
       });
 
@@ -592,6 +600,7 @@ describe('popup.js', () => {
       expect(showPlaystationCheckbox.checked).toBe(false);
       expect(showXboxCheckbox.checked).toBe(true);
       expect(showSteamDeckCheckbox.checked).toBe(false);
+      expect(showHltbCheckbox.checked).toBe(true);
     });
 
     it('should use default settings when none are stored', async () => {
@@ -607,6 +616,7 @@ describe('popup.js', () => {
       expect(showPlaystationCheckbox.checked).toBe(true);
       expect(showXboxCheckbox.checked).toBe(true);
       expect(showSteamDeckCheckbox.checked).toBe(true);
+      expect(showHltbCheckbox.checked).toBe(true);
     });
 
     it('should save settings when Nintendo toggle is changed', async () => {
