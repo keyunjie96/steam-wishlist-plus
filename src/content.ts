@@ -197,12 +197,37 @@ function setupSettingsChangeListener(): void {
       // This will show/hide icons based on new settings without re-fetching data
       refreshIconsFromCache('settings-change');
 
-      // Also update any pending containers that have loaders
-      // This handles lazy-loaded games that are waiting for batch resolution
-      for (const [appid, { container }] of pendingItems) {
-        // If all console platforms are disabled and Steam Deck is disabled, remove loader
-        if (!isAnyConsolePlatformEnabled() && !newSettings.showSteamDeck) {
+      // Also update ALL containers with loaders (not just pending ones)
+      // This handles lazy-loaded games that may have stale references or were just created
+      // Use querySelectorAll with filter for browser compatibility (avoids :has() selector)
+      const allContainers = document.querySelectorAll<HTMLElement>('.xcpw-platforms');
+      for (const container of allContainers) {
+        // Skip containers without loaders
+        if (!container.querySelector('.xcpw-loader')) continue;
+        const appid = container.getAttribute('data-appid');
+        if (!appid) continue;
+
+        // If we have cached data, use it to update the container
+        const cachedEntry = cachedEntriesByAppId.get(appid);
+        if (cachedEntry) {
+          updateIconsWithData(container, cachedEntry);
+          if (DEBUG) console.log(`${LOG_PREFIX} Updated loading container from cache: ${appid}`);
+        } else if (!isAnyConsolePlatformEnabled() && !newSettings.showSteamDeck) {
+          // No cached data and all platforms disabled - just remove loader
           removeLoadingState(container);
+          if (DEBUG) console.log(`${LOG_PREFIX} Removed loader (all platforms disabled): ${appid}`);
+        }
+        // Otherwise, loader stays while waiting for batch resolution (normal case)
+      }
+
+      // Also update pending items map with fresh container references
+      for (const [appid, pendingInfo] of pendingItems) {
+        if (!document.body.contains(pendingInfo.container)) {
+          // Container is stale - try to find fresh one
+          const freshContainer = document.querySelector<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+          if (freshContainer) {
+            pendingInfo.container = freshContainer;
+          }
         }
       }
 
@@ -906,30 +931,35 @@ async function processPendingBatch(): Promise<void> {
           cachedEntriesByAppId.set(appid, result.data);
         }
 
-        // Before updating, verify container is still in DOM (BUG-6, BUG-12)
-        // Container may have been detached by React re-render or filter change
-        if (!document.body.contains(container)) {
-          // Try to find fresh container by appid
-          const freshContainer = document.querySelector<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
-          if (freshContainer && result.data) {
-            updateIconsWithData(freshContainer, result.data);
-            if (DEBUG) console.log(`${LOG_PREFIX} Updated fresh container for ${appid}`);
-          } else if (DEBUG) {
-            console.log(`${LOG_PREFIX} Container stale for ${appid}, data cached for reuse`);
-          }
+        // BUG-13 FIX: Update ALL containers for this appid, not just the one in containerMap
+        // React's virtualization can create multiple containers when items are re-rendered
+        // while a batch request is in flight, causing duplicate containers with ghost loaders
+        const allContainersForAppid = document.querySelectorAll<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+
+        if (allContainersForAppid.length === 0) {
+          if (DEBUG) console.log(`${LOG_PREFIX} No containers found for ${appid}, data cached for reuse`);
           continue;
         }
 
-        if (result.data) {
-          updateIconsWithData(container, result.data);
+        // Update all containers for this appid
+        let updatedCount = 0;
+        for (const targetContainer of allContainersForAppid) {
+          if (result.data) {
+            updateIconsWithData(targetContainer, result.data);
+            updatedCount++;
+          } else {
+            // No data available - remove loading state
+            removeLoadingState(targetContainer);
+          }
+        }
 
+        if (result.data) {
           const source = result.fromCache ? 'cache' : 'new';
-          const iconSummary = getRenderedIconSummary(container);
-          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]`);
-        } else {
-          // No data available - keep icons as unknown (still link to store search)
-          removeLoadingState(container);
-          if (DEBUG) console.log(`${LOG_PREFIX} No data for appid ${appid}, keeping icons as unknown`);
+          const iconSummary = getRenderedIconSummary(allContainersForAppid[0]);
+          const containerNote = allContainersForAppid.length > 1 ? ` (${updatedCount} containers)` : '';
+          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]${containerNote}`);
+        } else if (DEBUG) {
+          console.log(`${LOG_PREFIX} No data for appid ${appid}, removed loading state`);
         }
       }
     } else {
@@ -955,6 +985,13 @@ async function processPendingBatch(): Promise<void> {
 
 /** Set of appids that have icons already injected (survives React re-renders) */
 const injectedAppIds = new Set<string>();
+
+/**
+ * BUG-13 FIX: Track appIds currently being processed (in-flight).
+ * This prevents the "state desync" logic from incorrectly deleting appIds
+ * when a concurrent call sees "tracked but no icons" during the async wait.
+ */
+const processingAppIds = new Set<string>();
 
 /** Retry configuration for lazy-loaded items */
 const INJECTION_MAX_RETRIES = 10;
@@ -1025,6 +1062,13 @@ async function processItem(item: Element): Promise<void> {
     iconsExistInDom = null;
   }
 
+  // BUG-13 FIX: If this appId is currently being processed by another call, skip
+  // This prevents duplicate container creation during the async wait window
+  if (processingAppIds.has(appId)) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Skipping ${appId} - already being processed`);
+    return;
+  }
+
   // If injectedAppIds thinks icons exist, verify they're actually in DOM
   // React virtualization can destroy DOM elements, desync'ing our tracking state
   if (injectedAppIds.has(appId)) {
@@ -1035,7 +1079,7 @@ async function processItem(item: Element): Promise<void> {
       return;
     } else {
       // State desync: injectedAppIds says injected, but icons are gone (React destroyed them)
-      // Remove from tracking so we can re-inject
+      // Only re-inject if not currently being processed by another call
       if (DEBUG) console.log(`${LOG_PREFIX} Re-injecting ${appId} - React destroyed icons`);
       injectedAppIds.delete(appId);
     }
@@ -1059,6 +1103,11 @@ async function processItem(item: Element): Promise<void> {
 
   const gameName = extractGameName(item);
 
+  // BUG-13 FIX: Mark as "in-flight" to prevent concurrent calls from creating duplicates
+  // This must happen BEFORE any async work
+  processingAppIds.add(appId);
+  injectedAppIds.add(appId);
+
   // Wait for injection point to be ready (handles lazy-loaded items where
   // Steam loads SVG icons slightly after the item skeleton appears)
   let injectionPoint = await waitForInjectionPoint(item);
@@ -1079,7 +1128,8 @@ async function processItem(item: Element): Promise<void> {
     container.appendChild(iconsContainer);
   }
   item.setAttribute(ICONS_INJECTED_ATTR, 'true');
-  injectedAppIds.add(appId);
+  // BUG-13 FIX: Done processing - remove from in-flight set
+  processingAppIds.delete(appId);
 
   // Check if we already have cached data for this game
   // This happens when React re-renders and destroys/recreates DOM elements

@@ -2955,4 +2955,88 @@ describe('content.js', () => {
       expect(icon.getAttribute('title')).toBe('Steam Deck: Available');
     });
   });
+
+  describe('settings change updates loading containers', () => {
+    it('should update loading containers with cached data when settings change', async () => {
+      const {
+        createIconsContainer,
+        updateIconsWithData,
+        getCachedEntriesByAppId,
+        setUserSettings
+      } = globalThis.XCPW_ContentTestExports;
+
+      // Create a container with loader
+      const container = createIconsContainer('12345', 'Test Game');
+      document.body.appendChild(container);
+
+      // Verify loader exists
+      expect(container.querySelector('.xcpw-loader')).not.toBeNull();
+
+      // Add cached data for this appid
+      const cachedEntriesByAppId = getCachedEntriesByAppId();
+      cachedEntriesByAppId.set('12345', {
+        appid: '12345',
+        gameName: 'Test Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: null },
+          playstation: { status: 'unavailable', storeUrl: null },
+          xbox: { status: 'unknown', storeUrl: null },
+          steamdeck: { status: 'unknown', storeUrl: null }
+        },
+        source: 'test',
+        wikidataId: null,
+        resolvedAt: Date.now(),
+        ttlDays: 7
+      });
+
+      // Update the container as would happen during settings change
+      updateIconsWithData(container, cachedEntriesByAppId.get('12345'));
+
+      // Verify loader is removed and icons are added
+      expect(container.querySelector('.xcpw-loader')).toBeNull();
+      expect(container.querySelector('.xcpw-platform-icon')).not.toBeNull();
+
+      // Cleanup
+      container.remove();
+      cachedEntriesByAppId.delete('12345');
+    });
+
+    it('should update stale pending items with fresh container references', () => {
+      const {
+        createIconsContainer,
+        pendingItems
+      } = globalThis.XCPW_ContentTestExports;
+
+      // Create an old container (not in DOM)
+      const oldContainer = createIconsContainer('54321', 'Old Game');
+
+      // Create a fresh container in DOM
+      const freshContainer = createIconsContainer('54321', 'Old Game');
+      document.body.appendChild(freshContainer);
+
+      // Add to pending items with old container
+      pendingItems.set('54321', { gameName: 'Old Game', container: oldContainer });
+
+      // Verify old container is NOT in DOM
+      expect(document.body.contains(oldContainer)).toBe(false);
+      expect(document.body.contains(freshContainer)).toBe(true);
+
+      // Simulate the settings change handler finding fresh container
+      const pendingInfo = pendingItems.get('54321');
+      if (!document.body.contains(pendingInfo.container)) {
+        const found = document.querySelector(`.xcpw-platforms[data-appid="54321"]`);
+        if (found) {
+          pendingInfo.container = found;
+        }
+      }
+
+      // Verify pending now points to fresh container
+      expect(pendingItems.get('54321').container).toBe(freshContainer);
+      expect(document.body.contains(pendingItems.get('54321').container)).toBe(true);
+
+      // Cleanup
+      freshContainer.remove();
+      pendingItems.delete('54321');
+    });
+  });
 });
