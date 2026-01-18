@@ -697,6 +697,26 @@ describe('options.js', () => {
       expect(chrome.storage.sync.get).toHaveBeenCalled();
     });
 
+    it('should handle all checkboxes missing gracefully', async () => {
+      // Remove all checkboxes to test all null check branches
+      showNintendoCheckbox.remove();
+      showPlaystationCheckbox.remove();
+      showXboxCheckbox.remove();
+      showSteamDeckCheckbox.remove();
+      showHltbCheckbox.remove();
+
+      // Re-require to test with missing elements
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Should complete without error
+      expect(chrome.storage.sync.get).toHaveBeenCalled();
+    });
+
     it('should handle setButtonLoading without originalText', async () => {
       // Delete the originalText dataset before it can be set
       delete clearCacheBtn.dataset.originalText;

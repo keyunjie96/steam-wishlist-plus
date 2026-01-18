@@ -97,6 +97,12 @@ describe('hltbClient.js', () => {
       expect(similarity).toBeGreaterThan(0.5);
     });
 
+    it('should return high similarity when first string is longer (contains second)', () => {
+      // Tests the branch where aNorm.length >= bNorm.length
+      const similarity = HltbClient.calculateSimilarity('Hollow Knight: Silksong', 'Hollow Knight');
+      expect(similarity).toBeGreaterThan(0.5);
+    });
+
     it('should return positive similarity for similar strings', () => {
       const similarity = HltbClient.calculateSimilarity('Dark Souls', 'Dark Souls III');
       expect(similarity).toBeGreaterThan(0.3);
@@ -303,6 +309,42 @@ describe('hltbClient.js', () => {
     it('should handle empty games array', async () => {
       const results = await HltbClient.batchQueryByGameNames([]);
       expect(results.size).toBe(0);
+    });
+
+    it('should catch and return null for individual game errors', async () => {
+      // First call succeeds, second throws
+      let callCount = 0;
+      global.fetch = jest.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve({
+              data: [{
+                game_id: 1,
+                game_name: 'Game One',
+                comp_main: 36000,
+                comp_plus: 72000,
+                comp_100: 108000,
+                comp_all: 72000,
+                profile_steam: 100
+              }]
+            })
+          });
+        }
+        throw new Error('Network failure');
+      });
+
+      const games = [
+        { appid: '100', gameName: 'Game One' },
+        { appid: '200', gameName: 'Game Two' }
+      ];
+
+      const results = await HltbClient.batchQueryByGameNames(games);
+      expect(results.size).toBe(2);
+      expect(results.get('100')).not.toBeNull();
+      expect(results.get('200')).toBeNull();
     });
   });
 });

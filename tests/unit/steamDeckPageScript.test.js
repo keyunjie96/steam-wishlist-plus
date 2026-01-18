@@ -180,6 +180,56 @@ describe('steamDeckPageScript.js', () => {
             expect(data['99999']).toBe(1);
         });
 
+        it('should use loaderData with nested queryData', () => {
+            window.SSR = {
+                renderContext: { queryData: '{"queries":[]}' },
+                loaderData: [
+                    JSON.stringify({
+                        queryData: JSON.stringify({
+                            queries: [
+                                {
+                                    queryKey: ['StoreItem', 'app_88888', 'include_platforms'],
+                                    state: { data: { steam_deck_compat_category: 2 } }
+                                }
+                            ]
+                        })
+                    })
+                ]
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('xcpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            expect(data['88888']).toBe(2);
+        });
+
+        it('should handle loaderData with invalid nested JSON gracefully', () => {
+            window.SSR = {
+                renderContext: { queryData: '{"queries":[]}' },
+                loaderData: [
+                    'invalid json string',
+                    JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_77777', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 3 } }
+                            }
+                        ]
+                    })
+                ]
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('xcpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            // Should still get valid data from second item
+            expect(data['77777']).toBe(3);
+        });
+
         it('should replace existing data element', () => {
             // Create an existing element
             const existingEl = document.createElement('script');

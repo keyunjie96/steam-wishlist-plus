@@ -218,7 +218,7 @@ describe('steamDeckClient.js', () => {
                 if (tagName === 'script') {
                     // Trigger onerror immediately after append to simulate load failure
                     setTimeout(() => {
-                        element.onerror && element.onerror(new Error('Load failed'));
+                        element.onerror && element.onerror();
                     }, 0);
                 }
                 return element;
@@ -228,7 +228,9 @@ describe('steamDeckClient.js', () => {
             require('../../dist/steamDeckClient.js');
             const SteamDeck = globalThis.XCPW_SteamDeck;
 
-            const result = await SteamDeck.waitForDeckData(100);
+            const promise = SteamDeck.waitForDeckData(100);
+            await jest.advanceTimersByTimeAsync(10);
+            const result = await promise;
 
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);

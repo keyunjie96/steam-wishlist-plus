@@ -135,6 +135,25 @@ describe('types.js', () => {
         // Restore
         globalThis.XCPW_StoreUrls = savedStoreUrls;
       });
+
+      it('should not overwrite existing XCPW_StoreUrls', () => {
+        // Save original values
+        const savedStoreUrls = globalThis.XCPW_StoreUrls;
+
+        // Set a mock value
+        const mockStoreUrls = { nintendo: () => 'mock', playstation: () => 'mock', xbox: () => 'mock' };
+        globalThis.XCPW_StoreUrls = mockStoreUrls;
+
+        // Reset and reload module
+        jest.resetModules();
+        require('../../dist/types.js');
+
+        // Verify the existing value was not overwritten
+        expect(globalThis.XCPW_StoreUrls).toBe(mockStoreUrls);
+
+        // Restore
+        globalThis.XCPW_StoreUrls = savedStoreUrls;
+      });
     });
   });
 });

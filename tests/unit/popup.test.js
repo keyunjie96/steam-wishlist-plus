@@ -703,11 +703,12 @@ describe('popup.js', () => {
     });
 
     it('should handle missing checkbox elements gracefully', async () => {
-      // Remove checkboxes from DOM
+      // Remove all checkboxes from DOM to test null checks
       showNintendoCheckbox.remove();
       showPlaystationCheckbox.remove();
       showXboxCheckbox.remove();
       showSteamDeckCheckbox.remove();
+      showHltbCheckbox.remove();
 
       jest.resetModules();
       require('../../dist/popup.js');
