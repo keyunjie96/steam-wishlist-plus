@@ -187,6 +187,16 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Prevent flicker: hide content until JS loads settings */
+    body.is-loading .section {
+      opacity: 0;
+    }
+
+    body:not(.is-loading) .section {
+      opacity: 1;
+      transition: opacity 0.15s ease-in;
+    }
+
     .toggle-group {
       display: flex;
       flex-direction: column;
@@ -234,7 +244,7 @@
     }
   </style>
 </head>
-<body>
+<body class="is-loading">
   <h1>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
@@ -262,7 +272,7 @@
 
     <div class="toggle-group">
       <label class="toggle-row">
-        <input type="checkbox" id="show-nintendo" checked>
+        <input type="checkbox" id="show-nintendo">
         <span class="toggle-label">
           <strong>Nintendo Switch</strong>
           <span class="toggle-desc">Show availability on Nintendo eShop</span>
@@ -270,7 +280,7 @@
       </label>
 
       <label class="toggle-row">
-        <input type="checkbox" id="show-playstation" checked>
+        <input type="checkbox" id="show-playstation">
         <span class="toggle-label">
           <strong>PlayStation</strong>
           <span class="toggle-desc">Show availability on PlayStation Store</span>
@@ -278,7 +288,7 @@
       </label>
 
       <label class="toggle-row">
-        <input type="checkbox" id="show-xbox" checked>
+        <input type="checkbox" id="show-xbox">
         <span class="toggle-label">
           <strong>Xbox</strong>
           <span class="toggle-desc">Show availability on Xbox Store</span>
@@ -286,7 +296,7 @@
       </label>
 
       <label class="toggle-row">
-        <input type="checkbox" id="show-steamdeck" checked>
+        <input type="checkbox" id="show-steamdeck">
         <span class="toggle-label">
           <strong>Steam Deck Compatibility</strong>
           <span class="toggle-desc">Show verified status (Verified, Playable, Unsupported)</span>

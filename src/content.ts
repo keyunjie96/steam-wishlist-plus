@@ -1045,6 +1045,12 @@ async function processItem(item: Element): Promise<void> {
     return;
   }
 
+  // Short-circuit: If all platforms are disabled, don't create any containers
+  // This prevents ghost loaders from appearing when user has turned off all icons
+  if (!isAnyConsolePlatformEnabled() && !userSettings.showSteamDeck) {
+    return;
+  }
+
   // Check if icons actually exist in DOM for this item
   let iconsExistInDom = item.querySelector('.xcpw-platforms');
 

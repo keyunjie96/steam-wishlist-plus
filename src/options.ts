@@ -235,9 +235,11 @@ function initializePage(): void {
     showSteamDeckCheckbox.addEventListener('change', handlePlatformToggle);
   }
 
-  // Load initial data
-  loadCacheStats();
-  loadSettings();
+  // Load initial data, then reveal UI
+  Promise.all([loadCacheStats(), loadSettings()]).then(() => {
+    // Remove loading class to reveal content with smooth transition
+    document.body.classList.remove('is-loading');
+  });
 }
 
 // Initialize when DOM is ready (or immediately if already loaded)
