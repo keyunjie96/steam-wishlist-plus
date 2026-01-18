@@ -8,7 +8,7 @@
  * - Handles infinite scroll with MutationObserver
  */
 
-import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse } from './types';
+import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, RemovalSettings, RemovalSuggestion } from './types';
 
 const PROCESSED_ATTR = 'data-xcpw-processed';
 const ICONS_INJECTED_ATTR = 'data-xcpw-icons';
@@ -83,9 +83,18 @@ function checkDeckFilterActive(): boolean {
 /** All available platforms in display order */
 const ALL_PLATFORMS: Platform[] = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
 
+/** Default removal settings */
+const DEFAULT_REMOVAL_SETTINGS: RemovalSettings = {
+  enabled: false,
+  minDaysOnWishlist: 1095, // 3 years
+  minReviewScore: 40,
+  showReviewWarnings: true
+};
+
 /** User settings (loaded from storage) */
 let userSettings = {
-  showSteamDeck: true
+  showSteamDeck: true,
+  removalSuggestions: DEFAULT_REMOVAL_SETTINGS
 };
 
 /** Pre-extracted Steam Deck data from page SSR (Map of appId -> category) */
@@ -125,7 +134,16 @@ async function loadUserSettings(): Promise<void> {
   try {
     const result = await chrome.storage.sync.get('xcpwSettings');
     if (result.xcpwSettings) {
-      userSettings = { ...userSettings, ...result.xcpwSettings };
+      userSettings = {
+        ...userSettings,
+        ...result.xcpwSettings,
+        removalSuggestions: {
+          ...DEFAULT_REMOVAL_SETTINGS,
+          ...result.xcpwSettings.removalSuggestions,
+          // Convert years to days for internal use
+          minDaysOnWishlist: (result.xcpwSettings.removalSuggestions?.minYearsOnWishlist ?? 3) * 365
+        }
+      };
     }
     if (DEBUG) console.log(`${LOG_PREFIX} Loaded settings:`, userSettings);
   } catch (error) {
@@ -541,6 +559,78 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   }
 }
 
+// ============================================================================
+// Removal Suggestion Indicator
+// ============================================================================
+
+/** SVG icon for removal suggestion (subtle clock/warning icon) */
+const REMOVAL_SUGGESTION_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12.5a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/>
+  <path d="M8 4v4l3 1.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+</svg>`;
+
+/**
+ * Creates a removal suggestion indicator element.
+ */
+function createRemovalIndicator(suggestion: RemovalSuggestion): HTMLElement {
+  const indicator = document.createElement('span');
+  indicator.className = 'xcpw-removal-indicator';
+
+  // Generate tooltip based on reasons
+  const tooltipParts: string[] = [];
+  if (suggestion.details.daysOnWishlist !== undefined) {
+    const years = Math.floor(suggestion.details.daysOnWishlist / 365);
+    if (years >= 1) {
+      tooltipParts.push(`On wishlist for ${years}+ year${years > 1 ? 's' : ''}`);
+    }
+  }
+  if (suggestion.details.reviewText) {
+    tooltipParts.push(`Reviews: ${suggestion.details.reviewText}`);
+  }
+
+  const tooltip = tooltipParts.length > 0
+    ? tooltipParts.join(' | ')
+    : 'Consider removing from wishlist';
+
+  indicator.setAttribute('title', tooltip);
+  indicator.setAttribute('aria-label', tooltip);
+
+  const svg = parseSvg(REMOVAL_SUGGESTION_ICON);
+  if (svg) {
+    indicator.appendChild(svg);
+  }
+
+  return indicator;
+}
+
+/**
+ * Checks if removal suggestions should be shown and creates indicator if needed.
+ */
+function checkRemovalSuggestion(item: Element, iconsContainer: HTMLElement): void {
+  if (!userSettings.removalSuggestions.enabled) return;
+
+  const RemovalSuggestions = globalThis.XCPW_RemovalSuggestions;
+  if (!RemovalSuggestions) return;
+
+  const suggestion = RemovalSuggestions.analyzeItem(item);
+  if (suggestion.shouldSuggest) {
+    // Remove existing indicator if present
+    const existing = iconsContainer.querySelector('.xcpw-removal-indicator');
+    if (existing) existing.remove();
+
+    const indicator = createRemovalIndicator(suggestion);
+    iconsContainer.appendChild(indicator);
+
+    if (DEBUG) {
+      console.log(`${LOG_PREFIX} Removal suggestion for item:`, {
+        reasons: suggestion.reasons,
+        score: suggestion.score,
+        details: suggestion.details
+      });
+    }
+  }
+}
+
 /**
  * Creates a concise log string describing rendered icons for a container.
  */
@@ -710,7 +800,7 @@ async function requestPlatformData(appid: string, gameName: string): Promise<Get
 // ============================================================================
 
 /** Pending items waiting for batch resolution */
-const pendingItems = new Map<string, { gameName: string; container: HTMLElement }>();
+const pendingItems = new Map<string, { gameName: string; container: HTMLElement; item: Element }>();
 
 /** Debounce timer for batch requests */
 let batchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -722,8 +812,8 @@ const BATCH_DEBOUNCE_MS = 100;
  * Queues an item for batch platform data resolution.
  * Uses debouncing to collect multiple items before sending a single batch request.
  */
-function queueForBatchResolution(appid: string, gameName: string, iconsContainer: HTMLElement): void {
-  pendingItems.set(appid, { gameName, container: iconsContainer });
+function queueForBatchResolution(appid: string, gameName: string, iconsContainer: HTMLElement, wishlistItem: Element): void {
+  pendingItems.set(appid, { gameName, container: iconsContainer, item: wishlistItem });
 
   // Reset debounce timer
   if (batchDebounceTimer) {
@@ -745,11 +835,11 @@ async function processPendingBatch(): Promise<void> {
 
   // Collect all pending items
   const games: Array<{ appid: string; gameName: string }> = [];
-  const containerMap = new Map<string, { container: HTMLElement; gameName: string }>();
+  const containerMap = new Map<string, { container: HTMLElement; gameName: string; item: Element }>();
 
-  for (const [appid, { gameName, container }] of pendingItems) {
+  for (const [appid, { gameName, container, item }] of pendingItems) {
     games.push({ appid, gameName });
-    containerMap.set(appid, { container, gameName });
+    containerMap.set(appid, { container, gameName, item });
   }
 
   // Clear pending items before async operation
@@ -770,7 +860,7 @@ async function processPendingBatch(): Promise<void> {
         const itemInfo = containerMap.get(appid);
         if (!itemInfo) continue;
 
-        const { container, gameName } = itemInfo;
+        const { container, gameName, item } = itemInfo;
 
         // Before updating, verify container is still in DOM (BUG-6, BUG-12)
         // Container may have been detached by React re-render or filter change
@@ -784,12 +874,17 @@ async function processPendingBatch(): Promise<void> {
           cachedEntriesByAppId.set(appid, result.data);
           updateIconsWithData(container, result.data);
 
+          // Check for removal suggestions after icons are updated
+          checkRemovalSuggestion(item, container);
+
           const source = result.fromCache ? 'cache' : 'new';
           const iconSummary = getRenderedIconSummary(container);
           console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]`);
         } else {
           // No data available - keep icons as unknown (still link to store search)
           removeLoadingState(container);
+          // Still check for removal suggestions even without platform data
+          checkRemovalSuggestion(item, container);
           if (DEBUG) console.log(`${LOG_PREFIX} No data for appid ${appid}, keeping icons as unknown`);
         }
       }
@@ -945,7 +1040,7 @@ async function processItem(item: Element): Promise<void> {
   // Queue for batch resolution instead of individual request
   // This dramatically reduces Wikidata API calls by batching multiple games together
   if (DEBUG) console.log(`${LOG_PREFIX} Queuing appid ${appId} for batch resolution`);
-  queueForBatchResolution(appId, gameName, iconsContainer);
+  queueForBatchResolution(appId, gameName, iconsContainer, item);
 }
 
 /**
@@ -1134,9 +1229,13 @@ if (typeof globalThis !== 'undefined') {
     setSteamDeckRefreshAttempts: (val: number) => { steamDeckRefreshAttempts = val; },
     getCachedEntriesByAppId: () => cachedEntriesByAppId,
     getUserSettings: () => userSettings,
-    setUserSettings: (val: { showSteamDeck: boolean }) => { userSettings = val; },
+    setUserSettings: (val: { showSteamDeck: boolean; removalSuggestions: RemovalSettings }) => { userSettings = val; },
     getSteamDeckRefreshTimer: () => steamDeckRefreshTimer,
     setSteamDeckRefreshTimer: (val: ReturnType<typeof setTimeout> | null) => { steamDeckRefreshTimer = val; },
-    STEAM_DECK_REFRESH_DELAYS_MS
+    STEAM_DECK_REFRESH_DELAYS_MS,
+    // Removal suggestion exports
+    createRemovalIndicator,
+    checkRemovalSuggestion,
+    DEFAULT_REMOVAL_SETTINGS
   };
 }

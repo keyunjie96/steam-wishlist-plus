@@ -12,6 +12,11 @@ describe('options.js', () => {
   let refreshStatsBtn;
   let clearCacheBtn;
   let showSteamDeckCheckbox;
+  let removalEnabledCheckbox;
+  let removalOptionsDiv;
+  let showReviewWarningsCheckbox;
+  let ageThresholdInput;
+  let suggestionsStatusEl;
 
   beforeEach(() => {
     jest.resetModules();
@@ -55,6 +60,35 @@ describe('options.js', () => {
     showSteamDeckCheckbox.id = 'show-steamdeck';
     showSteamDeckCheckbox.checked = true;
     document.body.appendChild(showSteamDeckCheckbox);
+
+    // Removal suggestions elements
+    removalEnabledCheckbox = document.createElement('input');
+    removalEnabledCheckbox.type = 'checkbox';
+    removalEnabledCheckbox.id = 'removal-suggestions-enabled';
+    removalEnabledCheckbox.checked = false;
+    document.body.appendChild(removalEnabledCheckbox);
+
+    removalOptionsDiv = document.createElement('div');
+    removalOptionsDiv.id = 'removal-options';
+    removalOptionsDiv.style.display = 'none';
+    document.body.appendChild(removalOptionsDiv);
+
+    showReviewWarningsCheckbox = document.createElement('input');
+    showReviewWarningsCheckbox.type = 'checkbox';
+    showReviewWarningsCheckbox.id = 'show-review-warnings';
+    showReviewWarningsCheckbox.checked = true;
+    document.body.appendChild(showReviewWarningsCheckbox);
+
+    ageThresholdInput = document.createElement('input');
+    ageThresholdInput.type = 'number';
+    ageThresholdInput.id = 'age-threshold';
+    ageThresholdInput.value = '3';
+    document.body.appendChild(ageThresholdInput);
+
+    suggestionsStatusEl = document.createElement('div');
+    suggestionsStatusEl.id = 'suggestions-status';
+    suggestionsStatusEl.className = 'status';
+    document.body.appendChild(suggestionsStatusEl);
 
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
@@ -518,7 +552,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showSteamDeck: false }
+        xcpwSettings: expect.objectContaining({ showSteamDeck: false })
       });
     });
 
@@ -529,7 +563,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showSteamDeck: true }
+        xcpwSettings: expect.objectContaining({ showSteamDeck: true })
       });
     });
 
@@ -644,6 +678,112 @@ describe('options.js', () => {
       // The else-if branch: button.dataset.originalText is undefined
 
       expect(clearCacheBtn.disabled).toBe(false);
+    });
+  });
+
+  describe('removal suggestions settings', () => {
+    it('should toggle removal options visibility when enabled checkbox changes', async () => {
+      removalEnabledCheckbox.checked = true;
+      removalEnabledCheckbox.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(removalOptionsDiv.style.display).toBe('block');
+    });
+
+    it('should hide removal options when disabled', async () => {
+      removalEnabledCheckbox.checked = false;
+      removalEnabledCheckbox.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(removalOptionsDiv.style.display).toBe('none');
+    });
+
+    it('should save removal suggestions settings', async () => {
+      removalEnabledCheckbox.checked = true;
+      removalEnabledCheckbox.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        xcpwSettings: expect.objectContaining({
+          removalSuggestions: expect.objectContaining({
+            enabled: true
+          })
+        })
+      });
+    });
+
+    it('should save review warnings setting', async () => {
+      showReviewWarningsCheckbox.checked = false;
+      showReviewWarningsCheckbox.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        xcpwSettings: expect.objectContaining({
+          removalSuggestions: expect.objectContaining({
+            showReviewWarnings: false
+          })
+        })
+      });
+    });
+
+    it('should save age threshold setting', async () => {
+      ageThresholdInput.value = '5';
+      ageThresholdInput.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        xcpwSettings: expect.objectContaining({
+          removalSuggestions: expect.objectContaining({
+            minYearsOnWishlist: 5
+          })
+        })
+      });
+    });
+
+    it('should validate age threshold minimum', async () => {
+      ageThresholdInput.value = '0';
+      ageThresholdInput.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(ageThresholdInput.value).toBe('1');
+    });
+
+    it('should validate age threshold maximum', async () => {
+      ageThresholdInput.value = '15';
+      ageThresholdInput.dispatchEvent(new Event('change'));
+
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(ageThresholdInput.value).toBe('10');
+    });
+
+    it('should load removal suggestions settings on init', async () => {
+      chrome.storage.sync.get.mockResolvedValue({
+        xcpwSettings: {
+          showSteamDeck: true,
+          removalSuggestions: {
+            enabled: true,
+            minYearsOnWishlist: 5,
+            showReviewWarnings: false
+          }
+        }
+      });
+
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(removalEnabledCheckbox.checked).toBe(true);
+      expect(showReviewWarningsCheckbox.checked).toBe(false);
+      expect(ageThresholdInput.value).toBe('5');
     });
   });
 });

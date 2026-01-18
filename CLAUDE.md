@@ -49,6 +49,7 @@
 │   ├── wikidataClient.ts   # Wikidata SPARQL client
 │   ├── steamDeckClient.ts  # Steam Deck data from page SSR
 │   ├── steamDeckPageScript.ts # Injected script for SSR access
+│   ├── removalSuggestions.ts # Smart removal suggestions logic
 │   ├── icons.ts            # Icon definitions
 │   ├── types.ts            # Type definitions
 │   ├── options.ts          # Options page logic
@@ -71,6 +72,7 @@
 | `src/wikidataClient.ts` | Wikidata SPARQL queries | `queryBySteamAppId()`, `executeSparqlQuery()` |
 | `src/steamDeckClient.ts` | Steam Deck data extraction | `waitForDeckData()`, `getDeckStatus()` |
 | `src/steamDeckPageScript.ts` | Page script for SSR access | `extractDeckData()` (runs in MAIN world) |
+| `src/removalSuggestions.ts` | Smart removal suggestions | `analyzeItem()`, `extractWishlistAge()`, `extractReviewData()` |
 | `src/icons.ts` | SVG icons and platform info | `PLATFORM_ICONS`, `PLATFORM_INFO`, `STATUS_INFO` |
 | `src/types.ts` | TypeScript type definitions, URL builders | `StoreUrls.nintendo()`, `.playstation()`, `.xbox()` |
 

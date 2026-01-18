@@ -232,6 +232,70 @@
       font-size: 12px;
       color: #8f98a0;
     }
+
+    .sub-options {
+      margin-left: 30px;
+      margin-top: 8px;
+      padding-left: 12px;
+      border-left: 2px solid #3d4f5f;
+    }
+
+    .sub-toggle {
+      padding: 10px;
+      background: #1a3040;
+    }
+
+    .threshold-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: #1e3a46;
+      border: 1px solid #3d4f5f;
+      border-radius: 4px;
+      margin-top: 8px;
+    }
+
+    .threshold-label {
+      display: block;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .threshold-desc {
+      display: block;
+      font-size: 12px;
+      color: #8f98a0;
+      margin-top: 2px;
+    }
+
+    .threshold-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .threshold-input input[type="number"] {
+      width: 60px;
+      padding: 6px 10px;
+      border: 1px solid #3d4f5f;
+      border-radius: 4px;
+      background: #1b2838;
+      color: #ffffff;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .threshold-input input[type="number"]:focus {
+      outline: none;
+      border-color: #66c0f4;
+    }
+
+    .threshold-unit {
+      color: #8f98a0;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
@@ -271,6 +335,46 @@
     </div>
 
     <div id="settings-status" class="status"></div>
+  </div>
+
+  <div class="section">
+    <h2 class="section-title">Smart Suggestions</h2>
+    <p class="help-text" style="margin-top: 0;">
+      Get subtle hints about games you might want to remove from your wishlist.
+    </p>
+
+    <div class="toggle-group">
+      <label class="toggle-row">
+        <input type="checkbox" id="removal-suggestions-enabled">
+        <span class="toggle-label">
+          <strong>Removal Suggestions</strong>
+          <span class="toggle-desc">Show indicators on games wishlisted 3+ years ago or with poor reviews</span>
+        </span>
+      </label>
+
+      <div id="removal-options" class="sub-options" style="display: none;">
+        <label class="toggle-row sub-toggle">
+          <input type="checkbox" id="show-review-warnings" checked>
+          <span class="toggle-label">
+            <strong>Review Warnings</strong>
+            <span class="toggle-desc">Highlight games with Mostly Negative or worse reviews</span>
+          </span>
+        </label>
+
+        <div class="threshold-row">
+          <label for="age-threshold">
+            <span class="threshold-label">Minimum wishlist age</span>
+            <span class="threshold-desc">Suggest removal for games older than this</span>
+          </label>
+          <div class="threshold-input">
+            <input type="number" id="age-threshold" min="1" max="10" value="3">
+            <span class="threshold-unit">years</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="suggestions-status" class="status"></div>
   </div>
 
   <div class="section">

@@ -14,7 +14,7 @@
   "content_scripts": [
     {
       "matches": ["https://store.steampowered.com/wishlist/*"],
-      "js": ["dist/types.js", "dist/icons.js", "dist/steamDeckClient.js", "dist/content.js"],
+      "js": ["dist/types.js", "dist/icons.js", "dist/steamDeckClient.js", "dist/removalSuggestions.js", "dist/content.js"],
       "css": ["src/styles.css"],
       "run_at": "document_idle"
     }

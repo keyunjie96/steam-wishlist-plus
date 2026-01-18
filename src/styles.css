@@ -215,3 +215,48 @@
     opacity: 0.4;
   }
 }
+
+/* ============================================================================
+   Removal Suggestion Indicator
+   Subtle indicator for games the user might want to remove from wishlist.
+   Uses a muted amber/yellow color to suggest attention without being alarming.
+   ============================================================================ */
+
+.xcpw-removal-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  margin-left: 4px;
+  color: #d4a853;
+  opacity: 0.7;
+  cursor: help;
+  transition: opacity 0.15s ease;
+  vertical-align: middle;
+}
+
+.xcpw-removal-indicator:hover {
+  opacity: 1;
+}
+
+.xcpw-removal-indicator svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* High contrast mode - make indicator more visible */
+@media (prefers-contrast: high) {
+  .xcpw-removal-indicator {
+    color: #ffc107;
+    opacity: 1;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .xcpw-removal-indicator {
+    transition: none;
+  }
+}

@@ -130,10 +130,18 @@ declare global {
       statusToDisplayStatus: (status: DeckStatus) => 'available' | 'unavailable' | 'unknown';
       CATEGORY_MAP: Record<DeckCategory, DeckStatus>;
     };
+    XCPW_RemovalSuggestions: {
+      analyzeItem: (item: Element) => RemovalSuggestion;
+      extractWishlistAge: (item: Element) => number | null;
+      extractReviewData: (item: Element) => { score: number | null; text: string | null };
+      parseWishlistDate: (dateText: string) => Date | null;
+      reviewTextToScore: (text: string) => number | null;
+      DEFAULT_SETTINGS: RemovalSettings;
+    };
     XCPW_ContentTestExports?: {
-      queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
+      queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement, wishlistItem: Element) => void;
       processPendingBatch: () => Promise<void>;
-      pendingItems: Map<string, { gameName: string; container: HTMLElement }>;
+      pendingItems: Map<string, { gameName: string; container: HTMLElement; item: Element }>;
       updateIconsWithData: (container: HTMLElement, data: CacheEntry) => void;
       createIconsContainer: (appid: string, gameName: string) => HTMLElement;
       createPlatformIcon: (platform: Platform, status: PlatformStatus, gameName: string, storeUrl?: string, tier?: string) => HTMLElement;
@@ -172,11 +180,15 @@ declare global {
       getSteamDeckRefreshAttempts: () => number;
       setSteamDeckRefreshAttempts: (val: number) => void;
       getCachedEntriesByAppId: () => Map<string, CacheEntry>;
-      getUserSettings: () => { showSteamDeck: boolean };
-      setUserSettings: (val: { showSteamDeck: boolean }) => void;
+      getUserSettings: () => { showSteamDeck: boolean; removalSuggestions: RemovalSettings };
+      setUserSettings: (val: { showSteamDeck: boolean; removalSuggestions: RemovalSettings }) => void;
       getSteamDeckRefreshTimer: () => ReturnType<typeof setTimeout> | null;
       setSteamDeckRefreshTimer: (val: ReturnType<typeof setTimeout> | null) => void;
       STEAM_DECK_REFRESH_DELAYS_MS: number[];
+      // Removal suggestion exports
+      createRemovalIndicator: (suggestion: RemovalSuggestion) => HTMLElement;
+      checkRemovalSuggestion: (item: Element, iconsContainer: HTMLElement) => void;
+      DEFAULT_REMOVAL_SETTINGS: RemovalSettings;
     };
     SSR?: {
       renderContext?: {
@@ -203,6 +215,8 @@ declare global {
   var XCPW_Resolver: Window['XCPW_Resolver'];
   // eslint-disable-next-line no-var
   var XCPW_SteamDeck: Window['XCPW_SteamDeck'];
+  // eslint-disable-next-line no-var
+  var XCPW_RemovalSuggestions: Window['XCPW_RemovalSuggestions'];
   // eslint-disable-next-line no-var
   var XCPW_ContentTestExports: Window['XCPW_ContentTestExports'];
 }
@@ -234,6 +248,28 @@ export interface WikidataResult {
 // Steam Deck types
 export type DeckCategory = 0 | 1 | 2 | 3;
 export type DeckStatus = 'unknown' | 'unsupported' | 'playable' | 'verified';
+
+// Removal suggestion types
+export type RemovalReason = 'old_wishlist' | 'poor_reviews' | 'no_recent_discount';
+
+export interface RemovalSuggestion {
+  shouldSuggest: boolean;
+  reasons: RemovalReason[];
+  score: number; // 0-100, higher = stronger suggestion
+  details: {
+    daysOnWishlist?: number;
+    reviewScore?: number;
+    reviewText?: string;
+    daysSinceDiscount?: number;
+  };
+}
+
+export interface RemovalSettings {
+  enabled: boolean;
+  minDaysOnWishlist: number; // Default: 1095 (3 years)
+  minReviewScore: number; // Below this = poor reviews. Default: 40 (Mixed or lower)
+  showReviewWarnings: boolean;
+}
 
 // Export globally for content scripts (ES modules not fully supported in Chrome extensions)
 // Only set if not already defined (allows mocking in tests)

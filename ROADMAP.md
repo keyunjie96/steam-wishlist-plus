@@ -113,12 +113,6 @@ Features below were evaluated and declined because established extensions (Augme
 **Approach:** Use `chrome.alarms` API for periodic checks, `chrome.notifications` for alerts.
 **Risk:** High user annoyance if too many notifications. Needs careful UX design.
 
-### IDEA-2: Smart removal suggestions
-**Concept:** Surface games user might want to remove from wishlist (e.g., games wishlisted 3+ years ago, games with poor reviews).
-**Challenge:** Hard to get signal right - what makes a game "removable"?
-**Approach:** Analyze wishlist age, review scores, last price drop. Show subtle indicator.
-**Risk:** Users may feel patronized. Need opt-in and non-intrusive UI.
-
 ---
 
 ## Technical Debt
@@ -159,6 +153,7 @@ Features below were evaluated and declined because established extensions (Augme
 - [x] BUG-3: Icons disappear when wishlist filter is applied (fixed: dual-strategy item detection)
 - [x] UX-1: Refine icon loading state (fixed: single loader, dynamic icon injection)
 - [x] LIFECYCLE-1: Icon lifecycle management (fixed: cleanupAllIcons on URL change, stale container validation, strengthened duplicate prevention)
+- [x] IDEA-2: Smart removal suggestions (opt-in feature showing subtle indicators on games wishlisted 3+ years or with poor reviews)
 
 ---
 

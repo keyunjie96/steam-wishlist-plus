@@ -18,13 +18,30 @@ const refreshStatsBtn = document.getElementById('refresh-stats-btn') as HTMLButt
 const clearCacheBtn = document.getElementById('clear-cache-btn') as HTMLButtonElement;
 const showSteamDeckCheckbox = document.getElementById('show-steamdeck') as HTMLInputElement | null;
 
+// Removal suggestions elements
+const removalEnabledCheckbox = document.getElementById('removal-suggestions-enabled') as HTMLInputElement | null;
+const removalOptionsDiv = document.getElementById('removal-options') as HTMLElement | null;
+const showReviewWarningsCheckbox = document.getElementById('show-review-warnings') as HTMLInputElement | null;
+const ageThresholdInput = document.getElementById('age-threshold') as HTMLInputElement | null;
+const suggestionsStatusEl = document.getElementById('suggestions-status') as HTMLElement | null;
+
 // Default settings
 interface Settings {
   showSteamDeck: boolean;
+  removalSuggestions: {
+    enabled: boolean;
+    minYearsOnWishlist: number;
+    showReviewWarnings: boolean;
+  };
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  showSteamDeck: true
+  showSteamDeck: true,
+  removalSuggestions: {
+    enabled: false, // Opt-in by default
+    minYearsOnWishlist: 3,
+    showReviewWarnings: true
+  }
 };
 
 /**
@@ -71,13 +88,42 @@ function showSettingsStatus(message: string, type: 'success' | 'error'): void {
 async function loadSettings(): Promise<void> {
   try {
     const result = await chrome.storage.sync.get('xcpwSettings');
-    const settings: Settings = { ...DEFAULT_SETTINGS, ...result.xcpwSettings };
+    // Deep merge to handle nested removalSuggestions object
+    const settings: Settings = {
+      ...DEFAULT_SETTINGS,
+      ...result.xcpwSettings,
+      removalSuggestions: {
+        ...DEFAULT_SETTINGS.removalSuggestions,
+        ...result.xcpwSettings?.removalSuggestions
+      }
+    };
 
     if (showSteamDeckCheckbox) {
       showSteamDeckCheckbox.checked = settings.showSteamDeck;
     }
+
+    // Load removal suggestions settings
+    if (removalEnabledCheckbox) {
+      removalEnabledCheckbox.checked = settings.removalSuggestions.enabled;
+      updateRemovalOptionsVisibility(settings.removalSuggestions.enabled);
+    }
+    if (showReviewWarningsCheckbox) {
+      showReviewWarningsCheckbox.checked = settings.removalSuggestions.showReviewWarnings;
+    }
+    if (ageThresholdInput) {
+      ageThresholdInput.value = settings.removalSuggestions.minYearsOnWishlist.toString();
+    }
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
+  }
+}
+
+/**
+ * Updates visibility of removal options sub-section
+ */
+function updateRemovalOptionsVisibility(enabled: boolean): void {
+  if (removalOptionsDiv) {
+    removalOptionsDiv.style.display = enabled ? 'block' : 'none';
   }
 }
 
@@ -95,13 +141,54 @@ async function saveSettings(settings: Settings): Promise<void> {
 }
 
 /**
+ * Gets current settings from form state
+ */
+function getCurrentSettings(): Settings {
+  return {
+    showSteamDeck: showSteamDeckCheckbox?.checked ?? DEFAULT_SETTINGS.showSteamDeck,
+    removalSuggestions: {
+      enabled: removalEnabledCheckbox?.checked ?? DEFAULT_SETTINGS.removalSuggestions.enabled,
+      minYearsOnWishlist: parseInt(ageThresholdInput?.value ?? '', 10) || DEFAULT_SETTINGS.removalSuggestions.minYearsOnWishlist,
+      showReviewWarnings: showReviewWarningsCheckbox?.checked ?? DEFAULT_SETTINGS.removalSuggestions.showReviewWarnings
+    }
+  };
+}
+
+/**
  * Handles Steam Deck toggle change
  */
 async function handleSteamDeckToggle(): Promise<void> {
-  const settings: Settings = {
-    showSteamDeck: showSteamDeckCheckbox!.checked
-  };
-  await saveSettings(settings);
+  await saveSettings(getCurrentSettings());
+}
+
+/**
+ * Handles removal suggestions toggle change
+ */
+async function handleRemovalToggle(): Promise<void> {
+  const enabled = removalEnabledCheckbox?.checked ?? false;
+  updateRemovalOptionsVisibility(enabled);
+  await saveSettings(getCurrentSettings());
+}
+
+/**
+ * Handles review warnings toggle change
+ */
+async function handleReviewWarningsToggle(): Promise<void> {
+  await saveSettings(getCurrentSettings());
+}
+
+/**
+ * Handles age threshold change
+ */
+async function handleAgeThresholdChange(): Promise<void> {
+  // Validate input
+  const value = parseInt(ageThresholdInput?.value ?? '', 10);
+  if (isNaN(value) || value < 1) {
+    if (ageThresholdInput) ageThresholdInput.value = '1';
+  } else if (value > 10) {
+    if (ageThresholdInput) ageThresholdInput.value = '10';
+  }
+  await saveSettings(getCurrentSettings());
 }
 
 /**
@@ -180,6 +267,17 @@ refreshStatsBtn.addEventListener('click', loadCacheStats);
 clearCacheBtn.addEventListener('click', clearCache);
 if (showSteamDeckCheckbox) {
   showSteamDeckCheckbox.addEventListener('change', handleSteamDeckToggle);
+}
+
+// Removal suggestions event listeners
+if (removalEnabledCheckbox) {
+  removalEnabledCheckbox.addEventListener('change', handleRemovalToggle);
+}
+if (showReviewWarningsCheckbox) {
+  showReviewWarningsCheckbox.addEventListener('change', handleReviewWarningsToggle);
+}
+if (ageThresholdInput) {
+  ageThresholdInput.addEventListener('change', handleAgeThresholdChange);
 }
 
 // Initialize
