@@ -9,6 +9,10 @@ describe('popup.js', () => {
   let refreshBtn;
   let clearBtn;
   let optionsLink;
+  let showNintendoCheckbox;
+  let showPlaystationCheckbox;
+  let showXboxCheckbox;
+  let showSteamDeckCheckbox;
 
   beforeEach(() => {
     jest.resetModules();
@@ -16,6 +20,7 @@ describe('popup.js', () => {
 
     // Set up DOM elements that popup.js expects
     document.body.textContent = '';
+    document.body.className = 'is-loading';
 
     statusEl = document.createElement('div');
     statusEl.id = 'status';
@@ -49,6 +54,27 @@ describe('popup.js', () => {
     optionsLink.textContent = 'Open Settings';
     document.body.appendChild(optionsLink);
 
+    // Platform toggle checkboxes
+    showNintendoCheckbox = document.createElement('input');
+    showNintendoCheckbox.type = 'checkbox';
+    showNintendoCheckbox.id = 'show-nintendo';
+    document.body.appendChild(showNintendoCheckbox);
+
+    showPlaystationCheckbox = document.createElement('input');
+    showPlaystationCheckbox.type = 'checkbox';
+    showPlaystationCheckbox.id = 'show-playstation';
+    document.body.appendChild(showPlaystationCheckbox);
+
+    showXboxCheckbox = document.createElement('input');
+    showXboxCheckbox.type = 'checkbox';
+    showXboxCheckbox.id = 'show-xbox';
+    document.body.appendChild(showXboxCheckbox);
+
+    showSteamDeckCheckbox = document.createElement('input');
+    showSteamDeckCheckbox.type = 'checkbox';
+    showSteamDeckCheckbox.id = 'show-steamdeck';
+    document.body.appendChild(showSteamDeckCheckbox);
+
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
     chrome.runtime.sendMessage.mockResolvedValue({
@@ -59,6 +85,19 @@ describe('popup.js', () => {
 
     // Mock chrome.runtime.openOptionsPage
     chrome.runtime.openOptionsPage.mockClear();
+
+    // Mock chrome.storage.sync
+    chrome.storage.sync.get.mockClear();
+    chrome.storage.sync.get.mockResolvedValue({
+      xcpwSettings: {
+        showNintendo: true,
+        showPlaystation: true,
+        showXbox: false,
+        showSteamDeck: true
+      }
+    });
+    chrome.storage.sync.set.mockClear();
+    chrome.storage.sync.set.mockResolvedValue();
 
     // Mock confirm dialog
     global.confirm = jest.fn(() => true);
@@ -519,11 +558,178 @@ describe('popup.js', () => {
       clearBtn.textContent = 'Test';
 
       clearBtn.disabled = true;
-      clearBtn.innerHTML = '<span class="loading"></span>';
 
       clearBtn.disabled = false;
 
       expect(clearBtn.disabled).toBe(false);
+    });
+  });
+
+  describe('platform toggles', () => {
+    it('should load settings from chrome.storage.sync on init', async () => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.get).toHaveBeenCalledWith('xcpwSettings');
+    });
+
+    it('should set checkbox states based on loaded settings', async () => {
+      chrome.storage.sync.get.mockResolvedValueOnce({
+        xcpwSettings: {
+          showNintendo: true,
+          showPlaystation: false,
+          showXbox: true,
+          showSteamDeck: false
+        }
+      });
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(showNintendoCheckbox.checked).toBe(true);
+      expect(showPlaystationCheckbox.checked).toBe(false);
+      expect(showXboxCheckbox.checked).toBe(true);
+      expect(showSteamDeckCheckbox.checked).toBe(false);
+    });
+
+    it('should use default settings when none are stored', async () => {
+      chrome.storage.sync.get.mockResolvedValueOnce({});
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Default is all true
+      expect(showNintendoCheckbox.checked).toBe(true);
+      expect(showPlaystationCheckbox.checked).toBe(true);
+      expect(showXboxCheckbox.checked).toBe(true);
+      expect(showSteamDeckCheckbox.checked).toBe(true);
+    });
+
+    it('should save settings when Nintendo toggle is changed', async () => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      showNintendoCheckbox.checked = false;
+      showNintendoCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        xcpwSettings: expect.objectContaining({
+          showNintendo: false
+        })
+      });
+    });
+
+    it.each([
+      ['PlayStation', () => showPlaystationCheckbox],
+      ['Xbox', () => showXboxCheckbox],
+      ['Steam Deck', () => showSteamDeckCheckbox]
+    ])('should save settings when %s toggle is changed', async (name, getCheckbox) => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      const checkbox = getCheckbox();
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.storage.sync.set).toHaveBeenCalled();
+    });
+
+    it('should show success status when settings are saved', async () => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      showNintendoCheckbox.checked = false;
+      showNintendoCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(statusEl.textContent).toContain('saved');
+      expect(statusEl.className).toContain('success');
+    });
+
+    it('should show error status when settings fail to save', async () => {
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      chrome.storage.sync.set.mockRejectedValueOnce(new Error('Storage error'));
+
+      showNintendoCheckbox.checked = false;
+      showNintendoCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(statusEl.textContent).toContain('Failed');
+      expect(statusEl.className).toContain('error');
+    });
+
+    it('should handle loadSettings error gracefully', async () => {
+      chrome.storage.sync.get.mockRejectedValueOnce(new Error('Storage error'));
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Should not throw - the error is caught and logged
+      // Checkboxes keep their initial HTML state (unchecked)
+      expect(chrome.storage.sync.get).toHaveBeenCalled();
+    });
+
+    it('should remove is-loading class after initialization', async () => {
+      // Ensure is-loading is set
+      document.body.classList.add('is-loading');
+      expect(document.body.classList.contains('is-loading')).toBe(true);
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(document.body.classList.contains('is-loading')).toBe(false);
+    });
+
+    it('should handle missing checkbox elements gracefully', async () => {
+      // Remove checkboxes from DOM
+      showNintendoCheckbox.remove();
+      showPlaystationCheckbox.remove();
+      showXboxCheckbox.remove();
+      showSteamDeckCheckbox.remove();
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+
+      // Should not throw
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(document.body.classList.contains('is-loading')).toBe(false);
+    });
+
+    it('should initialize immediately when document already loaded', async () => {
+      // Simulate document already loaded (readyState !== 'loading')
+      Object.defineProperty(document, 'readyState', {
+        value: 'complete',
+        writable: true
+      });
+
+      jest.resetModules();
+      require('../../dist/popup.js');
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Should have loaded stats without needing DOMContentLoaded event
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'GET_CACHE_STATS'
+      });
+
+      // Restore
+      Object.defineProperty(document, 'readyState', {
+        value: 'loading',
+        writable: true
+      });
     });
   });
 });

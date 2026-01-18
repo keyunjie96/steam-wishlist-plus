@@ -85,6 +85,9 @@ const ALL_PLATFORMS: Platform[] = ['nintendo', 'playstation', 'xbox', 'steamdeck
 
 /** User settings (loaded from storage) */
 let userSettings = {
+  showNintendo: true,
+  showPlaystation: true,
+  showXbox: true,
   showSteamDeck: true
 };
 
@@ -110,12 +113,28 @@ function getEnabledPlatforms(): Platform[] {
   const isDeckFilterActive = checkDeckFilterActive();
 
   return ALL_PLATFORMS.filter(platform => {
-    if (platform === 'steamdeck') {
-      // Hide our Deck icons when Steam's Deck filter is active (shows native badges)
-      return userSettings.showSteamDeck && !isDeckFilterActive;
+    switch (platform) {
+      case 'nintendo':
+        return userSettings.showNintendo;
+      case 'playstation':
+        return userSettings.showPlaystation;
+      case 'xbox':
+        return userSettings.showXbox;
+      case 'steamdeck':
+        // Hide our Deck icons when Steam's Deck filter is active (shows native badges)
+        return userSettings.showSteamDeck && !isDeckFilterActive;
+      default:
+        return true;
     }
-    return true; // Other platforms always shown
   });
+}
+
+/**
+ * Checks if any console platform (Nintendo, PlayStation, Xbox) is enabled.
+ * Used to skip Wikidata fetching when all consoles are disabled.
+ */
+function isAnyConsolePlatformEnabled(): boolean {
+  return userSettings.showNintendo || userSettings.showPlaystation || userSettings.showXbox;
 }
 
 /**
@@ -131,6 +150,113 @@ async function loadUserSettings(): Promise<void> {
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
+}
+
+/**
+ * Handles settings changes from the options page.
+ * Refreshes icons when platforms are re-enabled.
+ */
+function setupSettingsChangeListener(): void {
+  // Guard for test environment where chrome.storage.onChanged may not exist
+  if (!chrome?.storage?.onChanged) {
+    return;
+  }
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'sync' || !changes.xcpwSettings) {
+      return;
+    }
+
+    const oldSettings = changes.xcpwSettings.oldValue || {};
+    const newSettings = changes.xcpwSettings.newValue || {};
+
+    // Update local settings
+    userSettings = { ...userSettings, ...newSettings };
+    if (DEBUG) console.log(`${LOG_PREFIX} Settings changed:`, { old: oldSettings, new: newSettings });
+
+    // Check if any platform was just enabled
+    const platformsJustEnabled: Platform[] = [];
+
+    if (newSettings.showNintendo && !oldSettings.showNintendo) platformsJustEnabled.push('nintendo');
+    if (newSettings.showPlaystation && !oldSettings.showPlaystation) platformsJustEnabled.push('playstation');
+    if (newSettings.showXbox && !oldSettings.showXbox) platformsJustEnabled.push('xbox');
+    if (newSettings.showSteamDeck && !oldSettings.showSteamDeck) platformsJustEnabled.push('steamdeck');
+
+    // Check if any platform was just disabled
+    const platformsJustDisabled: Platform[] = [];
+
+    if (!newSettings.showNintendo && oldSettings.showNintendo) platformsJustDisabled.push('nintendo');
+    if (!newSettings.showPlaystation && oldSettings.showPlaystation) platformsJustDisabled.push('playstation');
+    if (!newSettings.showXbox && oldSettings.showXbox) platformsJustDisabled.push('xbox');
+    if (!newSettings.showSteamDeck && oldSettings.showSteamDeck) platformsJustDisabled.push('steamdeck');
+
+    if (platformsJustEnabled.length > 0 || platformsJustDisabled.length > 0) {
+      console.log(`${LOG_PREFIX} Platform settings changed - enabled: [${platformsJustEnabled.join(', ')}], disabled: [${platformsJustDisabled.join(', ')}]`);
+
+      // Refresh icons from cache for all visible containers
+      // This will show/hide icons based on new settings without re-fetching data
+      refreshIconsFromCache('settings-change');
+
+      // Also update ALL containers with loaders (not just pending ones)
+      // This handles lazy-loaded games that may have stale references or were just created
+      // Use querySelectorAll with filter for browser compatibility (avoids :has() selector)
+      const allContainers = document.querySelectorAll<HTMLElement>('.xcpw-platforms');
+      for (const container of allContainers) {
+        // Skip containers without loaders
+        if (!container.querySelector('.xcpw-loader')) continue;
+        const appid = container.getAttribute('data-appid');
+        if (!appid) continue;
+
+        // If we have cached data, use it to update the container
+        const cachedEntry = cachedEntriesByAppId.get(appid);
+        if (cachedEntry) {
+          updateIconsWithData(container, cachedEntry);
+          if (DEBUG) console.log(`${LOG_PREFIX} Updated loading container from cache: ${appid}`);
+        } else if (!isAnyConsolePlatformEnabled() && !newSettings.showSteamDeck) {
+          // No cached data and all platforms disabled - just remove loader
+          removeLoadingState(container);
+          if (DEBUG) console.log(`${LOG_PREFIX} Removed loader (all platforms disabled): ${appid}`);
+        }
+        // Otherwise, loader stays while waiting for batch resolution (normal case)
+      }
+
+      // Also update pending items map with fresh container references
+      for (const [appid, pendingInfo] of pendingItems) {
+        if (!document.body.contains(pendingInfo.container)) {
+          // Container is stale - try to find fresh one
+          const freshContainer = document.querySelector<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+          if (freshContainer) {
+            pendingInfo.container = freshContainer;
+          }
+        }
+      }
+
+      // If Steam Deck was just enabled, fetch Steam Deck data
+      if (platformsJustEnabled.includes('steamdeck') && !steamDeckData) {
+        const SteamDeck = globalThis.XCPW_SteamDeck;
+        if (SteamDeck) {
+          SteamDeck.waitForDeckData().then((data: Map<string, DeckCategory>) => {
+            if (data.size > 0) {
+              steamDeckData = data;
+              refreshIconsFromCache('steamdeck-enabled');
+            }
+          });
+        }
+      }
+
+      // If console platforms were just enabled and we have no cached data, re-process items
+      const consolePlatformsJustEnabled = platformsJustEnabled.filter(p => p !== 'steamdeck');
+      if (consolePlatformsJustEnabled.length > 0) {
+        // Check if we need to fetch new data (items not in cache)
+        const needsFetch = Array.from(cachedEntriesByAppId.keys()).length === 0;
+        if (needsFetch) {
+          // Clear injected state and reprocess to trigger fetches
+          injectedAppIds.clear();
+          processWishlistItems();
+        }
+      }
+    }
+  });
 }
 
 /**
@@ -756,6 +882,33 @@ async function processPendingBatch(): Promise<void> {
   pendingItems.clear();
   batchDebounceTimer = null;
 
+  // Skip Wikidata fetch if all console platforms are disabled
+  // Just update icons with Steam Deck data (if enabled) or remove loading state
+  if (!isAnyConsolePlatformEnabled()) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Skipping batch request - all console platforms disabled`);
+    for (const [appid, { container }] of containerMap) {
+      // Create a minimal cache entry with no console platform data
+      const minimalEntry: CacheEntry = {
+        appid,
+        gameName: containerMap.get(appid)!.gameName,
+        platforms: {
+          nintendo: { status: 'unknown', storeUrl: '' },
+          playstation: { status: 'unknown', storeUrl: '' },
+          xbox: { status: 'unknown', storeUrl: '' }
+        },
+        source: 'local',
+        wikidataId: null,
+        resolvedAt: Date.now(),
+        ttlDays: 7
+      };
+
+      // Always call updateIconsWithData - it handles removing the loader
+      // and will show Steam Deck icons if enabled and data is available
+      updateIconsWithData(container, minimalEntry);
+    }
+    return;
+  }
+
   if (DEBUG) console.log(`${LOG_PREFIX} Sending batch request for ${games.length} games`);
 
   try {
@@ -772,25 +925,41 @@ async function processPendingBatch(): Promise<void> {
 
         const { container, gameName } = itemInfo;
 
-        // Before updating, verify container is still in DOM (BUG-6, BUG-12)
-        // Container may have been detached by React re-render or filter change
-        if (!document.body.contains(container)) {
-          if (DEBUG) console.log(`${LOG_PREFIX} Skipping stale container for ${appid}`);
+        // Always save data to in-memory cache first, even if container is stale
+        // This ensures data is available for cache-reuse when game reappears
+        if (result.data) {
+          cachedEntriesByAppId.set(appid, result.data);
+        }
+
+        // BUG-13 FIX: Update ALL containers for this appid, not just the one in containerMap
+        // React's virtualization can create multiple containers when items are re-rendered
+        // while a batch request is in flight, causing duplicate containers with ghost loaders
+        const allContainersForAppid = document.querySelectorAll<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+
+        if (allContainersForAppid.length === 0) {
+          if (DEBUG) console.log(`${LOG_PREFIX} No containers found for ${appid}, data cached for reuse`);
           continue;
         }
 
-        if (result.data) {
-          if (DEBUG) console.log(`${LOG_PREFIX} Updating icons for appid ${appid}`);
-          cachedEntriesByAppId.set(appid, result.data);
-          updateIconsWithData(container, result.data);
+        // Update all containers for this appid
+        let updatedCount = 0;
+        for (const targetContainer of allContainersForAppid) {
+          if (result.data) {
+            updateIconsWithData(targetContainer, result.data);
+            updatedCount++;
+          } else {
+            // No data available - remove loading state
+            removeLoadingState(targetContainer);
+          }
+        }
 
+        if (result.data) {
           const source = result.fromCache ? 'cache' : 'new';
-          const iconSummary = getRenderedIconSummary(container);
-          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]`);
-        } else {
-          // No data available - keep icons as unknown (still link to store search)
-          removeLoadingState(container);
-          if (DEBUG) console.log(`${LOG_PREFIX} No data for appid ${appid}, keeping icons as unknown`);
+          const iconSummary = getRenderedIconSummary(allContainersForAppid[0]);
+          const containerNote = allContainersForAppid.length > 1 ? ` (${updatedCount} containers)` : '';
+          console.log(`${LOG_PREFIX} Rendered (${source}): ${appid} - ${gameName} [icons: ${iconSummary}]${containerNote}`);
+        } else if (DEBUG) {
+          console.log(`${LOG_PREFIX} No data for appid ${appid}, removed loading state`);
         }
       }
     } else {
@@ -816,6 +985,13 @@ async function processPendingBatch(): Promise<void> {
 
 /** Set of appids that have icons already injected (survives React re-renders) */
 const injectedAppIds = new Set<string>();
+
+/**
+ * BUG-13 FIX: Track appIds currently being processed (in-flight).
+ * This prevents the "state desync" logic from incorrectly deleting appIds
+ * when a concurrent call sees "tracked but no icons" during the async wait.
+ */
+const processingAppIds = new Set<string>();
 
 /** Retry configuration for lazy-loaded items */
 const INJECTION_MAX_RETRIES = 10;
@@ -869,6 +1045,12 @@ async function processItem(item: Element): Promise<void> {
     return;
   }
 
+  // Short-circuit: If all platforms are disabled, don't create any containers
+  // This prevents ghost loaders from appearing when user has turned off all icons
+  if (!isAnyConsolePlatformEnabled() && !userSettings.showSteamDeck) {
+    return;
+  }
+
   // Check if icons actually exist in DOM for this item
   let iconsExistInDom = item.querySelector('.xcpw-platforms');
 
@@ -886,6 +1068,13 @@ async function processItem(item: Element): Promise<void> {
     iconsExistInDom = null;
   }
 
+  // BUG-13 FIX: If this appId is currently being processed by another call, skip
+  // This prevents duplicate container creation during the async wait window
+  if (processingAppIds.has(appId)) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Skipping ${appId} - already being processed`);
+    return;
+  }
+
   // If injectedAppIds thinks icons exist, verify they're actually in DOM
   // React virtualization can destroy DOM elements, desync'ing our tracking state
   if (injectedAppIds.has(appId)) {
@@ -896,7 +1085,7 @@ async function processItem(item: Element): Promise<void> {
       return;
     } else {
       // State desync: injectedAppIds says injected, but icons are gone (React destroyed them)
-      // Remove from tracking so we can re-inject
+      // Only re-inject if not currently being processed by another call
       if (DEBUG) console.log(`${LOG_PREFIX} Re-injecting ${appId} - React destroyed icons`);
       injectedAppIds.delete(appId);
     }
@@ -920,6 +1109,11 @@ async function processItem(item: Element): Promise<void> {
 
   const gameName = extractGameName(item);
 
+  // BUG-13 FIX: Mark as "in-flight" to prevent concurrent calls from creating duplicates
+  // This must happen BEFORE any async work
+  processingAppIds.add(appId);
+  injectedAppIds.add(appId);
+
   // Wait for injection point to be ready (handles lazy-loaded items where
   // Steam loads SVG icons slightly after the item skeleton appears)
   let injectionPoint = await waitForInjectionPoint(item);
@@ -940,7 +1134,19 @@ async function processItem(item: Element): Promise<void> {
     container.appendChild(iconsContainer);
   }
   item.setAttribute(ICONS_INJECTED_ATTR, 'true');
-  injectedAppIds.add(appId);
+  // BUG-13 FIX: Done processing - remove from in-flight set
+  processingAppIds.delete(appId);
+
+  // Check if we already have cached data for this game
+  // This happens when React re-renders and destroys/recreates DOM elements
+  const cachedEntry = cachedEntriesByAppId.get(appId);
+  if (cachedEntry) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Using cached data for appid ${appId}`);
+    updateIconsWithData(iconsContainer, cachedEntry);
+    const iconSummary = getRenderedIconSummary(iconsContainer);
+    console.log(`${LOG_PREFIX} Rendered (cache-reuse): ${appId} - ${gameName} [icons: ${iconSummary}]`);
+    return;
+  }
 
   // Queue for batch resolution instead of individual request
   // This dramatically reduces Wikidata API calls by batching multiple games together
@@ -1013,8 +1219,9 @@ async function init(): Promise<void> {
     return;
   }
 
-  // Load user settings first
+  // Load user settings first and set up change listener
   await loadUserSettings();
+  setupSettingsChangeListener();
 
   // Load Steam Deck data from page script (runs in MAIN world)
   const SteamDeck = globalThis.XCPW_SteamDeck;
@@ -1129,12 +1336,14 @@ if (typeof globalThis !== 'undefined') {
     scheduleSteamDeckRefresh,
     markMissingSteamDeckData,
     getEnabledPlatforms,
+    isAnyConsolePlatformEnabled,
+    setupSettingsChangeListener,
     getMissingSteamDeckAppIds: () => missingSteamDeckAppIds,
     getSteamDeckRefreshAttempts: () => steamDeckRefreshAttempts,
     setSteamDeckRefreshAttempts: (val: number) => { steamDeckRefreshAttempts = val; },
     getCachedEntriesByAppId: () => cachedEntriesByAppId,
     getUserSettings: () => userSettings,
-    setUserSettings: (val: { showSteamDeck: boolean }) => { userSettings = val; },
+    setUserSettings: (val: { showNintendo: boolean; showPlaystation: boolean; showXbox: boolean; showSteamDeck: boolean }) => { userSettings = val; },
     getSteamDeckRefreshTimer: () => steamDeckRefreshTimer,
     setSteamDeckRefreshTimer: (val: ReturnType<typeof setTimeout> | null) => { steamDeckRefreshTimer = val; },
     STEAM_DECK_REFRESH_DELAYS_MS
