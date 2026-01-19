@@ -114,6 +114,21 @@ Current global thresholds:
 - Lines: 80%
 - Statements: 80%
 
+### Version Updates
+
+**When to update the version number:**
+- **Patch version (0.5.x)**: Bug fixes, minor improvements, refactoring
+- **Minor version (0.x.0)**: New features, significant enhancements
+- **Major version (x.0.0)**: Breaking changes, major rewrites
+
+**Files to update:**
+1. `manifest.json` - `"version"` field
+2. `package.json` - `"version"` field
+3. `CLAUDE.md` - Version in Project Overview section
+4. `src/hltbClient.ts` - User-Agent string (if version is referenced there)
+
+**IMPORTANT:** Always update version numbers when making user-visible changes before creating a commit or PR.
+
 ### Loading the Extension
 1. Run `npm run build` to compile TypeScript
 2. Open `chrome://extensions/`
@@ -215,6 +230,73 @@ Set to `true` for verbose logging during development.
 1. **Rate Limiting**: 500ms delay between Wikidata requests to avoid throttling
 2. **Cache TTL**: 7 days - games that become available on new platforms won't update until cache expires
 3. **Wikidata Coverage**: Not all games have platform data in Wikidata
+
+## Browser Automation Testing (Playwright)
+
+**IMPORTANT:** Playwright has significant limitations when testing Chrome extensions.
+
+### What Playwright CAN Do
+
+1. **Navigate to websites and observe results** - Load Steam wishlist pages to see if icons appear
+2. **Test APIs directly on their websites** - Navigate to howlongtobeat.com and test their API from within the page context
+3. **Scrape JavaScript to find API endpoints** - Fetch and analyze minified JS files to reverse-engineer API formats
+4. **Read console logs** - Check browser_console_messages for extension log output
+5. **Take screenshots** - Capture visual state of the page with extension icons
+
+### What Playwright CANNOT Do
+
+1. **Access extension service worker context** - The background script runs in an isolated world inaccessible from Playwright
+2. **Inject into extension contexts** - Cannot directly call chrome.runtime.sendMessage or access extension storage
+3. **Bypass CORS from page context** - API calls from browser_evaluate are subject to different CORS rules than the extension's host_permissions
+4. **Test extension-to-extension messaging** - No way to simulate content script ↔ background worker communication
+
+### Recommended Debugging Workflow
+
+When an external API (like HLTB) stops working:
+
+1. **Use Playwright to navigate to the API's website** (e.g., howlongtobeat.com)
+2. **Scrape the JavaScript files** to find the current API endpoint and format:
+   ```typescript
+   // Example: Find API endpoint in minified JS
+   const scripts = await page.evaluate(() =>
+     Array.from(document.querySelectorAll('script[src]'))
+       .map(s => s.src)
+   );
+   // Fetch each script and search for fetch() patterns
+   ```
+3. **Test the API directly using browser_evaluate**:
+   ```typescript
+   const result = await page.evaluate(async () => {
+     const response = await fetch('/api/endpoint', { ... });
+     return response.json();
+   });
+   ```
+4. **Update the extension code** with the discovered format
+5. **Verify manually** by loading the extension in Chrome and checking console logs
+
+### API-Specific Notes
+
+**HLTB (HowLongToBeat):**
+- Uses an undocumented API that changes periodically
+- Requires auth token from `/api/search/init?t=<timestamp>`
+- Search endpoint: POST `/api/search` (not `/api/s/`)
+- Request body must include nested objects: `rangeTime`, `gameplay`, `rangeYear`, `users`, `lists`
+- `searchTerms` must be `["Full Game Name"]` (single element), NOT split by spaces
+- Response times are in **seconds**, divide by 3600 for hours
+
+**Wikidata:**
+- SPARQL queries are stable and well-documented
+- Rate limit: 500ms between requests
+- Can be tested directly via browser fetch
+
+### Manual Extension Testing
+
+For full end-to-end testing, use Chrome DevTools:
+1. Load extension unpacked at `chrome://extensions/`
+2. Navigate to Steam wishlist
+3. Open DevTools → Console
+4. Filter by `[XCPW` to see extension logs
+5. Check Network tab for API requests from service worker
 
 ## Roadmap Maintenance
 

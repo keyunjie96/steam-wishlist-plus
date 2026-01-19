@@ -341,6 +341,7 @@ export type DeckStatus = 'unknown' | 'unsupported' | 'playable' | 'verified';
 
 // HLTB (How Long To Beat) types
 export interface HltbData {
+  hltbId: number;        // HLTB game ID for linking
   mainStory: number;    // Hours for main story
   mainExtra: number;    // Hours for main + extras
   completionist: number; // Hours for 100%

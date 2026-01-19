@@ -2193,6 +2193,197 @@ describe('content.js', () => {
       // Cleanup
       setSteamDeckData(null);
     });
+
+    it('should skip Steam Deck when steamDeckData is null', () => {
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.XCPW_ContentTestExports;
+
+      // Ensure Steam Deck is enabled but data is null
+      setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
+      setSteamDeckData(null);
+
+      const container = createIconsContainer('12345', 'Test Game');
+      const data = {
+        gameName: 'Test Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://ns.example.com' }
+        }
+      };
+
+      updateIconsWithData(container, data);
+
+      // Should have Nintendo but NOT Steam Deck (data is null)
+      expect(container.querySelector('[data-platform="nintendo"]')).toBeTruthy();
+      expect(container.querySelector('[data-platform="steamdeck"]')).toBeNull();
+    });
+
+    it('should skip Steam Deck when appid is missing', () => {
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.XCPW_ContentTestExports;
+
+      setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
+      const deckData = new Map([['12345', 3]]);
+      setSteamDeckData(deckData);
+
+      // Create container without appid
+      const container = document.createElement('div');
+      container.className = 'xcpw-container';
+      // Note: NOT setting data-appid attribute
+
+      const data = {
+        gameName: 'Test Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://ns.example.com' }
+        }
+      };
+
+      updateIconsWithData(container, data);
+
+      // Should NOT have Steam Deck icon (no appid)
+      expect(container.querySelector('[data-platform="steamdeck"]')).toBeNull();
+
+      setSteamDeckData(null);
+    });
+  });
+
+  describe('createHltbBadge', () => {
+    it('should create badge with all time fields populated', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 25,
+        mainExtra: 40,
+        completionist: 60,
+        allStyles: 45,
+        steamId: 12345
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      expect(badge.classList.contains('xcpw-hltb-badge')).toBe(true);
+      // Shows just main story time with tilde (estimate indicator)
+      expect(badge.textContent).toBe('~25h');
+      // Tooltip contains full breakdown
+      expect(badge.getAttribute('title')).toContain('Main Story: 25h');
+      expect(badge.getAttribute('title')).toContain('Main + Extras: 40h');
+      expect(badge.getAttribute('title')).toContain('Completionist: 60h');
+    });
+
+    it('should create badge with only mainStory', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 30,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      expect(badge.textContent).toBe('~30h');
+      expect(badge.getAttribute('title')).toContain('Main Story: 30h');
+      expect(badge.getAttribute('title')).not.toContain('Main + Extras');
+      expect(badge.getAttribute('title')).not.toContain('Completionist');
+    });
+
+    it('should show Unknown tooltip when all times are zero', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 0,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      expect(badge.textContent).toBe('?h');
+      expect(badge.getAttribute('title')).toBe('How Long To Beat: Unknown');
+    });
+
+    it('should fall back to mainExtra when mainStory is zero', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 0,
+        mainExtra: 50,
+        completionist: 80,
+        allStyles: 60,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      // Badge falls back to mainExtra time
+      expect(badge.textContent).toBe('~50h');
+      // Tooltip shows available times
+      expect(badge.getAttribute('title')).toContain('Main + Extras: 50h');
+      expect(badge.getAttribute('title')).toContain('Completionist: 80h');
+    });
+
+    it('should fall back to completionist when only it is available', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 0,
+        mainExtra: 0,
+        completionist: 100,
+        allStyles: 0,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      // Badge falls back to completionist time
+      expect(badge.textContent).toBe('~100h');
+      expect(badge.getAttribute('title')).toContain('Completionist: 100h');
+    });
+
+    it('should create clickable link when hltbId is provided', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 12345,
+        mainStory: 25,
+        mainExtra: 40,
+        completionist: 60,
+        allStyles: 45,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      expect(badge.tagName.toLowerCase()).toBe('a');
+      expect(badge.getAttribute('href')).toBe('https://howlongtobeat.com/game/12345');
+      expect(badge.getAttribute('target')).toBe('_blank');
+      expect(badge.getAttribute('title')).toContain('Click to view on HLTB');
+    });
+
+    it('should create span (not link) when hltbId is zero', () => {
+      const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 25,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      expect(badge.tagName.toLowerCase()).toBe('span');
+      expect(badge.getAttribute('href')).toBeNull();
+      expect(badge.getAttribute('title')).not.toContain('Click to view on HLTB');
+    });
   });
 
   describe('processItem function', () => {
@@ -3050,7 +3241,7 @@ describe('content.js', () => {
       expect(pendingItems.size).toBe(0);
     });
 
-    it('should skip batch request when all console platforms disabled', async () => {
+    it('should skip batch request when all console platforms AND HLTB disabled', async () => {
       const {
         processPendingBatch,
         pendingItems,
@@ -3058,12 +3249,14 @@ describe('content.js', () => {
         setUserSettings
       } = globalThis.XCPW_ContentTestExports;
 
-      // Disable all console platforms
+      // Disable all console platforms AND HLTB
+      // (We still query Wikidata when HLTB is enabled to get English game names)
       setUserSettings({
         showNintendo: false,
         showPlaystation: false,
         showXbox: false,
-        showSteamDeck: false
+        showSteamDeck: false,
+        showHltb: false
       });
 
       const container = createIconsContainer('77777', 'Test Game');
@@ -3090,7 +3283,54 @@ describe('content.js', () => {
         showNintendo: true,
         showPlaystation: true,
         showXbox: true,
-        showSteamDeck: true
+        showSteamDeck: true,
+        showHltb: true
+      });
+
+      container.remove();
+    });
+
+    it('should still query Wikidata when HLTB enabled even if console platforms disabled', async () => {
+      const {
+        processPendingBatch,
+        pendingItems,
+        createIconsContainer,
+        setUserSettings
+      } = globalThis.XCPW_ContentTestExports;
+
+      // Disable console platforms but keep HLTB enabled
+      // (We need Wikidata to get English game names for HLTB)
+      setUserSettings({
+        showNintendo: false,
+        showPlaystation: false,
+        showXbox: false,
+        showSteamDeck: false,
+        showHltb: true
+      });
+
+      const container = createIconsContainer('88888', 'Test Game');
+      document.body.appendChild(container);
+
+      pendingItems.set('88888', { gameName: 'Test Game', container });
+
+      // Clear mock
+      chrome.runtime.sendMessage.mockClear();
+
+      await processPendingBatch();
+
+      // Should have made a GET_PLATFORM_DATA_BATCH call (for English names)
+      const batchCalls = chrome.runtime.sendMessage.mock.calls.filter(
+        call => call[0]?.type === 'GET_PLATFORM_DATA_BATCH'
+      );
+      expect(batchCalls.length).toBe(1);
+
+      // Restore settings
+      setUserSettings({
+        showNintendo: true,
+        showPlaystation: true,
+        showXbox: true,
+        showSteamDeck: true,
+        showHltb: true
       });
 
       container.remove();

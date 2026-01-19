@@ -29,6 +29,9 @@ import type {
 
 const LOG_PREFIX = '[XCPW Background]';
 
+// Sentinel value for "searched HLTB but no match found" - prevents repeated searches
+const HLTB_NOT_FOUND_ID = -1;
+
 interface AsyncResponse {
   success: boolean;
   data?: CacheEntry | HltbData | null;
@@ -213,14 +216,25 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
 
   // Check if we have cached HLTB data first
   const cached = await globalThis.XCPW_Cache.getFromCache(appid);
-  if (cached?.hltbData) {
-    console.log(`${LOG_PREFIX} HLTB cache hit for appid ${appid}`);
-    return { success: true, data: cached.hltbData };
+  const hltb = cached?.hltbData;
+
+  // Check for "not found" marker - don't re-search
+  if (hltb && hltb.hltbId === HLTB_NOT_FOUND_ID) {
+    console.log(`${LOG_PREFIX} HLTB cache hit (not found) for appid ${appid}`);
+    return { success: true, data: null };
+  }
+
+  // Check for valid cached data (require valid hltbId for clickable badges)
+  if (hltb && hltb.hltbId > 0 && (hltb.mainStory > 0 || hltb.mainExtra > 0 || hltb.completionist > 0)) {
+    console.log(`${LOG_PREFIX} HLTB cache hit for appid ${appid} (hltbId=${hltb.hltbId})`);
+    return { success: true, data: hltb };
   }
 
   // Query HLTB
   try {
+    console.log(`${LOG_PREFIX} HLTB querying for "${gameName}" (appid: ${appid})`);
     const result = await globalThis.XCPW_HltbClient.queryByGameName(gameName, appid);
+    console.log(`${LOG_PREFIX} HLTB query result for ${appid}:`, JSON.stringify(result));
 
     if (result) {
       // Update cache with HLTB data
@@ -232,7 +246,19 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
       return { success: true, data: result.data };
     }
 
-    console.log(`${LOG_PREFIX} HLTB no match for appid ${appid}`);
+    // Save "not found" marker to cache to prevent repeated searches
+    if (cached) {
+      cached.hltbData = {
+        hltbId: HLTB_NOT_FOUND_ID,
+        mainStory: 0,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+      await globalThis.XCPW_Cache.saveToCache(cached);
+    }
+    console.log(`${LOG_PREFIX} HLTB no match for appid ${appid} (cached as not found)`);
     return { success: true, data: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -261,33 +287,70 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
   const uncached: Array<{ appid: string; gameName: string }> = [];
 
   // Check cache first
+  // Note: Treat HLTB data with all zeros or missing hltbId as uncached (likely from old broken API)
   for (const { appid, gameName } of games) {
     const cached = await globalThis.XCPW_Cache.getFromCache(appid);
-    if (cached?.hltbData) {
-      hltbResults[appid] = cached.hltbData;
+    const hltb = cached?.hltbData;
+
+    // Check for "not found" marker - don't re-search, return null
+    if (hltb && hltb.hltbId === HLTB_NOT_FOUND_ID) {
+      hltbResults[appid] = null;
+      continue;
+    }
+
+    // Require valid hltbId for clickable badges AND valid time data
+    const hasValidHltbData = hltb && hltb.hltbId > 0 && (hltb.mainStory > 0 || hltb.mainExtra > 0 || hltb.completionist > 0);
+    if (hasValidHltbData) {
+      hltbResults[appid] = hltb;
     } else {
       uncached.push({ appid, gameName });
     }
   }
 
   // Query HLTB for uncached games
+  console.log(`${LOG_PREFIX} HLTB: ${games.length} total, ${games.length - uncached.length} cached, ${uncached.length} to query`);
   if (uncached.length > 0) {
+    console.log(`${LOG_PREFIX} HLTB querying games:`, uncached.map(g => `${g.appid}:${g.gameName}`).join(', '));
     try {
+      console.log(`${LOG_PREFIX} HLTB: XCPW_HltbClient available:`, !!globalThis.XCPW_HltbClient);
       const batchResults = await globalThis.XCPW_HltbClient.batchQueryByGameNames(uncached);
+      console.log(`${LOG_PREFIX} HLTB batch returned ${batchResults.size} results`);
+      // Debug: log first result details
+      if (batchResults.size > 0) {
+        const firstEntry = batchResults.entries().next().value;
+        if (firstEntry) {
+          const [appid, result] = firstEntry;
+          console.log(`${LOG_PREFIX} HLTB first result (${appid}):`, JSON.stringify(result?.data || 'null'));
+        }
+      }
 
       for (const { appid } of uncached) {
         const hltbResult = batchResults.get(appid);
+        console.log(`${LOG_PREFIX} HLTB result for ${appid}: ${hltbResult ? `mainStory=${hltbResult.data.mainStory}h, hltbId=${hltbResult.data.hltbId}, similarity=${hltbResult.similarity}` : 'null'}`);
+
+        // Update cache
+        const cached = await globalThis.XCPW_Cache.getFromCache(appid);
         if (hltbResult) {
           hltbResults[appid] = hltbResult.data;
-
-          // Update cache
-          const cached = await globalThis.XCPW_Cache.getFromCache(appid);
           if (cached) {
             cached.hltbData = hltbResult.data;
             await globalThis.XCPW_Cache.saveToCache(cached);
           }
         } else {
+          // Save "not found" marker to prevent repeated searches
           hltbResults[appid] = null;
+          if (cached) {
+            cached.hltbData = {
+              hltbId: HLTB_NOT_FOUND_ID,
+              mainStory: 0,
+              mainExtra: 0,
+              completionist: 0,
+              allStyles: 0,
+              steamId: null
+            };
+            await globalThis.XCPW_Cache.saveToCache(cached);
+            console.log(`${LOG_PREFIX} HLTB cached as not found: ${appid}`);
+          }
         }
       }
     } catch (error) {

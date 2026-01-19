@@ -713,6 +713,7 @@ describe('background.js', () => {
 
     it('should return cached HLTB data if available', async () => {
       const cachedHltbData = {
+        hltbId: 12345,
         mainStory: 15,
         mainExtra: 25,
         completionist: 50,
@@ -818,6 +819,65 @@ describe('background.js', () => {
         })
       );
     });
+
+    it('should cache "not found" marker when HLTB returns no match', async () => {
+      const cachedEntry = { appid: '12345', gameName: 'Unknown Game', hltbData: null };
+      mockCache.getFromCache.mockResolvedValueOnce(cachedEntry);
+      mockHltbClient.queryByGameName.mockResolvedValueOnce(null);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA',
+        appid: '12345',
+        gameName: 'Unknown Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should save "not found" marker with hltbId: -1
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hltbData: expect.objectContaining({
+            hltbId: -1,
+            mainStory: 0,
+            mainExtra: 0,
+            completionist: 0
+          })
+        })
+      );
+    });
+
+    it('should return null without re-querying when cache has "not found" marker', async () => {
+      // Cache has "not found" marker (hltbId: -1)
+      const notFoundMarker = {
+        hltbId: -1,
+        mainStory: 0,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+      mockCache.getFromCache.mockResolvedValueOnce({
+        appid: '12345',
+        hltbData: notFoundMarker
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA',
+        appid: '12345',
+        gameName: 'Unknown Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should return null without calling HLTB client
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: null
+      });
+      expect(mockHltbClient.queryByGameName).not.toHaveBeenCalled();
+    });
   });
 
   describe('GET_HLTB_DATA_BATCH', () => {
@@ -914,7 +974,7 @@ describe('background.js', () => {
     });
 
     it('should use cached HLTB data when available', async () => {
-      const cachedHltbData = { mainStory: 15, mainExtra: 25, completionist: 50, allStyles: 30, steamId: 12345 };
+      const cachedHltbData = { hltbId: 12345, mainStory: 15, mainExtra: 25, completionist: 50, allStyles: 30, steamId: 12345 };
       mockCache.getFromCache.mockImplementation(async (appid) => {
         if (appid === '12345') {
           return { appid: '12345', hltbData: cachedHltbData };
@@ -994,6 +1054,76 @@ describe('background.js', () => {
         success: true,
         hltbResults: { '12345': null }
       });
+    });
+
+    it('should cache "not found" marker for games with no HLTB match', async () => {
+      const cachedEntry = { appid: '12345', gameName: 'Unknown Game', hltbData: null };
+      mockCache.getFromCache.mockResolvedValue(cachedEntry);
+      mockHltbClient.batchQueryByGameNames.mockResolvedValueOnce(
+        new Map([['12345', null]])
+      );
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA_BATCH',
+        games: [{ appid: '12345', gameName: 'Unknown Game' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should save "not found" marker with hltbId: -1
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          hltbData: expect.objectContaining({
+            hltbId: -1,
+            mainStory: 0
+          })
+        })
+      );
+    });
+
+    it('should skip re-querying games with "not found" marker in cache', async () => {
+      // Game 1 has "not found" marker, Game 2 needs querying
+      const notFoundMarker = {
+        hltbId: -1,
+        mainStory: 0,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      };
+      mockCache.getFromCache.mockImplementation(async (appid) => {
+        if (appid === '12345') {
+          return { appid: '12345', hltbData: notFoundMarker };
+        }
+        return null;
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Unknown Game' },
+          { appid: '67890', gameName: 'Game 2' }
+        ]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should only query HLTB for game without "not found" marker
+      expect(mockHltbClient.batchQueryByGameNames).toHaveBeenCalledWith([
+        { appid: '67890', gameName: 'Game 2' }
+      ]);
+
+      // Response should include null for "not found" game
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          hltbResults: expect.objectContaining({
+            '12345': null
+          })
+        })
+      );
     });
   });
 });

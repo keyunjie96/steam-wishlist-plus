@@ -2,135 +2,76 @@
  * Steam Cross-Platform Wishlist - HLTB Client
  *
  * Queries HowLongToBeat for game completion time estimates.
- * Uses reverse-engineered API endpoint (may break without notice).
+ * Uses declarativeNetRequest to modify Origin header for direct API access.
  *
  * Note: HLTB has no official API. This uses the internal search endpoint.
+ * The API validates Origin header, so we use declarativeNetRequest to set it.
  */
 
-import type { HltbData, HltbSearchResult } from './types';
+import type { HltbSearchResult } from './types';
 
-const HLTB_API_URL = 'https://howlongtobeat.com/api/search';
+const HLTB_BASE_URL = 'https://howlongtobeat.com';
 const HLTB_LOG_PREFIX = '[XCPW HLTB]';
-const HLTB_DEBUG = false;
+const HLTB_DEBUG = true;
 
 const REQUEST_DELAY_MS = 500;
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 1000;
+const RULE_ID_ORIGIN = 1;
 
 let requestQueue = Promise.resolve();
+let rulesRegistered = false;
 
 /**
- * HLTB API request payload structure (reverse-engineered)
+ * Registers declarativeNetRequest rules to modify headers for HLTB requests.
+ * This allows direct API access by setting the correct Origin header.
  */
-interface HltbSearchPayload {
-  searchType: string;
-  searchTerms: string[];
-  searchPage: number;
-  size: number;
-  searchOptions: {
-    games: {
-      userId: number;
-      platform: string;
-      sortCategory: string;
-      rangeCategory: string;
-      rangeTime: { min: null; max: null };
-      gameplay: { perspective: string; flow: string; genre: string };
-      rangeYear: { min: string; max: string };
-      modifier: string;
-    };
-    users: { sortCategory: string };
-    filter: string;
-    sort: number;
-    randomizer: number;
-  };
-}
+async function registerHeaderRules(): Promise<void> {
+  if (rulesRegistered) return;
 
-/**
- * HLTB API response structure (reverse-engineered)
- */
-interface HltbApiResponse {
-  color: string;
-  title: string;
-  category: string;
-  count: number;
-  pageCurrent: number;
-  pageTotal: number;
-  pageSize: number;
-  data: HltbGameData[];
-}
-
-interface HltbGameData {
-  game_id: number;
-  game_name: string;
-  game_name_date: number;
-  game_alias: string;
-  game_type: string;
-  game_image: string;
-  comp_lvl_combine: number;
-  comp_lvl_sp: number;
-  comp_lvl_co: number;
-  comp_lvl_mp: number;
-  comp_lvl_spd: number;
-  comp_main: number;
-  comp_plus: number;
-  comp_100: number;
-  comp_all: number;
-  comp_main_count: number;
-  comp_plus_count: number;
-  comp_100_count: number;
-  comp_all_count: number;
-  invested_co: number;
-  invested_mp: number;
-  invested_co_count: number;
-  invested_mp_count: number;
-  count_comp: number;
-  count_speedrun: number;
-  count_backlog: number;
-  count_review: number;
-  review_score: number;
-  count_playing: number;
-  count_retired: number;
-  profile_dev: string;
-  profile_popular: number;
-  profile_steam: number;
-  profile_platform: string;
-  release_world: number;
-}
-
-/**
- * Creates the search payload for HLTB API
- */
-function createSearchPayload(searchTerms: string[]): HltbSearchPayload {
-  return {
-    searchType: 'games',
-    searchTerms,
-    searchPage: 1,
-    size: 20,
-    searchOptions: {
-      games: {
-        userId: 0,
-        platform: '',
-        sortCategory: 'popular',
-        rangeCategory: 'main',
-        rangeTime: { min: null, max: null },
-        gameplay: { perspective: '', flow: '', genre: '' },
-        rangeYear: { min: '', max: '' },
-        modifier: ''
-      },
-      users: { sortCategory: 'postcount' },
-      filter: '',
-      sort: 0,
-      randomizer: 0
+  try {
+    // Remove any existing rules first
+    const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
+    const existingIds = existingRules.map(r => r.id);
+    if (existingIds.length > 0) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: existingIds
+      });
     }
-  };
-}
 
-/**
- * Converts seconds to hours (HLTB stores times in seconds)
- */
-function secondsToHours(seconds: number): number {
-  if (!seconds || seconds <= 0) return 0;
-  return Math.round(seconds / 3600 * 10) / 10; // Round to 1 decimal
+    // Add rules to modify Origin and Referer headers for HLTB API requests
+    await chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: [
+        {
+          id: RULE_ID_ORIGIN,
+          priority: 1,
+          action: {
+            type: chrome.declarativeNetRequest.RuleActionType.MODIFY_HEADERS,
+            requestHeaders: [
+              {
+                header: 'Origin',
+                operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+                value: HLTB_BASE_URL
+              },
+              {
+                header: 'Referer',
+                operation: chrome.declarativeNetRequest.HeaderOperation.SET,
+                value: `${HLTB_BASE_URL}/`
+              }
+            ]
+          },
+          condition: {
+            urlFilter: `${HLTB_BASE_URL}/api/*`,
+            resourceTypes: [chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST]
+          }
+        }
+      ]
+    });
+
+    rulesRegistered = true;
+    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Header modification rules registered`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`${HLTB_LOG_PREFIX} Failed to register header rules:`, errorMessage);
+  }
 }
 
 /**
@@ -196,26 +137,6 @@ function calculateSimilarity(a: string, b: string): number {
 }
 
 /**
- * Parses HLTB API response to HltbData
- */
-function parseHltbResult(game: HltbGameData, steamGameName: string): HltbSearchResult {
-  const similarity = calculateSimilarity(steamGameName, game.game_name);
-
-  return {
-    hltbId: game.game_id,
-    gameName: game.game_name,
-    similarity,
-    data: {
-      mainStory: secondsToHours(game.comp_main),
-      mainExtra: secondsToHours(game.comp_plus),
-      completionist: secondsToHours(game.comp_100),
-      allStyles: secondsToHours(game.comp_all),
-      steamId: game.profile_steam > 0 ? game.profile_steam : null
-    }
-  };
-}
-
-/**
  * Serializes requests through a queue to prevent concurrent bursts.
  */
 async function rateLimit(): Promise<void> {
@@ -225,101 +146,180 @@ async function rateLimit(): Promise<void> {
 }
 
 /**
- * Executes an HLTB API search with retry logic.
- * Fails silently - errors are caught and return null.
+ * Creates the search payload for HLTB API
  */
-async function executeHltbSearch(gameName: string, retryCount = 0): Promise<HltbApiResponse | null> {
-  await rateLimit();
+function createSearchPayload(gameName: string) {
+  return {
+    searchType: 'games',
+    searchTerms: [gameName],
+    searchPage: 1,
+    size: 20,
+    searchOptions: {
+      games: {
+        userId: 0,
+        platform: '',
+        sortCategory: 'popular',
+        rangeCategory: 'main',
+        rangeTime: { min: null, max: null },
+        gameplay: { perspective: '', flow: '', genre: '', difficulty: '' },
+        rangeYear: { min: '', max: '' },
+        modifier: ''
+      },
+      users: { sortCategory: 'postcount' },
+      lists: { sortCategory: 'follows' },
+      filter: '',
+      sort: 0,
+      randomizer: 0
+    },
+    useCache: true
+  };
+}
+
+/**
+ * Converts seconds to hours
+ */
+function secondsToHours(seconds: number): number {
+  if (!seconds || seconds <= 0) return 0;
+  return Math.round(seconds / 3600 * 10) / 10;
+}
+
+/**
+ * Fetches auth token from HLTB API
+ */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const response = await fetch(`${HLTB_BASE_URL}/api/search/init?t=${Date.now()}`);
+    if (!response.ok) {
+      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Auth token request failed: ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    return data.token || null;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Auth token error:`, errorMessage);
+    return null;
+  }
+}
+
+/**
+ * Searches HLTB for a game directly via fetch
+ */
+async function searchHltb(gameName: string, steamAppId?: string): Promise<HltbSearchResult | null> {
+  // Ensure header rules are registered
+  await registerHeaderRules();
+
+  if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Searching for: ${gameName}`);
+
+  const authToken = await getAuthToken();
+  if (!authToken) {
+    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Failed to get auth token`);
+    return null;
+  }
 
   try {
-    const searchTerms = gameName.split(/\s+/).filter(t => t.length > 0);
-    const payload = createSearchPayload(searchTerms);
-
-    const response = await fetch(HLTB_API_URL, {
+    const response = await fetch(`${HLTB_BASE_URL}/api/search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'SteamCrossPlatformWishlist/0.5.0 (Chrome Extension)',
-        'Referer': 'https://howlongtobeat.com/',
-        'Origin': 'https://howlongtobeat.com'
+        'X-Auth-Token': authToken
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(createSearchPayload(gameName))
     });
 
-    // Handle rate limiting with exponential backoff
-    if (response.status === 429) {
-      if (retryCount < MAX_RETRIES) {
-        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, retryCount);
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
-        return executeHltbSearch(gameName, retryCount + 1);
-      }
-      return null;
-    }
-
     if (!response.ok) {
-      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} API returned ${response.status}`);
+      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Search failed with status ${response.status}`);
       return null;
     }
 
-    return await response.json() as HltbApiResponse;
-  } catch (error) {
-    if (HLTB_DEBUG) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log(`${HLTB_LOG_PREFIX} Network error: ${errorMessage}`);
+    const result = await response.json();
+    if (!result.data || result.data.length === 0) {
+      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} No results for: ${gameName}`);
+      return null;
     }
+
+    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Got ${result.data.length} results, first: ${result.data[0].game_name}`);
+
+    // Check for exact Steam ID match first
+    if (steamAppId) {
+      const steamIdNum = parseInt(steamAppId, 10);
+      const exactMatch = result.data.find((g: { profile_steam: number }) => g.profile_steam === steamIdNum);
+      if (exactMatch) {
+        if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Exact Steam ID match: ${exactMatch.game_name}`);
+        return {
+          hltbId: exactMatch.game_id,
+          gameName: exactMatch.game_name,
+          similarity: 1,
+          data: {
+            hltbId: exactMatch.game_id,
+            mainStory: secondsToHours(exactMatch.comp_main),
+            mainExtra: secondsToHours(exactMatch.comp_plus),
+            completionist: secondsToHours(exactMatch.comp_100),
+            allStyles: secondsToHours(exactMatch.comp_all),
+            steamId: exactMatch.profile_steam > 0 ? exactMatch.profile_steam : null
+          }
+        };
+      }
+    }
+
+    // Fuzzy match
+    interface GameData {
+      game_id: number;
+      game_name: string;
+      comp_main: number;
+      comp_plus: number;
+      comp_100: number;
+      comp_all: number;
+      profile_steam: number;
+    }
+    const candidates = result.data.map((g: GameData) => ({
+      similarity: calculateSimilarity(gameName, g.game_name),
+      result: {
+        hltbId: g.game_id,
+        gameName: g.game_name,
+        similarity: 0, // Will be set below
+        data: {
+          hltbId: g.game_id,
+          mainStory: secondsToHours(g.comp_main),
+          mainExtra: secondsToHours(g.comp_plus),
+          completionist: secondsToHours(g.comp_100),
+          allStyles: secondsToHours(g.comp_all),
+          steamId: g.profile_steam > 0 ? g.profile_steam : null
+        }
+      }
+    }));
+
+    candidates.sort((a: { similarity: number }, b: { similarity: number }) => b.similarity - a.similarity);
+    const best = candidates[0];
+
+    if (best.similarity < 0.5) {
+      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Best match "${best.result.gameName}" too dissimilar (${(best.similarity * 100).toFixed(0)}%)`);
+      return null;
+    }
+
+    best.result.similarity = best.similarity;
+    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Best match: ${best.result.gameName} (${(best.similarity * 100).toFixed(0)}%), mainStory=${best.result.data.mainStory}h`);
+    return best.result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`${HLTB_LOG_PREFIX} Search error:`, errorMessage);
     return null;
   }
 }
 
 /**
  * Queries HLTB for game completion time by game name.
- * Uses fuzzy matching to find the best match.
  *
  * @param gameName - The game name to search for (from Steam)
  * @param steamAppId - Optional Steam app ID for exact matching
- * @returns HltbData if found with confidence, null otherwise
+ * @returns HltbSearchResult if found with confidence, null otherwise
  */
 async function queryByGameName(gameName: string, steamAppId?: string): Promise<HltbSearchResult | null> {
-  if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Searching for: ${gameName}`);
+  if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Searching for: ${gameName} (Steam: ${steamAppId || 'none'})`);
 
-  const result = await executeHltbSearch(gameName);
+  await rateLimit();
 
-  if (!result || !result.data || result.data.length === 0) {
-    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} No results for: ${gameName}`);
-    return null;
-  }
-
-  // If we have a Steam app ID, try to find exact match first
-  if (steamAppId) {
-    const steamIdNum = parseInt(steamAppId, 10);
-    const exactMatch = result.data.find(g => g.profile_steam === steamIdNum);
-    if (exactMatch) {
-      const parsed = parseHltbResult(exactMatch, gameName);
-      parsed.similarity = 1; // Perfect match via Steam ID
-      if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Exact Steam ID match for ${gameName}: ${exactMatch.game_name}`);
-      console.log(`${HLTB_LOG_PREFIX} Found ${gameName} -> ${parsed.data.mainStory}h main, ${parsed.data.mainExtra}h extra`);
-      return parsed;
-    }
-  }
-
-  // Otherwise, use fuzzy matching
-  const candidates = result.data.map(g => parseHltbResult(g, gameName));
-
-  // Sort by similarity (descending) and pick best match
-  candidates.sort((a, b) => b.similarity - a.similarity);
-  const bestMatch = candidates[0];
-
-  // Require minimum similarity threshold (0.5 = 50%)
-  const SIMILARITY_THRESHOLD = 0.5;
-  if (bestMatch.similarity < SIMILARITY_THRESHOLD) {
-    if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Best match "${bestMatch.gameName}" too dissimilar (${(bestMatch.similarity * 100).toFixed(0)}%)`);
-    return null;
-  }
-
-  if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Best match for "${gameName}": "${bestMatch.gameName}" (${(bestMatch.similarity * 100).toFixed(0)}%)`);
-  console.log(`${HLTB_LOG_PREFIX} Found ${gameName} -> ${bestMatch.data.mainStory}h main, ${bestMatch.data.mainExtra}h extra`);
-
-  return bestMatch;
+  return searchHltb(gameName, steamAppId);
 }
 
 /**
@@ -349,7 +349,8 @@ globalThis.XCPW_HltbClient = {
   batchQueryByGameNames,
   formatHours,
   normalizeGameName,
-  calculateSimilarity
+  calculateSimilarity,
+  registerHeaderRules
 };
 
 // Also export for module imports in tests
@@ -359,7 +360,5 @@ export {
   formatHours,
   normalizeGameName,
   calculateSimilarity,
-  parseHltbResult,
-  executeHltbSearch,
-  createSearchPayload
+  registerHeaderRules
 };

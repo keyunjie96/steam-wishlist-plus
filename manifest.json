@@ -3,10 +3,11 @@
   "name": "Steam Cross-Platform Wishlist",
   "version": "0.5.0",
   "description": "Shows cross-platform availability (Switch/PlayStation/Xbox/Steam Deck) on Steam wishlist pages using Wikidata and Steam",
-  "permissions": ["storage"],
+  "permissions": ["storage", "declarativeNetRequest"],
   "host_permissions": [
     "https://store.steampowered.com/*",
-    "https://query.wikidata.org/*"
+    "https://query.wikidata.org/*",
+    "https://howlongtobeat.com/*"
   ],
   "action": {
     "default_popup": "src/popup.html",
