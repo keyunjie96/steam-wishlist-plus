@@ -6,26 +6,54 @@
   <title>Steam Cross-Platform Wishlist - Small Tile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --steam-darker: #171a21;
+      --steam-blue: #66c0f4;
+      --steam-text: #c7d5e0;
+      --nintendo-red: #e60012;
+      --playstation-blue: #006fcd;
+      --xbox-green: #107c10;
+      --steamdeck-purple: #c957e6;
+    }
 
     body {
       width: 440px;
       height: 280px;
-      font-family: 'DM Sans', sans-serif;
-      background: #0e1419;
+      font-family: 'Inter', sans-serif;
+      background: var(--steam-darker);
       overflow: hidden;
       position: relative;
     }
 
-    .bg {
+    /* Screenshot background */
+    .screenshot-bg {
       position: absolute;
       inset: 0;
-      background:
-        radial-gradient(ellipse 100% 80% at 30% 100%, rgba(102, 192, 244, 0.12) 0%, transparent 50%),
-        radial-gradient(ellipse 80% 60% at 90% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-        linear-gradient(160deg, #0e1419 0%, #171d25 100%);
+      overflow: hidden;
+    }
+
+    .screenshot-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      filter: brightness(0.4) blur(2px);
+    }
+
+    /* Gradient overlay */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(23, 26, 33, 0.7) 0%,
+        rgba(23, 26, 33, 0.85) 50%,
+        rgba(23, 26, 33, 0.95) 100%
+      );
     }
 
     .content {
@@ -36,66 +64,82 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 28px;
+      padding: 24px;
       text-align: center;
+      gap: 16px;
     }
 
-    .icon-row {
+    /* Extension icon */
+    .extension-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .extension-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Platform icons row */
+    .platform-row {
       display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 8px;
     }
 
     .platform-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .platform-icon svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
     }
 
-    .platform-icon.nintendo svg { fill: #e60012; filter: drop-shadow(0 0 6px rgba(230, 0, 18, 0.5)); }
-    .platform-icon.playstation svg { fill: #006fcd; filter: drop-shadow(0 0 6px rgba(0, 111, 205, 0.5)); }
-    .platform-icon.xbox svg { fill: #107c10; filter: drop-shadow(0 0 6px rgba(16, 124, 16, 0.5)); }
-    .platform-icon.steamdeck svg { fill: #8b5cf6; filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.5)); }
+    .platform-icon.nintendo svg { fill: var(--nintendo-red); filter: drop-shadow(0 0 4px rgba(230, 0, 18, 0.5)); }
+    .platform-icon.playstation svg { fill: var(--playstation-blue); filter: drop-shadow(0 0 4px rgba(0, 111, 205, 0.5)); }
+    .platform-icon.xbox svg { fill: var(--xbox-green); filter: drop-shadow(0 0 4px rgba(16, 124, 16, 0.5)); }
+    .platform-icon.steamdeck svg { fill: var(--steamdeck-purple); filter: drop-shadow(0 0 4px rgba(201, 87, 230, 0.5)); }
 
     h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       color: #fff;
       line-height: 1.25;
-      margin-bottom: 10px;
       letter-spacing: -0.02em;
     }
 
     h1 span {
-      color: #66c0f4;
+      color: var(--steam-blue);
     }
 
     .subtitle {
-      font-size: 13px;
-      color: #8b9298;
+      font-size: 12px;
+      color: var(--steam-text);
       line-height: 1.4;
     }
 
+    /* Chrome badge */
     .badge {
       position: absolute;
-      bottom: 20px;
+      bottom: 16px;
       display: flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.08);
       padding: 6px 12px;
       border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .badge svg {
@@ -105,15 +149,26 @@
 
     .badge span {
       font-size: 11px;
-      color: #c7d5e0;
+      color: white;
       font-weight: 500;
     }
   </style>
 </head>
 <body>
-  <div class="bg"></div>
+  <!-- Blurred screenshot background -->
+  <div class="screenshot-bg">
+    <img src="screenshot-1.png" alt="Background">
+  </div>
+  <div class="overlay"></div>
+
   <div class="content">
-    <div class="icon-row">
+    <!-- Extension icon -->
+    <div class="extension-icon">
+      <img src="../icons/icon128.png" alt="Extension icon">
+    </div>
+
+    <!-- Platform icons -->
+    <div class="platform-row">
       <div class="platform-icon nintendo">
         <svg viewBox="0 0 32 32"><path d="M18.901 32h4.901c4.5 0 8.198-3.698 8.198-8.198v-15.604c0-4.5-3.698-8.198-8.198-8.198h-5c-0.099 0-0.203 0.099-0.203 0.198v31.604c0 0.099 0.099 0.198 0.302 0.198zM25 14.401c1.802 0 3.198 1.5 3.198 3.198 0 1.802-1.5 3.198-3.198 3.198-1.802 0-3.198-1.396-3.198-3.198-0.104-1.797 1.396-3.198 3.198-3.198zM15.198 0h-7c-4.5 0-8.198 3.698-8.198 8.198v15.604c0 4.5 3.698 8.198 8.198 8.198h7c0.099 0 0.203-0.099 0.203-0.198v-31.604c0-0.099-0.099-0.198-0.203-0.198zM12.901 29.401h-4.703c-3.099 0-5.599-2.5-5.599-5.599v-15.604c0-3.099 2.5-5.599 5.599-5.599h4.604zM5 9.599c0 1.698 1.302 3 3 3s3-1.302 3-3c0-1.698-1.302-3-3-3s-3 1.302-3 3z"/></svg>
       </div>
@@ -132,12 +187,12 @@
     <p class="subtitle">Switch, PlayStation, Xbox, Steam Deck + game length</p>
 
     <div class="badge">
-      <svg viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" fill="#4285f4"/>
-        <circle cx="12" cy="12" r="4" fill="#fff"/>
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10" stroke="#34a853" stroke-width="2.5" fill="none"/>
-        <path d="M22 12c0-5.52-4.48-10-10-10" stroke="#ea4335" stroke-width="2.5" fill="none"/>
-        <path d="M12 22c5.52 0 10-4.48 10-10" stroke="#fbbc04" stroke-width="2.5" fill="none"/>
+      <svg viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="22" fill="#4285f4"/>
+        <circle cx="24" cy="24" r="9" fill="#fff"/>
+        <path d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20" stroke="#34a853" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M44 24c0-11.05-8.95-20-20-20" stroke="#ea4335" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <path d="M24 44c11.05 0 20-8.95 20-20" stroke="#fbbc04" stroke-width="4" fill="none" stroke-linecap="round"/>
       </svg>
       <span>Chrome Extension</span>
     </div>

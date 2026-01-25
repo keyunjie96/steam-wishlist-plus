@@ -142,10 +142,10 @@ function updateHltbRowVisibility(): void {
  * Updates the visual active state of all platform toggles
  */
 function updateToggleActiveStates(): void {
-  for (const [key, checkbox] of checkboxes) {
+  for (const [, checkbox] of checkboxes) {
     if (checkbox) {
-      // Support both old (.platform-toggle) and new (.option-item) class names
-      const toggleLabel = checkbox.closest('.platform-toggle') || checkbox.closest('.option-item');
+      // Support multiple class names: .platform-toggle, .option-item, .toggle-item
+      const toggleLabel = checkbox.closest('.platform-toggle') || checkbox.closest('.option-item') || checkbox.closest('.toggle-item');
       if (toggleLabel) {
         toggleLabel.classList.toggle('active', checkbox.checked);
       }

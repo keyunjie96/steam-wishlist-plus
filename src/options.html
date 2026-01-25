@@ -6,30 +6,35 @@
   <title>Steam Cross-Platform Wishlist - Options</title>
   <style>
     :root {
-      /* Steam-native colors - high contrast */
-      --bg-body: #1b2838;
-      --bg-card: #2a475e;
-      --bg-input: #1b2838;
+      /* Modern Steam-inspired palette */
+      --bg-body: #171d25;
+      --bg-card: #1e2837;
+      --bg-card-hover: #232f3e;
+      --bg-input: #141a22;
 
-      --text-primary: #c7d5e0;
+      --text-primary: #c6d4df;
       --text-secondary: #8f98a0;
       --text-bright: #ffffff;
 
-      --border-color: #4a6b8a;
-      --border-subtle: #3d5a73;
+      --border-color: #2a3f5f;
+      --border-subtle: #232f3e;
 
-      --accent: #66c0f4;
-      --accent-hover: #8ed1fc;
+      --accent: #1a9fff;
+      --accent-soft: rgba(26, 159, 255, 0.15);
 
       /* Platform colors */
       --nintendo: #e60012;
       --playstation: #006fcd;
       --xbox: #107c10;
       --steamdeck: #8b5cf6;
-      --hltb: #66c0f4;
+      --hltb: #1a9fff;
 
-      --success: #5ba32b;
-      --danger: #c44242;
+      --success: #4ade80;
+      --danger: #ef4444;
+
+      /* Shadows */
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
     }
 
     * {
@@ -42,269 +47,263 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg-body);
       color: var(--text-primary);
-      line-height: 1.5;
+      line-height: 1.6;
       min-height: 100vh;
-      padding: 24px;
+      padding: 32px 24px;
     }
 
     .container {
-      max-width: 540px;
+      max-width: 520px;
       margin: 0 auto;
     }
 
-    /* Header */
+    /* Header - Modern */
     .header {
       display: flex;
       align-items: center;
       gap: 16px;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 32px;
     }
 
     .header-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #2a475e 0%, #1b2838 100%);
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      flex-shrink: 0;
     }
 
-    .header-icon svg {
-      width: 24px;
-      height: 24px;
-      fill: var(--accent);
+    .header-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    /* Platform corner dots */
-    .header-icon::before,
-    .header-icon::after,
-    .header-icon .dot-xbox,
-    .header-icon .dot-sd {
-      content: '';
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-    }
-    .header-icon::before { top: 4px; left: 4px; background: var(--nintendo); }
-    .header-icon::after { top: 4px; right: 4px; background: var(--playstation); }
-    .header-icon .dot-xbox { bottom: 4px; left: 4px; background: var(--xbox); }
-    .header-icon .dot-sd { bottom: 4px; right: 4px; background: var(--steamdeck); }
-
-    .header h1 {
-      font-size: 18px;
+    .header-text h1 {
+      font-size: 20px;
       font-weight: 600;
       color: var(--text-bright);
+      letter-spacing: -0.3px;
     }
 
-    .header p {
+    .header-text p {
       font-size: 13px;
       color: var(--text-secondary);
       margin-top: 2px;
     }
 
-    /* Sections */
+    /* Sections - Modern card style */
     .section {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      margin-bottom: 16px;
-      overflow: hidden;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
     }
 
     .section-header {
-      padding: 14px 16px;
+      padding: 16px 20px 14px;
       border-bottom: 1px solid var(--border-subtle);
-      background: rgba(0, 0, 0, 0.1);
     }
 
     .section-header h2 {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      color: var(--text-bright);
+      color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
 
     .section-body {
-      padding: 16px;
+      padding: 16px 20px 20px;
     }
 
     .section-desc {
       font-size: 13px;
       color: var(--text-secondary);
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
-    /* Info boxes */
-    .info-box {
-      background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 12px 14px;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .info-box strong {
-      color: var(--accent);
-      font-weight: 500;
-    }
-
-    .info-box a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .info-box a:hover {
-      text-decoration: underline;
-    }
-
-    .info-box ul {
-      margin: 10px 0 0;
-      padding-left: 20px;
-    }
-
-    .info-box li {
-      padding: 2px 0;
-    }
-
-    /* Checkbox list - simple, clear design */
-    .option-list {
+    /* Toggle list - Modern */
+    .toggle-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
     }
 
-    .option-item {
+    .toggle-item {
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 10px 12px;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .toggle-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .toggle-item.active {
+      background: var(--accent-soft);
+    }
+
+    /* Platform icon in toggle */
+    .toggle-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: border-color 0.15s, background-color 0.15s;
     }
 
-    .option-item:hover {
-      border-color: var(--border-color);
-      background: rgba(102, 192, 244, 0.05);
-    }
-
-    .option-item.active {
-      border-color: var(--accent);
-      background: rgba(102, 192, 244, 0.08);
-    }
-
-    .option-item input[type="checkbox"] {
-      appearance: none;
+    .toggle-icon svg {
       width: 18px;
       height: 18px;
-      border: 2px solid var(--border-color);
-      border-radius: 3px;
-      background: var(--bg-input);
-      cursor: pointer;
-      flex-shrink: 0;
-      margin-top: 1px;
-      transition: all 0.15s;
+      fill: currentColor;
+      opacity: 0.7;
     }
 
-    .option-item input[type="checkbox"]:checked {
-      background: var(--accent);
-      border-color: var(--accent);
+    .toggle-item[data-platform="nintendo"] .toggle-icon { color: var(--nintendo); }
+    .toggle-item[data-platform="playstation"] .toggle-icon { color: var(--playstation); }
+    .toggle-item[data-platform="xbox"] .toggle-icon { color: var(--xbox); }
+    .toggle-item[data-platform="steamdeck"] .toggle-icon { color: var(--steamdeck); }
+    .toggle-item[data-platform="hltb"] .toggle-icon { color: var(--hltb); }
+
+    .toggle-item.active .toggle-icon {
+      background: currentColor;
     }
 
-    .option-item input[type="checkbox"]:checked::after {
-      content: '✓';
-      display: block;
-      color: white;
-      font-size: 12px;
-      font-weight: bold;
-      text-align: center;
-      line-height: 14px;
+    .toggle-item.active .toggle-icon svg {
+      fill: white;
+      opacity: 1;
     }
 
-    .option-item input[type="checkbox"]:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    /* Platform color indicators */
-    .option-item[data-platform="nintendo"] input:checked { background: var(--nintendo); border-color: var(--nintendo); }
-    .option-item[data-platform="playstation"] input:checked { background: var(--playstation); border-color: var(--playstation); }
-    .option-item[data-platform="xbox"] input:checked { background: var(--xbox); border-color: var(--xbox); }
-    .option-item[data-platform="steamdeck"] input:checked { background: var(--steamdeck); border-color: var(--steamdeck); }
-    .option-item[data-platform="hltb"] input:checked { background: var(--hltb); border-color: var(--hltb); }
-
-    .option-content {
+    .toggle-content {
       flex: 1;
       min-width: 0;
     }
 
-    .option-label {
+    .toggle-label {
       font-size: 14px;
       font-weight: 500;
       color: var(--text-bright);
     }
 
-    .option-desc {
+    .toggle-desc {
       font-size: 12px;
       color: var(--text-secondary);
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
-    /* Nested options (HLTB dropdown) */
-    .nested-option {
-      margin-left: 30px;
-      margin-top: 8px;
-      padding: 10px 12px;
+    /* Modern toggle switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-switch .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
       background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-switch .slider::before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      top: 2px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-switch input:checked + .slider {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .toggle-switch input:checked + .slider::before {
+      transform: translateX(20px);
+      background: white;
+    }
+
+    .toggle-switch input:focus-visible + .slider {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Platform-colored toggles when active */
+    .toggle-item[data-platform="nintendo"] .toggle-switch input:checked + .slider { background: var(--nintendo); border-color: var(--nintendo); }
+    .toggle-item[data-platform="playstation"] .toggle-switch input:checked + .slider { background: var(--playstation); border-color: var(--playstation); }
+    .toggle-item[data-platform="xbox"] .toggle-switch input:checked + .slider { background: var(--xbox); border-color: var(--xbox); }
+    .toggle-item[data-platform="steamdeck"] .toggle-switch input:checked + .slider { background: var(--steamdeck); border-color: var(--steamdeck); }
+    .toggle-item[data-platform="hltb"] .toggle-switch input:checked + .slider { background: var(--hltb); border-color: var(--hltb); }
+
+    /* Sub-option (HLTB stat selector) */
+    .sub-option {
       display: none;
-    }
-
-    .nested-option.visible {
-      display: block;
-    }
-
-    .nested-option label {
-      display: flex;
+      margin: 8px 0 4px 60px;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border-radius: 8px;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+    }
+
+    .sub-option.visible {
+      display: flex;
+    }
+
+    .sub-option label {
       font-size: 13px;
       color: var(--text-secondary);
+      white-space: nowrap;
     }
 
-    .nested-option select {
-      padding: 6px 10px;
+    .sub-option select {
+      flex: 1;
+      padding: 8px 12px;
       background: var(--bg-card);
       border: 1px solid var(--border-color);
-      border-radius: 4px;
+      border-radius: 6px;
       color: var(--text-primary);
       font-family: inherit;
       font-size: 13px;
       cursor: pointer;
+      transition: border-color 0.15s;
     }
 
-    .nested-option select:hover {
+    .sub-option select:hover {
       border-color: var(--accent);
     }
 
-    .nested-option select:focus {
+    .sub-option select:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.2);
     }
 
-    /* Stats display */
+    /* Stats grid */
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -314,14 +313,13 @@
 
     .stat-box {
       background: var(--bg-input);
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      padding: 14px;
+      border-radius: 8px;
+      padding: 16px;
       text-align: center;
     }
 
     .stat-value {
-      font-size: 24px;
+      font-size: 28px;
       font-weight: 600;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
@@ -345,14 +343,14 @@
       font-family: inherit;
       font-size: 13px;
       font-weight: 500;
-      padding: 8px 16px;
-      border-radius: 4px;
+      padding: 10px 16px;
+      border-radius: 8px;
       border: none;
       cursor: pointer;
       transition: all 0.15s;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
 
     button:disabled {
@@ -367,30 +365,30 @@
     }
 
     .btn-secondary:hover:not(:disabled) {
-      background: var(--bg-card);
+      background: var(--bg-card-hover);
       border-color: var(--accent);
-      color: var(--text-bright);
     }
 
     .btn-danger {
-      background: rgba(196, 66, 66, 0.2);
-      color: #f87171;
-      border: 1px solid var(--danger);
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     .btn-danger:hover:not(:disabled) {
-      background: rgba(196, 66, 66, 0.3);
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--danger);
     }
 
     button svg {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
     }
 
     /* Status messages */
     .status {
-      padding: 10px 12px;
-      border-radius: 4px;
+      padding: 12px 14px;
+      border-radius: 8px;
       margin-top: 12px;
       font-size: 13px;
       display: none;
@@ -398,19 +396,55 @@
 
     .status.success {
       display: block;
-      background: rgba(91, 163, 43, 0.15);
-      color: #86efac;
-      border: 1px solid var(--success);
+      background: rgba(74, 222, 128, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(74, 222, 128, 0.2);
     }
 
     .status.error {
       display: block;
-      background: rgba(196, 66, 66, 0.15);
+      background: rgba(239, 68, 68, 0.1);
       color: #fca5a5;
-      border: 1px solid var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
     }
 
-    /* Loading spinner */
+    /* Info box */
+    .info-box {
+      background: var(--bg-input);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .info-box strong {
+      color: var(--text-bright);
+      font-weight: 500;
+    }
+
+    .info-box a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .info-box a:hover {
+      text-decoration: underline;
+    }
+
+    .info-box ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .info-box li {
+      padding: 3px 0;
+    }
+
+    /* Loading state */
+    body.is-loading .section {
+      opacity: 0.6;
+    }
+
     .loading {
       display: inline-block;
       width: 14px;
@@ -425,9 +459,11 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Hide content until loaded */
-    body.is-loading .section {
-      opacity: 0.5;
+    /* Separator */
+    .section-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 8px 0;
     }
 
     /* Focus styles */
@@ -441,13 +477,9 @@
   <div class="container">
     <header class="header">
       <div class="header-icon">
-        <svg viewBox="0 0 24 24">
-          <path d="M21.65 10.44l-2.73-4.73a2 2 0 00-1.73-1H6.81a2 2 0 00-1.73 1L2.35 10.44a2 2 0 000 2l2.73 4.73a2 2 0 001.73 1h10.38a2 2 0 001.73-1l2.73-4.73a2 2 0 000-2zM12 14a2 2 0 110-4 2 2 0 010 4z"/>
-        </svg>
-        <span class="dot-xbox"></span>
-        <span class="dot-sd"></span>
+        <img src="../assets/icons/icon128.png" alt="Extension icon">
       </div>
-      <div>
+      <div class="header-text">
         <h1>Steam Cross-Platform Wishlist</h1>
         <p>Extension Settings</p>
       </div>
@@ -455,47 +487,50 @@
 
     <section class="section">
       <div class="section-header">
-        <h2>Data Source</h2>
-      </div>
-      <div class="section-body">
-        <div class="info-box">
-          <strong>Powered by Wikidata &amp; Steam</strong>
-          <p style="margin-top: 6px;">
-            Platform data from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> (community-maintained).
-            Steam Deck status from Steam's official data.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-header">
         <h2>Console Platforms</h2>
       </div>
       <div class="section-body">
-        <p class="section-desc">Show availability on other gaming platforms.</p>
-        <div class="option-list">
-          <label class="option-item" data-platform="nintendo">
-            <input type="checkbox" id="show-nintendo">
-            <div class="option-content">
-              <div class="option-label">Nintendo Switch</div>
-              <div class="option-desc">Show Nintendo eShop availability</div>
+        <p class="section-desc">Show game availability on other platforms</p>
+        <div class="toggle-list">
+          <label class="toggle-item" data-platform="nintendo">
+            <div class="toggle-icon">
+              <svg viewBox="0 0 24 24"><path d="M10.04 20.4H7.12c-.93 0-1.82-.4-2.48-1.04C4 18.7 3.6 17.81 3.6 16.88V7.12c0-.93.4-1.82 1.04-2.48C5.3 4 6.19 3.6 7.12 3.6h2.92V20.4zm-2.32-4.67c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5.67 1.5 1.5 1.5zM20.4 16.88c0 .93-.4 1.82-1.04 2.48-.66.64-1.55 1.04-2.48 1.04h-2.92V3.6h2.92c.93 0 1.82.4 2.48 1.04.64.66 1.04 1.55 1.04 2.48v9.76zm-3.88-7.65c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/></svg>
+            </div>
+            <div class="toggle-content">
+              <div class="toggle-label">Nintendo Switch</div>
+              <div class="toggle-desc">Show eShop availability</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="show-nintendo">
+              <span class="slider"></span>
             </div>
           </label>
 
-          <label class="option-item" data-platform="playstation">
-            <input type="checkbox" id="show-playstation">
-            <div class="option-content">
-              <div class="option-label">PlayStation</div>
-              <div class="option-desc">Show PlayStation Store availability</div>
+          <label class="toggle-item" data-platform="playstation">
+            <div class="toggle-icon">
+              <svg viewBox="0 0 24 24"><path d="M9.5 4v13.5l3 1V6.6c0-.5.2-.8.6-.9.5-.1.8.2.8.8v7.6c1.8.7 3.5-.2 3.5-2.4 0-2.4-1.2-3.5-3.5-4.4V4c4 1.2 5.5 3.5 5.5 6.5 0 3.5-2 5.5-5.5 5V20l-4.5-1.5V5.5L9.5 4zm-5 11.5l5.5-2v1.5l-3.5 1c-1 .3-1 .5-.5.8s1.5 0 2-.2l2 .7v1.5l-5.5-1.8V15.5zm15-1.5l-3.5 1.5v1.5l5.5-2.3v-1.2l-2-.8z"/></svg>
+            </div>
+            <div class="toggle-content">
+              <div class="toggle-label">PlayStation</div>
+              <div class="toggle-desc">Show PS Store availability</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="show-playstation">
+              <span class="slider"></span>
             </div>
           </label>
 
-          <label class="option-item" data-platform="xbox">
-            <input type="checkbox" id="show-xbox">
-            <div class="option-content">
-              <div class="option-label">Xbox</div>
-              <div class="option-desc">Show Xbox Store / Game Pass availability</div>
+          <label class="toggle-item" data-platform="xbox">
+            <div class="toggle-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c.82 0 1.6.13 2.35.35-.54.39-1.1.9-1.65 1.52-.35-.1-.7-.15-1.05-.2-.2.05-.4.1-.6.18-.55-.62-1.1-1.13-1.65-1.52A8.08 8.08 0 0112 4zm-4.5 2.95c.55.38 1.1.88 1.65 1.48-.85.95-1.65 2.18-2.25 3.55-.85-.25-1.65-.4-2.35-.45.35-1.8 1.25-3.4 2.55-4.55.15-.02.25-.02.4-.03zm9 0c.15 0 .25 0 .4.03 1.3 1.15 2.2 2.75 2.55 4.55-.7.05-1.5.2-2.35.45-.6-1.37-1.4-2.6-2.25-3.55.55-.6 1.1-1.1 1.65-1.48zM12 8.5c.95 1.05 1.85 2.4 2.5 4-.8.35-1.65.65-2.5.85-.85-.2-1.7-.5-2.5-.85.65-1.6 1.55-2.95 2.5-4zM5.1 13.1c.75 0 1.55.15 2.4.4.25.95.55 1.85.95 2.65-.95-.15-2-.5-2.9-1.1-.3-.55-.45-1.25-.45-1.95zm13.8 0c0 .7-.15 1.4-.45 1.95-.9.6-1.95.95-2.9 1.1.4-.8.7-1.7.95-2.65.85-.25 1.65-.4 2.4-.4zm-9.4 2.7c.6.2 1.2.35 1.85.45.35.55.7 1.05 1.1 1.5-.25.1-.5.15-.8.2-1.05-.45-1.75-1.2-2.15-2.15zm5 0c-.4.95-1.1 1.7-2.15 2.15-.3-.05-.55-.1-.8-.2.4-.45.75-.95 1.1-1.5.65-.1 1.25-.25 1.85-.45z"/></svg>
+            </div>
+            <div class="toggle-content">
+              <div class="toggle-label">Xbox</div>
+              <div class="toggle-desc">Show Xbox Store / Game Pass</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="show-xbox">
+              <span class="slider"></span>
             </div>
           </label>
         </div>
@@ -504,37 +539,48 @@
 
     <section class="section">
       <div class="section-header">
-        <h2>Game Info</h2>
+        <h2>Steam Deck & Game Info</h2>
       </div>
       <div class="section-body">
-        <p class="section-desc">Additional details and compatibility info.</p>
-        <div class="option-list">
-          <label class="option-item" data-platform="steamdeck">
-            <input type="checkbox" id="show-steamdeck">
-            <div class="option-content">
-              <div class="option-label">Steam Deck Compatibility</div>
-              <div class="option-desc">Show Verified, Playable, or Unsupported status</div>
+        <p class="section-desc">Compatibility and playtime information</p>
+        <div class="toggle-list">
+          <label class="toggle-item" data-platform="steamdeck">
+            <div class="toggle-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.1 0 2 .9 2 2v2h-4V7c0-1.1.9-2 2-2zm-5 7h2v2H7v-2zm10 0h-2v2h2v-2zm-5-2c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>
+            </div>
+            <div class="toggle-content">
+              <div class="toggle-label">Steam Deck Compatibility</div>
+              <div class="toggle-desc">Show Verified / Playable status</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="show-steamdeck">
+              <span class="slider"></span>
             </div>
           </label>
 
-          <div>
-            <label class="option-item" data-platform="hltb">
-              <input type="checkbox" id="show-hltb">
-              <div class="option-content">
-                <div class="option-label">How Long To Beat</div>
-                <div class="option-desc">Show estimated completion times</div>
-              </div>
-            </label>
-            <div class="nested-option" id="hltb-stat-row">
-              <label>
-                Display stat:
-                <select id="hltb-display-stat">
-                  <option value="mainStory">Main Story</option>
-                  <option value="mainExtra">Main + Extras</option>
-                  <option value="completionist">Completionist</option>
-                </select>
-              </label>
+          <div class="section-divider"></div>
+
+          <label class="toggle-item" data-platform="hltb">
+            <div class="toggle-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
             </div>
+            <div class="toggle-content">
+              <div class="toggle-label">How Long To Beat</div>
+              <div class="toggle-desc">Show completion time estimates</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="show-hltb">
+              <span class="slider"></span>
+            </div>
+          </label>
+
+          <div class="sub-option" id="hltb-stat-row">
+            <label for="hltb-display-stat">Display stat:</label>
+            <select id="hltb-display-stat">
+              <option value="mainStory">Main Story</option>
+              <option value="mainExtra">Main + Extras</option>
+              <option value="completionist">Completionist</option>
+            </select>
           </div>
         </div>
         <div id="settings-status" class="status"></div>
@@ -543,10 +589,10 @@
 
     <section class="section">
       <div class="section-header">
-        <h2>Cache Management</h2>
+        <h2>Cache</h2>
       </div>
       <div class="section-body">
-        <p class="section-desc">Data is cached locally for 7 days to reduce API requests.</p>
+        <p class="section-desc">Game data cached locally for 7 days</p>
         <div class="stats-grid">
           <div class="stat-box">
             <div class="stat-value" id="cache-count">-</div>
@@ -590,6 +636,22 @@
             <li>All cache stored locally in Chrome</li>
             <li>Zero analytics or telemetry</li>
           </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2>Data Sources</h2>
+      </div>
+      <div class="section-body">
+        <div class="info-box">
+          <strong>Powered by open data</strong>
+          <p style="margin-top: 6px;">
+            Platform data from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> (community-maintained).
+            Steam Deck status from Steam's official data.
+            Playtime from <a href="https://howlongtobeat.com" target="_blank" rel="noopener">HowLongToBeat</a>.
+          </p>
         </div>
       </div>
     </section>
