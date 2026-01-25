@@ -16,7 +16,7 @@ describe('options.js', () => {
   let showXboxCheckbox;
   let showSteamDeckCheckbox;
   let showHltbCheckbox;
-  let hltbStatRow;
+  let hltbDisplayStatSelect;
 
   beforeEach(() => {
     jest.resetModules();
@@ -85,10 +85,15 @@ describe('options.js', () => {
     showHltbCheckbox.checked = true;
     document.body.appendChild(showHltbCheckbox);
 
-    hltbStatRow = document.createElement('div');
-    hltbStatRow.id = 'hltb-stat-row';
-    hltbStatRow.className = '';
-    document.body.appendChild(hltbStatRow);
+    hltbDisplayStatSelect = document.createElement('select');
+    hltbDisplayStatSelect.id = 'hltb-display-stat';
+    hltbDisplayStatSelect.hidden = true;
+    // Add default option to match production HTML
+    const defaultOption = document.createElement('option');
+    defaultOption.value = 'mainStory';
+    defaultOption.textContent = 'Main Story';
+    hltbDisplayStatSelect.appendChild(defaultOption);
+    document.body.appendChild(hltbDisplayStatSelect);
 
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
@@ -114,7 +119,8 @@ describe('options.js', () => {
         showPlaystation: true,
         showXbox: true,
         showSteamDeck: true,
-        showHltb: true
+        showHltb: true,
+        hltbDisplayStat: 'mainStory'
       },
       SETTING_CHECKBOX_IDS: {
         showNintendo: 'show-nintendo',
@@ -577,7 +583,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true, hltbDisplayStat: 'mainStory' }
       });
     });
 
@@ -588,7 +594,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true, hltbDisplayStat: 'mainStory' }
       });
     });
 
@@ -599,7 +605,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true, showHltb: true, hltbDisplayStat: 'mainStory' }
       });
     });
 
@@ -610,7 +616,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true, showHltb: true, hltbDisplayStat: 'mainStory' }
       });
     });
 
@@ -621,7 +627,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true, hltbDisplayStat: 'mainStory' }
       });
     });
 
@@ -762,7 +768,7 @@ describe('options.js', () => {
   describe('HLTB row visibility', () => {
     it('should show hltb-stat-row when HLTB checkbox is checked', async () => {
       // Start with hidden attribute
-      hltbStatRow.hidden = true;
+      hltbDisplayStatSelect.hidden = true;
       showHltbCheckbox.checked = true;
 
       // Re-require to reinitialize with our DOM
@@ -773,12 +779,12 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       // Row should be visible (hidden attribute removed)
-      expect(hltbStatRow.hidden).toBe(false);
+      expect(hltbDisplayStatSelect.hidden).toBe(false);
     });
 
     it('should hide hltb-stat-row when HLTB checkbox is unchecked', async () => {
       // Start visible
-      hltbStatRow.hidden = false;
+      hltbDisplayStatSelect.hidden = false;
 
       // Mock storage to return showHltb: false so loadSettings sets checkbox to unchecked
       chrome.storage.sync.get.mockResolvedValueOnce({
@@ -793,7 +799,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       // Row should be hidden
-      expect(hltbStatRow.hidden).toBe(true);
+      expect(hltbDisplayStatSelect.hidden).toBe(true);
     });
 
     it('should toggle hltb-stat-row visibility when checkbox changes', async () => {
@@ -802,7 +808,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       // Initially checkbox is checked, row should be visible
-      expect(hltbStatRow.hidden).toBe(false);
+      expect(hltbDisplayStatSelect.hidden).toBe(false);
 
       // Uncheck the checkbox
       showHltbCheckbox.checked = false;
@@ -810,7 +816,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       // Row should now be hidden
-      expect(hltbStatRow.hidden).toBe(true);
+      expect(hltbDisplayStatSelect.hidden).toBe(true);
 
       // Check the checkbox again
       showHltbCheckbox.checked = true;
@@ -818,7 +824,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       // Row should be visible again
-      expect(hltbStatRow.hidden).toBe(false);
+      expect(hltbDisplayStatSelect.hidden).toBe(false);
     });
   });
 });

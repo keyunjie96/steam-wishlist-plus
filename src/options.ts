@@ -27,7 +27,6 @@ const checkboxes = new Map<keyof UserSettings, HTMLInputElement | null>();
 
 // Select elements (not checkboxes)
 let hltbDisplayStatSelect: HTMLSelectElement | null = null;
-let hltbStatRow: HTMLElement | null = null;
 
 /**
  * Formats a duration in milliseconds to a human-readable string
@@ -127,12 +126,12 @@ function getCurrentSettings(): UserSettings {
 }
 
 /**
- * Updates HLTB stat row visibility based on checkbox state
+ * Updates HLTB select visibility based on checkbox state
  */
-function updateHltbRowVisibility(): void {
+function updateHltbSelectVisibility(): void {
   const hltbCheckbox = checkboxes.get('showHltb');
-  if (hltbStatRow && hltbCheckbox) {
-    hltbStatRow.hidden = !hltbCheckbox.checked;
+  if (hltbDisplayStatSelect && hltbCheckbox) {
+    hltbDisplayStatSelect.hidden = !hltbCheckbox.checked;
   }
 }
 
@@ -156,7 +155,7 @@ function updateToggleActiveStates(): void {
  */
 async function handlePlatformToggle(): Promise<void> {
   updateToggleActiveStates();
-  updateHltbRowVisibility();
+  updateHltbSelectVisibility();
   const settings = getCurrentSettings();
   await saveSettings(settings);
 }
@@ -285,9 +284,8 @@ function initializePage(): void {
     }
   }
 
-  // HLTB display stat select and row
+  // HLTB display stat select (visibility controlled directly on the select)
   hltbDisplayStatSelect = document.getElementById('hltb-display-stat') as HTMLSelectElement | null;
-  hltbStatRow = document.getElementById('hltb-stat-row') as HTMLElement | null;
   if (hltbDisplayStatSelect) {
     hltbDisplayStatSelect.addEventListener('change', handlePlatformToggle);
   }
@@ -303,7 +301,7 @@ function initializePage(): void {
   Promise.all([loadCacheStats(), loadSettings()]).then(() => {
     // Update toggle active states and HLTB row visibility based on loaded settings
     updateToggleActiveStates();
-    updateHltbRowVisibility();
+    updateHltbSelectVisibility();
     // Remove loading class to reveal content with smooth transition
     document.body.classList.remove('is-loading');
   });
