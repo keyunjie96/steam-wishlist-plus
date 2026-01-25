@@ -10,9 +10,9 @@ This document explains how to regenerate all marketing assets for the Chrome Web
    npx http-server -p 8765 -c-1 &
    ```
 
-2. **librsvg** installed for SVG to PNG conversion:
+2. **Python 3 with Pillow** for PNG icon generation:
    ```bash
-   brew install librsvg
+   pip3 install Pillow
    ```
 
 3. **Playwright MCP** or browser automation tool for capturing screenshots
@@ -22,10 +22,11 @@ This document explains how to regenerate all marketing assets for the Chrome Web
 ```
 assets/
 ├── icons/
-│   ├── extension-icon.svg    # Master icon (editable)
-│   ├── icon16.png            # Generated
-│   ├── icon48.png            # Generated
-│   ├── icon128.png           # Generated
+│   ├── icon.png              # Master icon (1024x1024 source)
+│   ├── icon-cropped.png      # Auto-cropped for better fill
+│   ├── icon16.png            # Generated (toolbar)
+│   ├── icon48.png            # Generated (extensions page)
+│   ├── icon128.png           # Generated (store, options, promo)
 │   ├── ns.svg                # Platform icons (source)
 │   ├── ps.svg
 │   ├── xbox.svg
@@ -94,15 +95,36 @@ The promo tiles use a real screenshot from Steam wishlist. To recapture:
 
 ### 1. Extension Icons (16/48/128 PNG)
 
-If you modify `extension-icon.svg`:
+If you update `icon.png`, the regeneration script handles cropping and resizing automatically:
+
+```bash
+./scripts/regen-marketing.sh
+```
+
+Or manually with Python/Pillow:
 
 ```bash
 cd assets/icons
+python3 << 'EOF'
+from PIL import Image
 
-# Regenerate all sizes
-rsvg-convert -w 16 -h 16 extension-icon.svg -o icon16.png
-rsvg-convert -w 48 -h 48 extension-icon.svg -o icon48.png
-rsvg-convert -w 128 -h 128 extension-icon.svg -o icon128.png
+# Open and crop to content
+img = Image.open("icon.png").convert('RGBA')
+bbox = img.getbbox()
+if bbox:
+    padding = int(max(bbox[2]-bbox[0], bbox[3]-bbox[1]) * 0.02)
+    cropped = img.crop((max(0,bbox[0]-padding), max(0,bbox[1]-padding),
+                        min(img.width,bbox[2]+padding), min(img.height,bbox[3]+padding)))
+    size = max(cropped.size)
+    square = Image.new('RGBA', (size, size), (0,0,0,0))
+    square.paste(cropped, ((size-cropped.width)//2, (size-cropped.height)//2))
+else:
+    square = img
+
+square.save('icon-cropped.png')
+for s in [128, 48, 16]:
+    square.resize((s, s), Image.LANCZOS).save(f'icon{s}.png')
+EOF
 ```
 
 ### 2. Promotional Tiles
@@ -144,49 +166,20 @@ playwright screenshot --viewport-size=640,1200 --full-page \
 
 ### 4. All-in-One Regeneration Script
 
-Create `scripts/regen-marketing.sh`:
+Run the existing script:
 
 ```bash
-#!/bin/bash
-set -e
-
-cd "$(dirname "$0")/.."
-
-echo "Starting HTTP server..."
-npx http-server -p 8765 -c-1 &
-SERVER_PID=$!
-sleep 2
-
-echo "Regenerating extension icons..."
-cd assets/icons
-rsvg-convert -w 16 -h 16 extension-icon.svg -o icon16.png
-rsvg-convert -w 48 -h 48 extension-icon.svg -o icon48.png
-rsvg-convert -w 128 -h 128 extension-icon.svg -o icon128.png
-cd ../..
-
-echo "Regenerating promotional tiles..."
-# Large tile
-npx playwright screenshot --viewport-size=920,680 \
-  "http://localhost:8765/assets/marketing/promo-tile-920x680.html" \
-  "assets/marketing/promo-tile-920x680.png"
-
-# Small tile
-npx playwright screenshot --viewport-size=440,280 \
-  "http://localhost:8765/assets/marketing/promo-tile-440x280.html" \
-  "assets/marketing/promo-tile-440x280.png"
-
-# Options page
-npx playwright screenshot --viewport-size=640,1200 --full-page \
-  "http://localhost:8765/src/options.html" \
-  "assets/marketing/options-page-full.png"
-
-echo "Stopping HTTP server..."
-kill $SERVER_PID 2>/dev/null || true
-
-echo "Done! Marketing assets regenerated."
+./scripts/regen-marketing.sh
 ```
 
-Make executable: `chmod +x scripts/regen-marketing.sh`
+This script:
+1. Crops `icon.png` to remove padding (saves as `icon-cropped.png`)
+2. Generates `icon16.png`, `icon48.png`, `icon128.png` using Pillow
+3. Starts HTTP server on port 8765
+4. Captures all promo tile screenshots via Playwright
+5. Captures options page screenshot
+
+See `scripts/regen-marketing.sh` header comments for detailed icon update instructions.
 
 ## Customization Guide
 
@@ -217,12 +210,9 @@ Edit the `<h1 class="tagline">` in the promotional tile templates.
 
 ### Changing Extension Icon Design
 
-1. Edit `assets/icons/extension-icon.svg`
-2. Run the icon regeneration commands
-3. The design uses:
-   - Blue gradient circle (Steam-inspired)
-   - Controller silhouette center
-   - Four colored corner dots (platform indicators)
+1. Replace `assets/icons/icon.png` with your new icon (1024×1024 recommended)
+2. Run `./scripts/regen-marketing.sh`
+3. The script will auto-crop padding and generate all sizes
 
 ## Chrome Web Store Requirements
 
@@ -246,5 +236,6 @@ Edit the `<h1 class="tagline">` in the promotional tile templates.
 - Clear browser cache
 
 ### Icons look blurry
-- Ensure SVG is properly sized before conversion
-- Use `rsvg-convert` (not ImageMagick) for best quality
+- Ensure source `icon.png` is at least 512×512 (1024×1024 recommended)
+- Use Pillow with `Image.LANCZOS` resampling for best quality
+- Avoid excessive padding in source image (script auto-crops)
