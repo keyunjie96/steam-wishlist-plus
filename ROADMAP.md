@@ -53,17 +53,21 @@
 4. Consider caching with appropriate TTL
 **Risk:** Medium - ProtonDB API is unofficial but stable. Tier colors may conflict with existing dimmed/available styling.
 
-### FEAT-5: HLTB integration (How Long To Beat)
+### FEAT-10: Review scores (IGN, GameSpot, Metacritic)
 **Priority:** P2 (Medium Value)
-**Files:** `src/types.js:12-27`, `src/cache.js`, New `src/hltbClient.js`, `src/content.js:257-275`, `src/background.js`
-**Issue:** Users want completion time estimates to prioritize their backlog.
-**Data source:** HLTB API (reverse-engineered, `https://howlongtobeat.com/api/search` POST endpoint). Returns `main_story`, `main_extra`, `completionist` hours.
+**Files:** New `src/reviewScoresClient.ts`, `src/content.ts`, `src/types.ts`, `src/background.ts`
+**Issue:** Users want review scores to help prioritize their wishlist purchases.
+**Data sources:**
+- Metacritic: `https://www.metacritic.com/search/game/<name>/results` (web scraping required)
+- OpenCritic: `https://api.opencritic.com/api/game/search?criteria=<name>` (public API)
+- IGN/GameSpot: No public APIs (may require web scraping or alternative sources)
 **Fix:**
-1. Create `src/hltbClient.js` with `queryByGameName()` function
-2. Extend cache entry with optional `hltbData` field
-3. Add message handler in background.js
-4. Display completion time badge/tooltip in icon row
-**Risk:** High - No official HLTB API (reverse-engineered, may break). Name matching is fuzzy (might return wrong game). UI already crowded with 3-4 platform icons. Cache TTL can be same as platform data.
+1. Create `src/reviewScoresClient.ts` with `queryReviewScores()` function
+2. Add review score types to types.ts (metacritic, opencritic scores)
+3. Add message handler in background.ts for GET_REVIEW_SCORES
+4. Display score badge/tooltip in icon row (similar to HLTB badge)
+5. Add user preference toggle in options
+**Risk:** High - Metacritic has strict anti-scraping. OpenCritic is more accessible. IGN/GameSpot lack public APIs. Name matching is fuzzy. Consider OpenCritic as primary source (has aggregated scores).
 
 ### FEAT-8: Firefox/Edge browser support
 **Priority:** P3 (Lower Priority)
@@ -149,6 +153,7 @@ Features below were evaluated and declined because established extensions (Augme
 - [x] UX-1: Refine icon loading state (fixed: single loader, dynamic icon injection)
 - [x] LIFECYCLE-1: Icon lifecycle management (fixed: cleanupAllIcons on URL change, stale container validation, strengthened duplicate prevention)
 - [x] FEAT-2: User preferences for platform visibility (added toggles for Nintendo, PlayStation, Xbox, Steam Deck in options)
+- [x] FEAT-5: HLTB integration (How Long To Beat) - displays completion time estimates as a badge in the icon row
 
 ---
 
@@ -156,6 +161,6 @@ Features below were evaluated and declined because established extensions (Augme
 
 | ID | Item | Necessity | Confidence | Score | Effort |
 |----|------|-----------|------------|-------|--------|
+| FEAT-10 | Review Scores | 6 | 5 | 30 | Medium |
 | FEAT-8 | Firefox/Edge | 5 | 6 | 30 | Medium |
 | FEAT-9 | ChromeOS/ProtonDB | 4 | 5 | 20 | Medium |
-| FEAT-5 | HLTB integration | 5 | 4 | 20 | High |

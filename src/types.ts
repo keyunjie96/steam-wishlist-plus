@@ -9,6 +9,63 @@ export type Platform = 'nintendo' | 'playstation' | 'xbox' | 'steamdeck';
 
 export type PlatformStatus = 'available' | 'unavailable' | 'unknown';
 
+// HLTB display stat options
+export type HltbDisplayStat = 'mainStory' | 'mainExtra' | 'completionist';
+
+// ============================================================================
+// User Settings - SINGLE SOURCE OF TRUTH
+// ============================================================================
+// When adding a new setting:
+// 1. Add to UserSettings interface
+// 2. Add to DEFAULT_USER_SETTINGS with default value
+// 3. Add to SETTING_CHECKBOX_IDS mapping
+// That's it! options.ts, popup.ts, and content.ts will automatically pick it up.
+
+/**
+ * User settings interface - defines all configurable options.
+ * This is the single source of truth for settings structure.
+ */
+export interface UserSettings {
+  showNintendo: boolean;
+  showPlaystation: boolean;
+  showXbox: boolean;
+  showSteamDeck: boolean;
+  showHltb: boolean;
+  hltbDisplayStat: HltbDisplayStat;
+}
+
+/**
+ * Default values for all user settings.
+ * This is the single source of truth for default values.
+ */
+export const DEFAULT_USER_SETTINGS: UserSettings = {
+  showNintendo: true,
+  showPlaystation: true,
+  showXbox: true,
+  showSteamDeck: true,
+  showHltb: true,
+  hltbDisplayStat: 'mainStory'
+};
+
+/**
+ * Mapping from boolean setting keys to their checkbox element IDs in the UI.
+ * Only includes boolean settings that have corresponding checkboxes.
+ * Non-checkbox settings (like hltbDisplayStat) are handled separately.
+ */
+export const SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>> = {
+  showNintendo: 'show-nintendo',
+  showPlaystation: 'show-playstation',
+  showXbox: 'show-xbox',
+  showSteamDeck: 'show-steamdeck',
+  showHltb: 'show-hltb'
+} as Partial<Record<keyof UserSettings, string>>;
+
+/**
+ * Array of all setting keys for iteration.
+ * Derived from UserSettings to ensure type safety.
+ */
+export const USER_SETTING_KEYS = Object.keys(DEFAULT_USER_SETTINGS) as Array<keyof UserSettings>;
+
 export type DataSource = 'wikidata' | 'manual' | 'fallback' | 'none';
 
 // Platform data structure
@@ -24,6 +81,7 @@ export interface CacheEntry {
   platforms: Record<Platform, PlatformData>;
   source?: DataSource;
   wikidataId?: string | null;
+  hltbData?: HltbData | null;  // Optional HLTB completion time data
   resolvedAt: number;
   ttlDays: number;
 }
@@ -69,12 +127,37 @@ export interface ClearCacheRequest {
   type: 'CLEAR_CACHE';
 }
 
+export interface GetHltbDataRequest {
+  type: 'GET_HLTB_DATA';
+  appid: string;
+  gameName: string;
+}
+
+export interface GetHltbDataBatchRequest {
+  type: 'GET_HLTB_DATA_BATCH';
+  games: Array<{ appid: string; gameName: string }>;
+}
+
+export interface GetHltbDataResponse {
+  success: boolean;
+  data: HltbData | null;
+  error?: string;
+}
+
+export interface GetHltbDataBatchResponse {
+  success: boolean;
+  results: Record<string, HltbData | null>;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | GetPlatformDataRequest
   | GetPlatformDataBatchRequest
   | UpdateCacheRequest
   | GetCacheStatsRequest
-  | ClearCacheRequest;
+  | ClearCacheRequest
+  | GetHltbDataRequest
+  | GetHltbDataBatchRequest;
 
 // Store URL builders
 export const StoreUrls = {
@@ -130,6 +213,14 @@ declare global {
       statusToDisplayStatus: (status: DeckStatus) => 'available' | 'unavailable' | 'unknown';
       CATEGORY_MAP: Record<DeckCategory, DeckStatus>;
     };
+    XCPW_HltbClient: {
+      queryByGameName: (gameName: string, steamAppId?: string) => Promise<HltbSearchResult | null>;
+      batchQueryByGameNames: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, HltbSearchResult | null>>;
+      formatHours: (hours: number) => string;
+      normalizeGameName: (name: string) => string;
+      calculateSimilarity: (a: string, b: string) => number;
+      registerHeaderRules: () => Promise<void>;
+    };
     XCPW_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
       processPendingBatch: () => Promise<void>;
@@ -174,11 +265,22 @@ declare global {
       getSteamDeckRefreshAttempts: () => number;
       setSteamDeckRefreshAttempts: (val: number) => void;
       getCachedEntriesByAppId: () => Map<string, CacheEntry>;
-      getUserSettings: () => { showNintendo: boolean; showPlaystation: boolean; showXbox: boolean; showSteamDeck: boolean };
-      setUserSettings: (val: { showNintendo: boolean; showPlaystation: boolean; showXbox: boolean; showSteamDeck: boolean }) => void;
+      getUserSettings: () => UserSettings;
+      setUserSettings: (val: Partial<UserSettings>) => void;
       getSteamDeckRefreshTimer: () => ReturnType<typeof setTimeout> | null;
       setSteamDeckRefreshTimer: (val: ReturnType<typeof setTimeout> | null) => void;
       STEAM_DECK_REFRESH_DELAYS_MS: number[];
+      // HLTB exports for coverage testing
+      formatHltbTime: (hours: number) => string;
+      createHltbBadge: (hltbData: HltbData) => HTMLElement;
+      queueForHltbResolution: (appid: string, gameName: string, container: HTMLElement) => void;
+      processPendingHltbBatch: () => Promise<void>;
+      getHltbDataByAppId: () => Map<string, HltbData | null>;
+      getPendingHltbItems: () => Map<string, { gameName: string; container: HTMLElement }>;
+      getHltbBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
+      setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
+      HLTB_BATCH_DEBOUNCE_MS: number;
+      HLTB_MAX_BATCH_SIZE: number;
     };
     SSR?: {
       renderContext?: {
@@ -206,7 +308,15 @@ declare global {
   // eslint-disable-next-line no-var
   var XCPW_SteamDeck: Window['XCPW_SteamDeck'];
   // eslint-disable-next-line no-var
+  var XCPW_HltbClient: Window['XCPW_HltbClient'];
+  // eslint-disable-next-line no-var
   var XCPW_ContentTestExports: Window['XCPW_ContentTestExports'];
+  // eslint-disable-next-line no-var
+  var XCPW_UserSettings: {
+    DEFAULT_USER_SETTINGS: UserSettings;
+    SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>>;
+    USER_SETTING_KEYS: Array<keyof UserSettings>;
+  };
 }
 
 // Wikidata result types
@@ -237,8 +347,32 @@ export interface WikidataResult {
 export type DeckCategory = 0 | 1 | 2 | 3;
 export type DeckStatus = 'unknown' | 'unsupported' | 'playable' | 'verified';
 
+// HLTB (How Long To Beat) types
+export interface HltbData {
+  hltbId: number;        // HLTB game ID for linking
+  mainStory: number;    // Hours for main story
+  mainExtra: number;    // Hours for main + extras
+  completionist: number; // Hours for 100%
+  allStyles: number;     // Hours average across all play styles
+  steamId: number | null; // Steam app ID from HLTB (for verification)
+}
+
+export interface HltbSearchResult {
+  hltbId: number;
+  gameName: string;
+  similarity: number;  // 0-1 match confidence
+  data: HltbData;
+}
+
 // Export globally for content scripts (ES modules not fully supported in Chrome extensions)
 // Only set if not already defined (allows mocking in tests)
 if (!globalThis.XCPW_StoreUrls) {
   globalThis.XCPW_StoreUrls = StoreUrls;
+}
+if (!globalThis.XCPW_UserSettings) {
+  globalThis.XCPW_UserSettings = {
+    DEFAULT_USER_SETTINGS,
+    SETTING_CHECKBOX_IDS,
+    USER_SETTING_KEYS
+  };
 }

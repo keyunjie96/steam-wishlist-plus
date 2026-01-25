@@ -135,6 +135,103 @@ describe('types.js', () => {
         // Restore
         globalThis.XCPW_StoreUrls = savedStoreUrls;
       });
+
+      it('should not overwrite existing XCPW_StoreUrls', () => {
+        // Save original values
+        const savedStoreUrls = globalThis.XCPW_StoreUrls;
+
+        // Set a mock value
+        const mockStoreUrls = { nintendo: () => 'mock', playstation: () => 'mock', xbox: () => 'mock' };
+        globalThis.XCPW_StoreUrls = mockStoreUrls;
+
+        // Reset and reload module
+        jest.resetModules();
+        require('../../dist/types.js');
+
+        // Verify the existing value was not overwritten
+        expect(globalThis.XCPW_StoreUrls).toBe(mockStoreUrls);
+
+        // Restore
+        globalThis.XCPW_StoreUrls = savedStoreUrls;
+      });
+    });
+  });
+
+  describe('UserSettings', () => {
+    it('should export XCPW_UserSettings to globalThis', () => {
+      expect(globalThis.XCPW_UserSettings).toBeDefined();
+      expect(typeof globalThis.XCPW_UserSettings).toBe('object');
+    });
+
+    it('should have DEFAULT_USER_SETTINGS with all required properties', () => {
+      const { DEFAULT_USER_SETTINGS } = globalThis.XCPW_UserSettings;
+      expect(DEFAULT_USER_SETTINGS).toBeDefined();
+      expect(typeof DEFAULT_USER_SETTINGS.showNintendo).toBe('boolean');
+      expect(typeof DEFAULT_USER_SETTINGS.showPlaystation).toBe('boolean');
+      expect(typeof DEFAULT_USER_SETTINGS.showXbox).toBe('boolean');
+      expect(typeof DEFAULT_USER_SETTINGS.showSteamDeck).toBe('boolean');
+      expect(typeof DEFAULT_USER_SETTINGS.showHltb).toBe('boolean');
+    });
+
+    it('should have all settings enabled by default', () => {
+      const { DEFAULT_USER_SETTINGS } = globalThis.XCPW_UserSettings;
+      expect(DEFAULT_USER_SETTINGS.showNintendo).toBe(true);
+      expect(DEFAULT_USER_SETTINGS.showPlaystation).toBe(true);
+      expect(DEFAULT_USER_SETTINGS.showXbox).toBe(true);
+      expect(DEFAULT_USER_SETTINGS.showSteamDeck).toBe(true);
+      expect(DEFAULT_USER_SETTINGS.showHltb).toBe(true);
+    });
+
+    it('should have SETTING_CHECKBOX_IDS for all settings', () => {
+      const { SETTING_CHECKBOX_IDS } = globalThis.XCPW_UserSettings;
+      expect(SETTING_CHECKBOX_IDS).toBeDefined();
+      expect(SETTING_CHECKBOX_IDS.showNintendo).toBe('show-nintendo');
+      expect(SETTING_CHECKBOX_IDS.showPlaystation).toBe('show-playstation');
+      expect(SETTING_CHECKBOX_IDS.showXbox).toBe('show-xbox');
+      expect(SETTING_CHECKBOX_IDS.showSteamDeck).toBe('show-steamdeck');
+      expect(SETTING_CHECKBOX_IDS.showHltb).toBe('show-hltb');
+    });
+
+    it('should have USER_SETTING_KEYS array with all setting keys', () => {
+      const { USER_SETTING_KEYS } = globalThis.XCPW_UserSettings;
+      expect(Array.isArray(USER_SETTING_KEYS)).toBe(true);
+      expect(USER_SETTING_KEYS).toContain('showNintendo');
+      expect(USER_SETTING_KEYS).toContain('showPlaystation');
+      expect(USER_SETTING_KEYS).toContain('showXbox');
+      expect(USER_SETTING_KEYS).toContain('showSteamDeck');
+      expect(USER_SETTING_KEYS).toContain('showHltb');
+    });
+
+    it('should have matching keys between DEFAULT_USER_SETTINGS and SETTING_CHECKBOX_IDS', () => {
+      const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.XCPW_UserSettings;
+
+      // All boolean settings should have corresponding checkbox IDs
+      // Non-boolean settings (like hltbDisplayStat select) don't need checkbox IDs
+      for (const key of Object.keys(DEFAULT_USER_SETTINGS)) {
+        expect(USER_SETTING_KEYS).toContain(key);
+        if (typeof DEFAULT_USER_SETTINGS[key] === 'boolean') {
+          expect(SETTING_CHECKBOX_IDS[key]).toBeDefined();
+        }
+      }
+    });
+
+    it('should not overwrite existing XCPW_UserSettings', () => {
+      // Save original values
+      const savedUserSettings = globalThis.XCPW_UserSettings;
+
+      // Set a mock value
+      const mockUserSettings = { test: true };
+      globalThis.XCPW_UserSettings = mockUserSettings;
+
+      // Reset and reload module
+      jest.resetModules();
+      require('../../dist/types.js');
+
+      // Verify the existing value was not overwritten
+      expect(globalThis.XCPW_UserSettings).toBe(mockUserSettings);
+
+      // Restore
+      globalThis.XCPW_UserSettings = savedUserSettings;
     });
   });
 });

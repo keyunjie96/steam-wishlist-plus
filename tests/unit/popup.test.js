@@ -13,6 +13,7 @@ describe('popup.js', () => {
   let showPlaystationCheckbox;
   let showXboxCheckbox;
   let showSteamDeckCheckbox;
+  let showHltbCheckbox;
 
   beforeEach(() => {
     jest.resetModules();
@@ -75,6 +76,11 @@ describe('popup.js', () => {
     showSteamDeckCheckbox.id = 'show-steamdeck';
     document.body.appendChild(showSteamDeckCheckbox);
 
+    showHltbCheckbox = document.createElement('input');
+    showHltbCheckbox.type = 'checkbox';
+    showHltbCheckbox.id = 'show-hltb';
+    document.body.appendChild(showHltbCheckbox);
+
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
     chrome.runtime.sendMessage.mockResolvedValue({
@@ -93,7 +99,8 @@ describe('popup.js', () => {
         showNintendo: true,
         showPlaystation: true,
         showXbox: false,
-        showSteamDeck: true
+        showSteamDeck: true,
+        showHltb: true
       }
     });
     chrome.storage.sync.set.mockClear();
@@ -101,6 +108,25 @@ describe('popup.js', () => {
 
     // Mock confirm dialog
     global.confirm = jest.fn(() => true);
+
+    // Mock UserSettings (centralized settings from types.js)
+    globalThis.XCPW_UserSettings = {
+      DEFAULT_USER_SETTINGS: {
+        showNintendo: true,
+        showPlaystation: true,
+        showXbox: true,
+        showSteamDeck: true,
+        showHltb: true
+      },
+      SETTING_CHECKBOX_IDS: {
+        showNintendo: 'show-nintendo',
+        showPlaystation: 'show-playstation',
+        showXbox: 'show-xbox',
+        showSteamDeck: 'show-steamdeck',
+        showHltb: 'show-hltb'
+      },
+      USER_SETTING_KEYS: ['showNintendo', 'showPlaystation', 'showXbox', 'showSteamDeck', 'showHltb']
+    };
 
     // Load popup.js
     require('../../dist/popup.js');
@@ -579,7 +605,8 @@ describe('popup.js', () => {
           showNintendo: true,
           showPlaystation: false,
           showXbox: true,
-          showSteamDeck: false
+          showSteamDeck: false,
+          showHltb: true
         }
       });
 
@@ -592,6 +619,7 @@ describe('popup.js', () => {
       expect(showPlaystationCheckbox.checked).toBe(false);
       expect(showXboxCheckbox.checked).toBe(true);
       expect(showSteamDeckCheckbox.checked).toBe(false);
+      expect(showHltbCheckbox.checked).toBe(true);
     });
 
     it('should use default settings when none are stored', async () => {
@@ -607,6 +635,7 @@ describe('popup.js', () => {
       expect(showPlaystationCheckbox.checked).toBe(true);
       expect(showXboxCheckbox.checked).toBe(true);
       expect(showSteamDeckCheckbox.checked).toBe(true);
+      expect(showHltbCheckbox.checked).toBe(true);
     });
 
     it('should save settings when Nintendo toggle is changed', async () => {
@@ -693,11 +722,12 @@ describe('popup.js', () => {
     });
 
     it('should handle missing checkbox elements gracefully', async () => {
-      // Remove checkboxes from DOM
+      // Remove all checkboxes from DOM to test null checks
       showNintendoCheckbox.remove();
       showPlaystationCheckbox.remove();
       showXboxCheckbox.remove();
       showSteamDeckCheckbox.remove();
+      showHltbCheckbox.remove();
 
       jest.resetModules();
       require('../../dist/popup.js');

@@ -8,7 +8,7 @@
  * - Handles infinite scroll with MutationObserver
  */
 
-import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse } from './types';
+import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse } from './types';
 
 const PROCESSED_ATTR = 'data-xcpw-processed';
 const ICONS_INJECTED_ATTR = 'data-xcpw-icons';
@@ -43,6 +43,11 @@ function cleanupAllIcons(): void {
     batchDebounceTimer = null;
   }
 
+  if (hltbBatchDebounceTimer) {
+    clearTimeout(hltbBatchDebounceTimer);
+    hltbBatchDebounceTimer = null;
+  }
+
   if (steamDeckRefreshTimer) {
     clearTimeout(steamDeckRefreshTimer);
     steamDeckRefreshTimer = null;
@@ -56,9 +61,11 @@ function cleanupAllIcons(): void {
   injectedAppIds.clear();
   processedAppIds.clear();
   missingSteamDeckAppIds.clear();
+  hltbDataByAppId.clear();
 
   // Clear pending batch (stale container references)
   pendingItems.clear();
+  pendingHltbItems.clear();
 
   // Clear processed attributes
   document.querySelectorAll(`[${PROCESSED_ATTR}]`).forEach(el => {
@@ -83,19 +90,32 @@ function checkDeckFilterActive(): boolean {
 /** All available platforms in display order */
 const ALL_PLATFORMS: Platform[] = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
 
-/** User settings (loaded from storage) */
-let userSettings = {
-  showNintendo: true,
-  showPlaystation: true,
-  showXbox: true,
-  showSteamDeck: true
-};
+// Get centralized settings definitions from types.ts
+const { DEFAULT_USER_SETTINGS } = globalThis.XCPW_UserSettings;
+
+/** User settings (loaded from storage) - initialized from centralized defaults */
+let userSettings: typeof DEFAULT_USER_SETTINGS = { ...DEFAULT_USER_SETTINGS };
 
 /** Pre-extracted Steam Deck data from page SSR (Map of appId -> category) */
 let steamDeckData: Map<string, DeckCategory> | null = null;
 
 /** Cached platform data entries for refreshes */
 const cachedEntriesByAppId = new Map<string, CacheEntry>();
+
+/** Cached HLTB data entries */
+const hltbDataByAppId = new Map<string, HltbData | null>();
+
+/** Pending items waiting for HLTB data resolution */
+const pendingHltbItems = new Map<string, { gameName: string; container: HTMLElement }>();
+
+/** Debounce timer for HLTB batch requests */
+let hltbBatchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Debounce delay for HLTB batch requests (longer than platform data) */
+const HLTB_BATCH_DEBOUNCE_MS = 300;
+
+/** Max games per HLTB batch to prevent service worker timeout (each game ~500ms) */
+const HLTB_MAX_BATCH_SIZE = 5;
 
 /** Steam Deck refresh scheduling */
 const STEAM_DECK_REFRESH_DELAYS_MS = [800, 2000, 5000, 10000];
@@ -146,7 +166,7 @@ async function loadUserSettings(): Promise<void> {
     if (result.xcpwSettings) {
       userSettings = { ...userSettings, ...result.xcpwSettings };
     }
-    if (DEBUG) console.log(`${LOG_PREFIX} Loaded settings:`, userSettings);
+    if (DEBUG) console.log(`${LOG_PREFIX} Settings loaded: showHltb=${userSettings.showHltb}`);
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
   }
@@ -473,18 +493,20 @@ function isValidGameTitle(text: string | null | undefined): boolean {
  * Extracts the game name from a wishlist item element.
  */
 function extractGameName(item: Element): string {
-  // Primary: Get title from app link (most reliable)
-  const titleLink = item.querySelector('a[href*="/app/"]');
-  if (titleLink) {
-    const linkText = titleLink.textContent?.trim();
+  // Primary: Find an app link that has actual text content (not just an image)
+  const appLinks = item.querySelectorAll('a[href*="/app/"]');
+  for (const link of appLinks) {
+    const linkText = link.textContent?.trim();
     if (linkText && linkText.length > 0 && linkText.length < 200) {
       return linkText;
     }
+  }
 
-    // Fallback: Extract from URL slug
-    const href = titleLink.getAttribute('href');
+  // Fallback: Extract from URL slug if we found any app link
+  if (appLinks.length > 0) {
+    const href = appLinks[0].getAttribute('href');
     const match = href?.match(/\/app\/\d+\/([^/?]+)/);
-    if (match) {
+    if (match && match[1].length > 2) {
       return match[1].replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     }
   }
@@ -592,6 +614,91 @@ function createPlatformIcon(
 }
 
 /**
+ * Formats HLTB hours for display (e.g., "12h" or "100h+")
+ */
+function formatHltbTime(hours: number): string {
+  if (!hours || hours <= 0) return '';
+  // Round to whole number if >= 10, otherwise show one decimal
+  return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
+}
+
+/**
+ * Creates an HLTB time badge element.
+ * Shows only the main story time on the badge (clean, minimal).
+ * Full stats available in tooltip on hover.
+ */
+function createHltbBadge(hltbData: HltbData): HTMLElement {
+  const isClickable = hltbData.hltbId > 0;
+
+  if (DEBUG) console.log(`${LOG_PREFIX} createHltbBadge: hltbId=${hltbData.hltbId}, isClickable=${isClickable}`);
+
+  // Create link or span depending on whether we have an HLTB ID
+  const badge = document.createElement(isClickable ? 'a' : 'span') as HTMLAnchorElement | HTMLSpanElement;
+  badge.className = 'xcpw-hltb-badge';
+
+  if (isClickable && badge instanceof HTMLAnchorElement) {
+    badge.href = `https://howlongtobeat.com/game/${hltbData.hltbId}`;
+    badge.target = '_blank';
+    badge.rel = 'noopener noreferrer';
+  }
+
+  // Format times
+  const mainTime = formatHltbTime(hltbData.mainStory);
+  const extraTime = formatHltbTime(hltbData.mainExtra);
+  const completionistTime = formatHltbTime(hltbData.completionist);
+
+  // Display stat based on user preference, with fallbacks
+  const displayStat = userSettings.hltbDisplayStat || 'mainStory';
+  let displayTime = '';
+
+  if (displayStat === 'mainStory' && hltbData.mainStory > 0) {
+    displayTime = mainTime;
+  } else if (displayStat === 'mainExtra' && hltbData.mainExtra > 0) {
+    displayTime = extraTime;
+  } else if (displayStat === 'completionist' && hltbData.completionist > 0) {
+    displayTime = completionistTime;
+  }
+
+  // Fallback: show any available stat if preferred one is 0
+  if (!displayTime) {
+    if (hltbData.mainStory > 0) {
+      displayTime = mainTime;
+    } else if (hltbData.mainExtra > 0) {
+      displayTime = extraTime;
+    } else if (hltbData.completionist > 0) {
+      displayTime = completionistTime;
+    } else {
+      displayTime = '?h';
+    }
+  }
+
+  badge.textContent = displayTime;
+
+  // Tooltip with full breakdown (visible on hover)
+  const tooltipParts: string[] = [];
+  if (hltbData.mainStory > 0) {
+    tooltipParts.push(`Main Story: ${mainTime}`);
+  }
+  if (hltbData.mainExtra > 0) {
+    tooltipParts.push(`Main + Extras: ${extraTime}`);
+  }
+  if (hltbData.completionist > 0) {
+    tooltipParts.push(`Completionist: ${completionistTime}`);
+  }
+
+  if (isClickable) {
+    tooltipParts.push('Click to view on HLTB');
+  }
+
+  const hasAnyTime = hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0;
+  const tooltip = hasAnyTime ? tooltipParts.join('\n') : 'How Long To Beat: Unknown';
+  badge.setAttribute('title', tooltip);
+  badge.setAttribute('aria-label', tooltip);
+
+  return badge;
+}
+
+/**
  * Updates the icons container with platform data from cache.
  * Dynamically adds icons for available platforms (none exist initially).
  * Steam Deck icons are fetched separately from Steam's store pages.
@@ -606,7 +713,7 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   const iconsToAdd: HTMLElement[] = [];
 
   // Reset previous icons to keep updates idempotent
-  container.querySelectorAll('.xcpw-platform-icon, .xcpw-separator').forEach(el => el.remove());
+  container.querySelectorAll('.xcpw-platform-icon, .xcpw-separator, .xcpw-hltb-badge').forEach(el => el.remove());
 
   // Get Steam Deck client if available
   const SteamDeck = globalThis.XCPW_SteamDeck;
@@ -655,14 +762,25 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   const loader = container.querySelector('.xcpw-loader');
   if (loader) loader.remove();
 
-  // Only add separator and icons if we have visible icons
-  if (iconsToAdd.length > 0) {
+  // Get HLTB data if available
+  const hltbData = appid ? hltbDataByAppId.get(appid) : null;
+  const hasHltbTime = hltbData && (hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0);
+  const showHltbBadge = userSettings.showHltb && hasHltbTime;
+
+  // Only add separator and icons if we have visible icons or HLTB badge
+  if (iconsToAdd.length > 0 || showHltbBadge) {
     const separator = document.createElement('span');
     separator.className = 'xcpw-separator';
     container.appendChild(separator);
 
     for (const icon of iconsToAdd) {
       container.appendChild(icon);
+    }
+
+    // Add HLTB badge after platform icons
+    if (showHltbBadge && hltbData) {
+      const hltbBadge = createHltbBadge(hltbData);
+      container.appendChild(hltbBadge);
     }
   }
 }
@@ -882,25 +1000,30 @@ async function processPendingBatch(): Promise<void> {
   pendingItems.clear();
   batchDebounceTimer = null;
 
-  // Skip Wikidata fetch if all console platforms are disabled
-  // Just update icons with Steam Deck data (if enabled) or remove loading state
-  if (!isAnyConsolePlatformEnabled()) {
-    if (DEBUG) console.log(`${LOG_PREFIX} Skipping batch request - all console platforms disabled`);
-    for (const [appid, { container }] of containerMap) {
+  // Skip Wikidata fetch ONLY if all console platforms are disabled AND HLTB is disabled
+  // When HLTB is enabled, we still need Wikidata to get English game names for HLTB matching
+  // (Steam may show translated names that HLTB won't recognize)
+  if (!isAnyConsolePlatformEnabled() && !userSettings.showHltb) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Skipping batch request - all console platforms and HLTB disabled`);
+    for (const [appid, { container, gameName }] of containerMap) {
       // Create a minimal cache entry with no console platform data
       const minimalEntry: CacheEntry = {
         appid,
-        gameName: containerMap.get(appid)!.gameName,
+        gameName,
         platforms: {
           nintendo: { status: 'unknown', storeUrl: '' },
           playstation: { status: 'unknown', storeUrl: '' },
-          xbox: { status: 'unknown', storeUrl: '' }
+          xbox: { status: 'unknown', storeUrl: '' },
+          steamdeck: { status: 'unknown', storeUrl: '' }
         },
-        source: 'local',
+        source: 'fallback',
         wikidataId: null,
         resolvedAt: Date.now(),
         ttlDays: 7
       };
+
+      // Save to in-memory cache for HLTB re-rendering
+      cachedEntriesByAppId.set(appid, minimalEntry);
 
       // Always call updateIconsWithData - it handles removing the loader
       // and will show Steam Deck icons if enabled and data is available
@@ -929,6 +1052,14 @@ async function processPendingBatch(): Promise<void> {
         // This ensures data is available for cache-reuse when game reappears
         if (result.data) {
           cachedEntriesByAppId.set(appid, result.data);
+          // Also populate HLTB data if present in cache entry
+          // This prevents re-fetching HLTB data that was already cached
+          // Note: hltbId === -1 means "searched but not found" - store as null for consistency
+          if (result.data.hltbData && !hltbDataByAppId.has(appid)) {
+            const hltbValue = result.data.hltbData.hltbId === -1 ? null : result.data.hltbData;
+            hltbDataByAppId.set(appid, hltbValue);
+            if (DEBUG) console.log(`${LOG_PREFIX} HLTB from platform cache: ${appid} (hltbId=${result.data.hltbData.hltbId}, stored=${hltbValue ? 'data' : 'null'})`);
+          }
         }
 
         // BUG-13 FIX: Update ALL containers for this appid, not just the one in containerMap
@@ -977,6 +1108,120 @@ async function processPendingBatch(): Promise<void> {
       removeLoadingState(container);
     }
   }
+
+  // Queue HLTB requests for successfully processed items
+  // Use English game name from Wikidata (cachedEntry) instead of possibly-translated Steam name
+  if (userSettings.showHltb) {
+    for (const [appid, { container, gameName }] of containerMap) {
+      if (!hltbDataByAppId.has(appid) && document.body.contains(container)) {
+        // Prefer English name from Wikidata, fall back to Steam name
+        const cachedEntry = cachedEntriesByAppId.get(appid);
+        const englishName = cachedEntry?.gameName || gameName;
+        queueForHltbResolution(appid, englishName, container);
+      }
+    }
+  }
+}
+
+/**
+ * Queues an item for HLTB data resolution.
+ * Uses debouncing to collect multiple items before sending a batch request.
+ */
+function queueForHltbResolution(appid: string, gameName: string, container: HTMLElement): void {
+  if (DEBUG) console.log(`${LOG_PREFIX} HLTB: Queueing ${appid} - ${gameName}`);
+  pendingHltbItems.set(appid, { gameName, container });
+
+  // Reset debounce timer
+  if (hltbBatchDebounceTimer) {
+    clearTimeout(hltbBatchDebounceTimer);
+  }
+
+  hltbBatchDebounceTimer = setTimeout(() => {
+    processPendingHltbBatch();
+  }, HLTB_BATCH_DEBOUNCE_MS);
+}
+
+/**
+ * Processes pending HLTB items in smaller batches to prevent service worker timeout.
+ * Each batch is limited to HLTB_MAX_BATCH_SIZE games.
+ */
+async function processPendingHltbBatch(): Promise<void> {
+  if (pendingHltbItems.size === 0 || !userSettings.showHltb) {
+    return;
+  }
+
+  // Collect all pending HLTB items
+  const allGames: Array<{ appid: string; gameName: string }> = [];
+  const containerMap = new Map<string, { container: HTMLElement; gameName: string }>();
+
+  for (const [appid, { gameName, container }] of pendingHltbItems) {
+    allGames.push({ appid, gameName });
+    containerMap.set(appid, { container, gameName });
+  }
+
+  // Clear pending items before async operation
+  pendingHltbItems.clear();
+  hltbBatchDebounceTimer = null;
+
+  if (DEBUG) console.log(`${LOG_PREFIX} HLTB: Processing ${allGames.length} games`);
+
+  for (let i = 0; i < allGames.length; i += HLTB_MAX_BATCH_SIZE) {
+    const games = allGames.slice(i, i + HLTB_MAX_BATCH_SIZE);
+    const batchNum = Math.floor(i / HLTB_MAX_BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(allGames.length / HLTB_MAX_BATCH_SIZE);
+
+    if (DEBUG) console.log(`${LOG_PREFIX} HLTB: Sending batch ${batchNum}/${totalBatches} (${games.length} games)`);
+
+    try {
+      const response = await sendMessageWithRetry<{ success: boolean; hltbResults?: Record<string, HltbData | null> }>({
+        type: 'GET_HLTB_DATA_BATCH',
+        games
+      });
+
+      if (response?.success && response.hltbResults) {
+        // Update HLTB data and re-render icons
+        for (const [appid, hltbData] of Object.entries(response.hltbResults)) {
+          const itemInfo = containerMap.get(appid);
+          if (!itemInfo) continue;
+
+          const { gameName } = itemInfo;
+
+          if (DEBUG) console.log(`${LOG_PREFIX} HLTB result: ${appid} - ${gameName} => mainStory=${hltbData?.mainStory || 0}, hltbId=${hltbData?.hltbId || 0}`);
+
+          // Store HLTB data
+          hltbDataByAppId.set(appid, hltbData);
+
+          // Find ALL containers for this appid (React virtualization may have re-rendered)
+          const allContainersForAppid = document.querySelectorAll<HTMLElement>(`.xcpw-platforms[data-appid="${appid}"]`);
+
+          if (allContainersForAppid.length === 0) {
+            if (DEBUG) console.log(`${LOG_PREFIX} HLTB: No containers found for ${appid}, data cached for reuse`);
+            continue;
+          }
+
+          // Re-render icons with HLTB data on ALL containers
+          const cachedEntry = cachedEntriesByAppId.get(appid);
+          if (cachedEntry) {
+            for (const targetContainer of allContainersForAppid) {
+              updateIconsWithData(targetContainer, cachedEntry);
+            }
+
+            if (DEBUG && hltbData && hltbData.mainStory > 0) {
+              console.log(`${LOG_PREFIX} HLTB: ${appid} - ${gameName} [${hltbData.mainStory}h main]`);
+            }
+          }
+        }
+      } else if (DEBUG) {
+        console.log(`${LOG_PREFIX} HLTB batch ${batchNum} returned no results`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`${LOG_PREFIX} HLTB: Batch ${batchNum} error:`, errorMessage);
+      // Continue with next batch even if one fails
+    }
+  }
+
+  if (DEBUG) console.log(`${LOG_PREFIX} HLTB: All batches complete`);
 }
 
 // ============================================================================
@@ -1145,6 +1390,13 @@ async function processItem(item: Element): Promise<void> {
     updateIconsWithData(iconsContainer, cachedEntry);
     const iconSummary = getRenderedIconSummary(iconsContainer);
     console.log(`${LOG_PREFIX} Rendered (cache-reuse): ${appId} - ${gameName} [icons: ${iconSummary}]`);
+
+    // Queue HLTB request even for cache-reuse (HLTB data fetched separately)
+    // Use English name from cache for better HLTB matching
+    if (userSettings.showHltb && !hltbDataByAppId.has(appId)) {
+      const englishName = cachedEntry.gameName || gameName;
+      queueForHltbResolution(appId, englishName, iconsContainer);
+    }
     return;
   }
 
@@ -1343,9 +1595,20 @@ if (typeof globalThis !== 'undefined') {
     setSteamDeckRefreshAttempts: (val: number) => { steamDeckRefreshAttempts = val; },
     getCachedEntriesByAppId: () => cachedEntriesByAppId,
     getUserSettings: () => userSettings,
-    setUserSettings: (val: { showNintendo: boolean; showPlaystation: boolean; showXbox: boolean; showSteamDeck: boolean }) => { userSettings = val; },
+    setUserSettings: (val: Partial<typeof userSettings>) => { userSettings = { ...userSettings, ...val }; },
     getSteamDeckRefreshTimer: () => steamDeckRefreshTimer,
     setSteamDeckRefreshTimer: (val: ReturnType<typeof setTimeout> | null) => { steamDeckRefreshTimer = val; },
-    STEAM_DECK_REFRESH_DELAYS_MS
+    STEAM_DECK_REFRESH_DELAYS_MS,
+    // HLTB exports for coverage testing
+    formatHltbTime,
+    createHltbBadge,
+    queueForHltbResolution,
+    processPendingHltbBatch,
+    getHltbDataByAppId: () => hltbDataByAppId,
+    getPendingHltbItems: () => pendingHltbItems,
+    getHltbBatchDebounceTimer: () => hltbBatchDebounceTimer,
+    setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => { hltbBatchDebounceTimer = val; },
+    HLTB_BATCH_DEBOUNCE_MS,
+    HLTB_MAX_BATCH_SIZE
   };
 }

@@ -344,6 +344,25 @@ describe('cache.js', () => {
 
       expect(stats.count).toBe(0);
     });
+
+    it('should filter out entries with falsy resolvedAt', async () => {
+      const Cache = globalThis.XCPW_Cache;
+      const validTime = Date.now() - 100000;
+
+      setMockStorageData({
+        'xcpw_cache_111': { appid: '111', resolvedAt: validTime },
+        'xcpw_cache_222': { appid: '222', resolvedAt: 0 },  // Falsy resolvedAt
+        'xcpw_cache_333': { appid: '333', resolvedAt: null },  // Falsy resolvedAt
+        'xcpw_cache_444': { appid: '444' }  // Missing resolvedAt
+      });
+
+      const stats = await Cache.getCacheStats();
+
+      // Count includes all cache entries
+      expect(stats.count).toBe(4);
+      // But oldest should only consider truthy timestamps
+      expect(stats.oldestEntry).toBe(validTime);
+    });
   });
 
   describe('MANUAL_OVERRIDES', () => {

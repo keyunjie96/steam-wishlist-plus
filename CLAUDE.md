@@ -4,7 +4,7 @@
 
 **Steam Cross-Platform Wishlist** is a Chrome extension (Manifest V3) that displays platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck) on Steam wishlist pages using Wikidata and Steam's SSR data.
 
-**Version:** 0.5.0
+**Version:** 0.6.0
 **Status:** Production-ready
 **Tech Stack:** TypeScript, Chrome Extensions API (MV3), Jest
 
@@ -26,13 +26,13 @@
    │  Client.ts)       │                                   │                      │
    │                   │                                   └──────────┬───────────┘
    │ - Inject Page     │                                              │
-   │   Script          │                    ┌─────────────────────────┴─────────────────────────┐
-   │ - Read DOM        │                    │                                                   │
-   └───────┬───────────┘             ┌──────▼──────┐                                     ┌──────▼──────────┐
-           │                         │ Cache       │                                     │ WikidataClient  │
-   ┌───────▼────────────┐            │ (cache.ts)  │                                     │ (wikidata       │
-   │ SteamDeckPageScript│            │             │                                     │  Client.ts)     │
-   │ (Injected Script)  │            └─────────────┘                                     └─────────────────┘
+   │   Script          │                    ┌─────────────────────────┼─────────────────────────┐
+   │ - Read DOM        │                    │                         │                         │
+   └───────┬───────────┘             ┌──────▼──────┐           ┌──────▼──────────┐       ┌──────▼──────┐
+           │                         │ Cache       │           │ WikidataClient  │       │ HltbClient  │
+   ┌───────▼────────────┐            │ (cache.ts)  │           │ (wikidata       │       │ (hltb       │
+   │ SteamDeckPageScript│            │             │           │  Client.ts)     │       │  Client.ts) │
+   │ (Injected Script)  │            └─────────────┘           └─────────────────┘       └─────────────┘
    └────────────────────┘
 ```
 
@@ -47,6 +47,7 @@
 │   ├── cache.ts            # Cache module
 │   ├── resolver.ts         # Resolution orchestrator
 │   ├── wikidataClient.ts   # Wikidata SPARQL client
+│   ├── hltbClient.ts       # HLTB completion time client
 │   ├── steamDeckClient.ts  # Steam Deck data from page SSR
 │   ├── steamDeckPageScript.ts # Injected script for SSR access
 │   ├── icons.ts            # Icon definitions
@@ -69,6 +70,7 @@
 | `src/resolver.ts` | Orchestrates data resolution | `resolvePlatformData()` |
 | `src/cache.ts` | Chrome storage operations | `getFromCache()`, `saveToCache()`, `getOrCreatePlatformData()` |
 | `src/wikidataClient.ts` | Wikidata SPARQL queries | `queryBySteamAppId()`, `executeSparqlQuery()` |
+| `src/hltbClient.ts` | HLTB completion time queries | `queryByGameName()`, `batchQueryByGameNames()` |
 | `src/steamDeckClient.ts` | Steam Deck data extraction | `waitForDeckData()`, `getDeckStatus()` |
 | `src/steamDeckPageScript.ts` | Page script for SSR access | `extractDeckData()` (runs in MAIN world) |
 | `src/icons.ts` | SVG icons and platform info | `PLATFORM_ICONS`, `PLATFORM_INFO`, `STATUS_INFO` |
@@ -112,6 +114,21 @@ Current global thresholds:
 - Lines: 80%
 - Statements: 80%
 
+### Version Updates
+
+**When to update the version number:**
+- **Patch version (0.5.x)**: Bug fixes, minor improvements, refactoring
+- **Minor version (0.x.0)**: New features, significant enhancements
+- **Major version (x.0.0)**: Breaking changes, major rewrites
+
+**Files to update:**
+1. `manifest.json` - `"version"` field
+2. `package.json` - `"version"` field
+3. `CLAUDE.md` - Version in Project Overview section
+4. `src/hltbClient.ts` - User-Agent string (if version is referenced there)
+
+**IMPORTANT:** Always update version numbers when making user-visible changes before creating a commit or PR.
+
 ### Loading the Extension
 1. Run `npm run build` to compile TypeScript
 2. Open `chrome://extensions/`
@@ -146,11 +163,22 @@ Current global thresholds:
 3. **Wikidata**: SPARQL query for platform data
 4. **Fallback**: Return "unknown" for all platforms
 
-### Store URLs (Region-Agnostic)
-All store URLs auto-redirect to the user's local store:
-- Nintendo: `https://www.nintendo.com/search/...`
-- PlayStation: `https://store.playstation.com/search/...`
-- Xbox: `https://www.xbox.com/search/...`
+### Store URLs
+
+**Direct Links (from Wikidata):** When Wikidata provides a store ID, the resolver validates the URL before caching:
+1. Make HEAD request to check if URL is accessible
+2. If valid (2xx/3xx) → use direct product link
+3. If invalid (404/error) → fall back to US search URL
+
+**Fallback URLs (when validation fails):**
+- Nintendo: `https://www.nintendo.com/us/search/...`
+- PlayStation: `https://store.playstation.com/en-us/search/...`
+- Xbox: `https://www.xbox.com/en-US/search/...`
+
+**Default Search URLs (no Wikidata store ID):**
+- Nintendo: `https://www.nintendo.com/search/...` (region-agnostic)
+- PlayStation: `https://store.playstation.com/search/...` (region-agnostic)
+- Xbox: `https://www.xbox.com/search/...` (region-agnostic)
 
 ## Testing Data
 
@@ -190,6 +218,7 @@ Each module has a debug flag at the top:
 const DEBUG = false;              // src/content.ts
 const RESOLVER_DEBUG = false;     // src/resolver.ts
 const WIKIDATA_DEBUG = false;     // src/wikidataClient.ts
+const HLTB_DEBUG = false;         // src/hltbClient.ts
 const CACHE_DEBUG = false;        // src/cache.ts (enables manual test overrides)
 const STEAM_DECK_DEBUG = false;   // src/steamDeckClient.ts
 ```
@@ -212,6 +241,73 @@ Set to `true` for verbose logging during development.
 1. **Rate Limiting**: 500ms delay between Wikidata requests to avoid throttling
 2. **Cache TTL**: 7 days - games that become available on new platforms won't update until cache expires
 3. **Wikidata Coverage**: Not all games have platform data in Wikidata
+
+## Browser Automation Testing (Playwright)
+
+**IMPORTANT:** Playwright has significant limitations when testing Chrome extensions.
+
+### What Playwright CAN Do
+
+1. **Navigate to websites and observe results** - Load Steam wishlist pages to see if icons appear
+2. **Test APIs directly on their websites** - Navigate to howlongtobeat.com and test their API from within the page context
+3. **Scrape JavaScript to find API endpoints** - Fetch and analyze minified JS files to reverse-engineer API formats
+4. **Read console logs** - Check browser_console_messages for extension log output
+5. **Take screenshots** - Capture visual state of the page with extension icons
+
+### What Playwright CANNOT Do
+
+1. **Access extension service worker context** - The background script runs in an isolated world inaccessible from Playwright
+2. **Inject into extension contexts** - Cannot directly call chrome.runtime.sendMessage or access extension storage
+3. **Bypass CORS from page context** - API calls from browser_evaluate are subject to different CORS rules than the extension's host_permissions
+4. **Test extension-to-extension messaging** - No way to simulate content script ↔ background worker communication
+
+### Recommended Debugging Workflow
+
+When an external API (like HLTB) stops working:
+
+1. **Use Playwright to navigate to the API's website** (e.g., howlongtobeat.com)
+2. **Scrape the JavaScript files** to find the current API endpoint and format:
+   ```typescript
+   // Example: Find API endpoint in minified JS
+   const scripts = await page.evaluate(() =>
+     Array.from(document.querySelectorAll('script[src]'))
+       .map(s => s.src)
+   );
+   // Fetch each script and search for fetch() patterns
+   ```
+3. **Test the API directly using browser_evaluate**:
+   ```typescript
+   const result = await page.evaluate(async () => {
+     const response = await fetch('/api/endpoint', { ... });
+     return response.json();
+   });
+   ```
+4. **Update the extension code** with the discovered format
+5. **Verify manually** by loading the extension in Chrome and checking console logs
+
+### API-Specific Notes
+
+**HLTB (HowLongToBeat):**
+- Uses an undocumented API that changes periodically
+- Requires auth token from `/api/search/init?t=<timestamp>`
+- Search endpoint: POST `/api/search` (not `/api/s/`)
+- Request body must include nested objects: `rangeTime`, `gameplay`, `rangeYear`, `users`, `lists`
+- `searchTerms` must be `["Full Game Name"]` (single element), NOT split by spaces
+- Response times are in **seconds**, divide by 3600 for hours
+
+**Wikidata:**
+- SPARQL queries are stable and well-documented
+- Rate limit: 500ms between requests
+- Can be tested directly via browser fetch
+
+### Manual Extension Testing
+
+For full end-to-end testing, use Chrome DevTools:
+1. Load extension unpacked at `chrome://extensions/`
+2. Navigate to Steam wishlist
+3. Open DevTools → Console
+4. Filter by `[XCPW` to see extension logs
+5. Check Network tab for API requests from service worker
 
 ## Roadmap Maintenance
 
