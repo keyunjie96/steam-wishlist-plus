@@ -9,10 +9,10 @@ import type { UserSettings, HltbDisplayStat } from './types';
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const MS_PER_DAY = MS_PER_HOUR * 24;
-const LOG_PREFIX = '[XCPW Options]';
+const LOG_PREFIX = '[SCPW Options]';
 
 // Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.XCPW_UserSettings;
+const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.SCPW_UserSettings;
 
 // DOM Elements (initialized in DOMContentLoaded)
 let statusEl: HTMLElement;
@@ -74,8 +74,8 @@ function showSettingsStatus(message: string, type: 'success' | 'error'): void {
  */
 async function loadSettings(): Promise<void> {
   try {
-    const result = await chrome.storage.sync.get('xcpwSettings');
-    const settings: UserSettings = { ...DEFAULT_USER_SETTINGS, ...result.xcpwSettings };
+    const result = await chrome.storage.sync.get('scpwSettings');
+    const settings: UserSettings = { ...DEFAULT_USER_SETTINGS, ...result.scpwSettings };
 
     // Dynamically update all checkboxes from the centralized settings definition
     for (const key of USER_SETTING_KEYS) {
@@ -99,7 +99,7 @@ async function loadSettings(): Promise<void> {
  */
 async function saveSettings(settings: UserSettings): Promise<void> {
   try {
-    await chrome.storage.sync.set({ xcpwSettings: settings });
+    await chrome.storage.sync.set({ scpwSettings: settings });
     showSettingsStatus('Settings saved', 'success');
   } catch (error) {
     console.error(`${LOG_PREFIX} Error saving settings:`, error);

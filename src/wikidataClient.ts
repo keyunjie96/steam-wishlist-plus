@@ -9,7 +9,7 @@
 import type { WikidataResult, WikidataStoreIds } from './types';
 
 const WIKIDATA_SPARQL_URL = 'https://query.wikidata.org/sparql';
-const WIKIDATA_LOG_PREFIX = '[XCPW Wikidata]';
+const WIKIDATA_LOG_PREFIX = '[SCPW Wikidata]';
 const WIKIDATA_DEBUG = false;
 
 const REQUEST_DELAY_MS = 500;
@@ -385,7 +385,7 @@ async function testConnection(): Promise<{ success: boolean; message: string }> 
 }
 
 // Export for service worker
-globalThis.XCPW_WikidataClient = {
+globalThis.SCPW_WikidataClient = {
   queryBySteamAppId,
   batchQueryBySteamAppIds,
   getStoreUrl,

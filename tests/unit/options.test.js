@@ -108,7 +108,7 @@ describe('options.js', () => {
     global.confirm = jest.fn(() => true);
 
     // Mock UserSettings (centralized settings from types.js)
-    globalThis.XCPW_UserSettings = {
+    globalThis.SCPW_UserSettings = {
       DEFAULT_USER_SETTINGS: {
         showNintendo: true,
         showPlaystation: true,
@@ -524,13 +524,13 @@ describe('options.js', () => {
 
       await jest.advanceTimersByTimeAsync(0);
 
-      expect(chrome.storage.sync.get).toHaveBeenCalledWith('xcpwSettings');
+      expect(chrome.storage.sync.get).toHaveBeenCalledWith('scpwSettings');
     });
 
     it('should set checkbox to saved value when loading settings', async () => {
       // Set up mock before re-requiring the module
       chrome.storage.sync.get.mockResolvedValue({
-        xcpwSettings: { showNintendo: false, showPlaystation: true, showXbox: false, showSteamDeck: false }
+        scpwSettings: { showNintendo: false, showPlaystation: true, showXbox: false, showSteamDeck: false }
       });
 
       // Re-require to test fresh load with saved settings
@@ -577,7 +577,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true }
       });
     });
 
@@ -588,7 +588,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -599,7 +599,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -610,7 +610,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -621,7 +621,7 @@ describe('options.js', () => {
       await jest.advanceTimersByTimeAsync(0);
 
       expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true }
       });
     });
 
@@ -782,7 +782,7 @@ describe('options.js', () => {
 
       // Mock storage to return showHltb: false so loadSettings sets checkbox to unchecked
       chrome.storage.sync.get.mockResolvedValueOnce({
-        xcpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: false }
+        scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: false }
       });
 
       // Re-require to reinitialize with our DOM

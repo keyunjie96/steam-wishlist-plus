@@ -7,18 +7,18 @@
  */
 
 (function() {
-  const LOG_PREFIX = '[XCPW HLTB PageScript]';
+  const LOG_PREFIX = '[SCPW HLTB PageScript]';
   const DEBUG = false;
 
   interface HltbRequest {
-    type: 'XCPW_HLTB_REQUEST';
+    type: 'SCPW_HLTB_REQUEST';
     requestId: string;
     gameName: string;
     steamAppId?: string;
   }
 
   interface HltbResponse {
-    type: 'XCPW_HLTB_RESPONSE';
+    type: 'SCPW_HLTB_RESPONSE';
     requestId: string;
     success: boolean;
     data?: {
@@ -216,14 +216,14 @@
   async function handleRequest(event: MessageEvent) {
     if (event.source !== window) return;
     const message = event.data as HltbRequest;
-    if (message?.type !== 'XCPW_HLTB_REQUEST') return;
+    if (message?.type !== 'SCPW_HLTB_REQUEST') return;
 
     if (DEBUG) console.log(`${LOG_PREFIX} Received request:`, message);
 
     try {
       const data = await searchHltb(message.gameName, message.steamAppId);
       const response: HltbResponse = {
-        type: 'XCPW_HLTB_RESPONSE',
+        type: 'SCPW_HLTB_RESPONSE',
         requestId: message.requestId,
         success: true,
         data
@@ -232,7 +232,7 @@
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const response: HltbResponse = {
-        type: 'XCPW_HLTB_RESPONSE',
+        type: 'SCPW_HLTB_RESPONSE',
         requestId: message.requestId,
         success: false,
         error: errorMessage
@@ -245,5 +245,5 @@
   if (DEBUG) console.log(`${LOG_PREFIX} Page script loaded, listening for requests`);
 
   // Signal that the script is ready
-  window.postMessage({ type: 'XCPW_HLTB_READY' }, '*');
+  window.postMessage({ type: 'SCPW_HLTB_READY' }, '*');
 })();

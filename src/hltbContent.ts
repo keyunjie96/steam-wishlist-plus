@@ -6,7 +6,7 @@
  * and the page script to enable same-origin API calls.
  */
 
-const LOG_PREFIX = '[XCPW HLTB Content]';
+const LOG_PREFIX = '[SCPW HLTB Content]';
 const DEBUG = false;
 
 interface HltbQueryRequest {
@@ -39,14 +39,14 @@ const pendingRequests = new Map<string, (response: HltbQueryResponse) => void>()
 function injectPageScript(): Promise<void> {
   return new Promise((resolve) => {
     // Check if already injected
-    if (document.querySelector('script[data-xcpw-hltb]')) {
+    if (document.querySelector('script[data-scpw-hltb]')) {
       resolve();
       return;
     }
 
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('dist/hltbPageScript.js');
-    script.setAttribute('data-xcpw-hltb', 'true');
+    script.setAttribute('data-scpw-hltb', 'true');
     script.onload = () => {
       if (DEBUG) console.log(`${LOG_PREFIX} Page script injected`);
       resolve();
@@ -60,7 +60,7 @@ window.addEventListener('message', (event) => {
   if (event.source !== window) return;
 
   const data = event.data;
-  if (data?.type === 'XCPW_HLTB_RESPONSE') {
+  if (data?.type === 'SCPW_HLTB_RESPONSE') {
     if (DEBUG) console.log(`${LOG_PREFIX} Received response:`, data);
     const resolver = pendingRequests.get(data.requestId);
     if (resolver) {
@@ -73,7 +73,7 @@ window.addEventListener('message', (event) => {
         error: data.error
       });
     }
-  } else if (data?.type === 'XCPW_HLTB_READY') {
+  } else if (data?.type === 'SCPW_HLTB_READY') {
     if (DEBUG) console.log(`${LOG_PREFIX} Page script ready`);
   }
 });
@@ -91,7 +91,7 @@ chrome.runtime.onMessage.addListener((message: HltbQueryRequest, _sender, sendRe
 
     // Forward to page script
     window.postMessage({
-      type: 'XCPW_HLTB_REQUEST',
+      type: 'SCPW_HLTB_REQUEST',
       requestId: message.requestId,
       gameName: message.gameName,
       steamAppId: message.steamAppId
