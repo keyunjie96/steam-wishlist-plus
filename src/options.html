@@ -11,26 +11,28 @@
       --bg-card: #16202d;
       --bg-card-light: #1e2c3a;
       --bg-input: #32404f;
-      --bg-hover: #2a3f5f;
+      --bg-hover: rgba(255, 255, 255, 0.075);
 
-      --text-primary: #c6d4df;
-      --text-secondary: #8f98a0;
+      /* Improved contrast for readability */
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.68);
       --text-bright: #ffffff;
-      --text-muted: #6b7785;
+      --text-muted: rgba(255, 255, 255, 0.45);
 
-      --border-color: #2a3f5f;
-      --border-subtle: #1e2c3a;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --border-subtle: rgba(255, 255, 255, 0.06);
 
-      --accent: #1a9fff;
-      --accent-hover: #00bbff;
-      --accent-soft: rgba(26, 159, 255, 0.15);
+      /* Unified accent - all switches use this */
+      --accent: #4aa3ff;
+      --accent-hover: #6bb5ff;
+      --accent-soft: rgba(74, 163, 255, 0.15);
 
-      /* Platform colors */
+      /* Platform colors - icons only */
       --nintendo: #e60012;
       --playstation: #006fcd;
       --xbox: #107c10;
       --steamdeck: #8b5cf6;
-      --hltb: #1a9fff;
+      --hltb: #4aa3ff;
 
       --success: #5ba32b;
       --danger: #c03030;
@@ -38,6 +40,10 @@
       /* Toggle grid dimensions */
       --icon-size: 40px;
       --col-gap: 12px;
+
+      /* Card styling */
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --card-border: rgba(255, 255, 255, 0.08);
 
       /* Gradients - Steam style */
       --gradient-button: linear-gradient(to right, #47bfff 0%, #1a9fff 100%);
@@ -105,16 +111,16 @@
 
     /* Sections */
     .section {
-      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-light) 100%);
-      border-radius: 4px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      margin-bottom: 12px;
       overflow: hidden;
     }
 
     .section-header {
-      padding: 12px 16px;
-      background: rgba(0, 0, 0, 0.2);
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.15);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -123,19 +129,19 @@
 
     .section-header.collapsible {
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.15s;
     }
 
     .section-header.collapsible:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.25);
     }
 
     .section-header h2 {
-      font-size: 12px;
-      font-weight: 500;
+      font-size: 11px;
+      font-weight: 600;
       color: var(--text-secondary);
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.2px;
     }
 
     .collapse-icon {
@@ -153,20 +159,20 @@
     }
 
     .section-body {
-      padding: 16px;
+      padding: 14px 16px;
     }
 
     .section-desc {
       font-size: 13px;
       color: var(--text-secondary);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     /* Toggle list */
     .toggle-list {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 6px;
     }
 
     .toggle-item {
@@ -174,18 +180,27 @@
       grid-template-columns: var(--icon-size) 1fr auto;
       align-items: center;
       column-gap: var(--col-gap);
-      padding: 12px 14px;
-      border-radius: 4px;
+      padding: 14px 16px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: background 0.15s;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
     }
 
     .toggle-item:hover {
       background: var(--bg-hover);
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+
+    .toggle-item:has(input:focus-visible) {
+      outline: 2px solid rgba(74, 163, 255, 0.65);
+      outline-offset: 2px;
     }
 
     .toggle-item.active {
       background: var(--accent-soft);
+      border-color: rgba(74, 163, 255, 0.25);
     }
 
     /* Platform icon */
@@ -235,13 +250,15 @@
     .toggle-label {
       font-size: 14px;
       font-weight: 500;
-      color: var(--text-bright);
+      color: var(--text-primary);
+      letter-spacing: 0.01em;
     }
 
     .toggle-desc {
       font-size: 12px;
       color: var(--text-secondary);
-      margin-top: 2px;
+      margin-top: 3px;
+      line-height: 1.4;
     }
 
     /* Steam-style toggle switch */
@@ -273,7 +290,7 @@
       width: 14px;
       left: 3px;
       top: 3px;
-      background: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.5);
       border-radius: 50%;
       transition: all 0.2s;
     }
@@ -292,22 +309,17 @@
       outline-offset: 2px;
     }
 
-    /* Platform-colored toggles when active */
-    .toggle-item[data-platform="nintendo"] .toggle-switch input:checked + .slider { background: var(--nintendo); }
-    .toggle-item[data-platform="playstation"] .toggle-switch input:checked + .slider { background: var(--playstation); }
-    .toggle-item[data-platform="xbox"] .toggle-switch input:checked + .slider { background: var(--xbox); }
-    .toggle-item[data-platform="steamdeck"] .toggle-switch input:checked + .slider { background: var(--steamdeck); }
-    .toggle-item[data-platform="hltb"] .toggle-switch input:checked + .slider { background: var(--hltb); }
+    /* All switches use unified accent color (platform colors stay on icons) */
 
-    /* Sub-option (HLTB stat selector) - aligned to content column */
+    /* Sub-option (HLTB stat selector) - subordinate to parent toggle */
     .sub-option {
       display: none;
-      /* Align with toggle-content: icon-size + col-gap + row padding */
-      margin-left: calc(var(--icon-size) + var(--col-gap) + 14px);
-      margin-right: 14px;
-      margin-top: 4px;
-      padding: 10px 14px;
-      border-radius: 6px;
+      /* Align with toggle-content column */
+      margin-left: calc(var(--icon-size) + var(--col-gap) + 16px);
+      margin-right: 16px;
+      margin-top: 8px;
+      padding: 12px 14px;
+      border-radius: 8px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.06);
       align-items: center;
