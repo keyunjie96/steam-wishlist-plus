@@ -618,9 +618,8 @@ function createPlatformIcon(
  */
 function formatHltbTime(hours: number): string {
   if (!hours || hours <= 0) return '';
-  if (hours >= 100) return `${Math.round(hours)}h`;
-  if (hours >= 10) return `${Math.round(hours)}h`;
-  return `${hours.toFixed(1)}h`;
+  // Round to whole number if >= 10, otherwise show one decimal
+  return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
 }
 
 /**
@@ -676,32 +675,25 @@ function createHltbBadge(hltbData: HltbData): HTMLElement {
   badge.textContent = displayTime;
 
   // Tooltip with full breakdown (visible on hover)
-  const hasAnyTime = hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0;
-
-  if (!hasAnyTime) {
-    // No time data available
-    const tooltip = 'How Long To Beat: Unknown';
-    badge.setAttribute('title', tooltip);
-    badge.setAttribute('aria-label', tooltip);
-  } else {
-    const tooltipParts: string[] = [];
-    if (hltbData.mainStory > 0) {
-      tooltipParts.push(`Main Story: ${mainTime}`);
-    }
-    if (hltbData.mainExtra > 0) {
-      tooltipParts.push(`Main + Extras: ${extraTime}`);
-    }
-    if (hltbData.completionist > 0) {
-      tooltipParts.push(`Completionist: ${completionistTime}`);
-    }
-    if (isClickable) {
-      tooltipParts.push('Click to view on HLTB');
-    }
-
-    const tooltip = tooltipParts.join('\n');
-    badge.setAttribute('title', tooltip);
-    badge.setAttribute('aria-label', tooltip);
+  const tooltipParts: string[] = [];
+  if (hltbData.mainStory > 0) {
+    tooltipParts.push(`Main Story: ${mainTime}`);
   }
+  if (hltbData.mainExtra > 0) {
+    tooltipParts.push(`Main + Extras: ${extraTime}`);
+  }
+  if (hltbData.completionist > 0) {
+    tooltipParts.push(`Completionist: ${completionistTime}`);
+  }
+
+  if (isClickable) {
+    tooltipParts.push('Click to view on HLTB');
+  }
+
+  const hasAnyTime = hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0;
+  const tooltip = hasAnyTime ? tooltipParts.join('\n') : 'How Long To Beat: Unknown';
+  badge.setAttribute('title', tooltip);
+  badge.setAttribute('aria-label', tooltip);
 
   return badge;
 }
@@ -1021,9 +1013,10 @@ async function processPendingBatch(): Promise<void> {
         platforms: {
           nintendo: { status: 'unknown', storeUrl: '' },
           playstation: { status: 'unknown', storeUrl: '' },
-          xbox: { status: 'unknown', storeUrl: '' }
+          xbox: { status: 'unknown', storeUrl: '' },
+          steamdeck: { status: 'unknown', storeUrl: '' }
         },
-        source: 'local',
+        source: 'fallback',
         wikidataId: null,
         resolvedAt: Date.now(),
         ttlDays: 7

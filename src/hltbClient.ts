@@ -79,9 +79,8 @@ async function registerHeaderRules(): Promise<void> {
  */
 function formatHours(hours: number): string {
   if (!hours || hours <= 0) return '';
-  if (hours >= 100) return `${Math.round(hours)}h`;
-  if (hours >= 10) return `${Math.round(hours)}h`;
-  return `${hours.toFixed(1)}h`;
+  // Round to whole number if >= 10, otherwise show one decimal
+  return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
 }
 
 /**

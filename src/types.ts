@@ -48,16 +48,17 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 };
 
 /**
- * Mapping from setting keys to their checkbox element IDs in the UI.
- * This ensures UI elements stay in sync with the settings structure.
+ * Mapping from boolean setting keys to their checkbox element IDs in the UI.
+ * Only includes boolean settings that have corresponding checkboxes.
+ * Non-checkbox settings (like hltbDisplayStat) are handled separately.
  */
-export const SETTING_CHECKBOX_IDS: Record<keyof UserSettings, string> = {
+export const SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>> = {
   showNintendo: 'show-nintendo',
   showPlaystation: 'show-playstation',
   showXbox: 'show-xbox',
   showSteamDeck: 'show-steamdeck',
   showHltb: 'show-hltb'
-};
+} as Partial<Record<keyof UserSettings, string>>;
 
 /**
  * Array of all setting keys for iteration.
@@ -218,6 +219,7 @@ declare global {
       formatHours: (hours: number) => string;
       normalizeGameName: (name: string) => string;
       calculateSimilarity: (a: string, b: string) => number;
+      registerHeaderRules: () => Promise<void>;
     };
     XCPW_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
@@ -278,6 +280,7 @@ declare global {
       getHltbBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
       setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
       HLTB_BATCH_DEBOUNCE_MS: number;
+      HLTB_MAX_BATCH_SIZE: number;
     };
     SSR?: {
       renderContext?: {
@@ -311,7 +314,7 @@ declare global {
   // eslint-disable-next-line no-var
   var XCPW_UserSettings: {
     DEFAULT_USER_SETTINGS: UserSettings;
-    SETTING_CHECKBOX_IDS: Record<keyof UserSettings, string>;
+    SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>>;
     USER_SETTING_KEYS: Array<keyof UserSettings>;
   };
 }

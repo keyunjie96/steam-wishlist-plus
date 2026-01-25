@@ -32,6 +32,20 @@ const LOG_PREFIX = '[XCPW Background]';
 // Sentinel value for "searched HLTB but no match found" - prevents repeated searches
 const HLTB_NOT_FOUND_ID = -1;
 
+/**
+ * Creates a "not found" marker for HLTB data to prevent repeated searches.
+ */
+function createHltbNotFoundMarker(): HltbData {
+  return {
+    hltbId: HLTB_NOT_FOUND_ID,
+    mainStory: 0,
+    mainExtra: 0,
+    completionist: 0,
+    allStyles: 0,
+    steamId: null
+  };
+}
+
 interface AsyncResponse {
   success: boolean;
   data?: CacheEntry | HltbData | null;
@@ -248,14 +262,7 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
 
     // Save "not found" marker to cache to prevent repeated searches
     if (cached) {
-      cached.hltbData = {
-        hltbId: HLTB_NOT_FOUND_ID,
-        mainStory: 0,
-        mainExtra: 0,
-        completionist: 0,
-        allStyles: 0,
-        steamId: null
-      };
+      cached.hltbData = createHltbNotFoundMarker();
       await globalThis.XCPW_Cache.saveToCache(cached);
     }
     console.log(`${LOG_PREFIX} HLTB no match for appid ${appid} (cached as not found)`);
@@ -340,14 +347,7 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
           // Save "not found" marker to prevent repeated searches
           hltbResults[appid] = null;
           if (cached) {
-            cached.hltbData = {
-              hltbId: HLTB_NOT_FOUND_ID,
-              mainStory: 0,
-              mainExtra: 0,
-              completionist: 0,
-              allStyles: 0,
-              steamId: null
-            };
+            cached.hltbData = createHltbNotFoundMarker();
             await globalThis.XCPW_Cache.saveToCache(cached);
             console.log(`${LOG_PREFIX} HLTB cached as not found: ${appid}`);
           }

@@ -2245,6 +2245,12 @@ describe('content.js', () => {
   });
 
   describe('createHltbBadge', () => {
+    beforeEach(() => {
+      // Reset userSettings to default for each test
+      const { setUserSettings } = globalThis.XCPW_ContentTestExports;
+      setUserSettings({ hltbDisplayStat: 'mainStory' });
+    });
+
     it('should create badge with all time fields populated', () => {
       const { createHltbBadge } = globalThis.XCPW_ContentTestExports;
 
@@ -2383,6 +2389,63 @@ describe('content.js', () => {
       expect(badge.tagName.toLowerCase()).toBe('span');
       expect(badge.getAttribute('href')).toBeNull();
       expect(badge.getAttribute('title')).not.toContain('Click to view on HLTB');
+    });
+
+    it('should respect mainExtra display preference when available', () => {
+      const { createHltbBadge, setUserSettings } = globalThis.XCPW_ContentTestExports;
+      setUserSettings({ hltbDisplayStat: 'mainExtra' });
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 20,
+        mainExtra: 35,
+        completionist: 50,
+        allStyles: 40,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      // Should show mainExtra since that's the preference
+      expect(badge.textContent).toBe('35h');
+    });
+
+    it('should respect completionist display preference when available', () => {
+      const { createHltbBadge, setUserSettings } = globalThis.XCPW_ContentTestExports;
+      setUserSettings({ hltbDisplayStat: 'completionist' });
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 20,
+        mainExtra: 35,
+        completionist: 50,
+        allStyles: 40,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      // Should show completionist since that's the preference
+      expect(badge.textContent).toBe('50h');
+    });
+
+    it('should fall back to available stat when preferred stat is zero', () => {
+      const { createHltbBadge, setUserSettings } = globalThis.XCPW_ContentTestExports;
+      setUserSettings({ hltbDisplayStat: 'completionist' });
+
+      const hltbData = {
+        hltbId: 0,
+        mainStory: 25,
+        mainExtra: 40,
+        completionist: 0, // Preferred stat is zero
+        allStyles: 0,
+        steamId: null
+      };
+
+      const badge = createHltbBadge(hltbData);
+
+      // Should fall back to mainStory (first available)
+      expect(badge.textContent).toBe('25h');
     });
   });
 

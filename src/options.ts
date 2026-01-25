@@ -57,14 +57,16 @@ function showStatus(message: string, type: 'success' | 'error'): void {
  * Shows a status message for settings
  */
 function showSettingsStatus(message: string, type: 'success' | 'error'): void {
-  if (settingsStatusEl) {
-    settingsStatusEl.textContent = message;
-    settingsStatusEl.className = `status ${type}`;
-    // Auto-hide after 2 seconds
-    setTimeout(() => {
+  if (!settingsStatusEl) return;
+
+  settingsStatusEl.textContent = message;
+  settingsStatusEl.className = `status ${type}`;
+  // Auto-hide after 2 seconds
+  setTimeout(() => {
+    if (settingsStatusEl) {
       settingsStatusEl.className = 'status';
-    }, 2000);
-  }
+    }
+  }, 2000);
 }
 
 /**

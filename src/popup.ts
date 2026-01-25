@@ -28,7 +28,9 @@ const checkboxes = new Map<keyof UserSettings, HTMLInputElement | null>();
 // Populate checkbox map on load
 for (const key of USER_SETTING_KEYS) {
   const checkboxId = SETTING_CHECKBOX_IDS[key];
-  checkboxes.set(key, document.getElementById(checkboxId) as HTMLInputElement | null);
+  if (checkboxId) {
+    checkboxes.set(key, document.getElementById(checkboxId) as HTMLInputElement | null);
+  }
 }
 
 /**
@@ -153,8 +155,9 @@ async function loadSettings(): Promise<void> {
     // Dynamically update all checkboxes from the centralized settings definition
     for (const key of USER_SETTING_KEYS) {
       const checkbox = checkboxes.get(key);
-      if (checkbox) {
-        checkbox.checked = settings[key];
+      const value = settings[key];
+      if (checkbox && typeof value === 'boolean') {
+        checkbox.checked = value;
       }
     }
   } catch (error) {
@@ -170,7 +173,11 @@ function getCurrentSettings(): UserSettings {
   const settings = { ...DEFAULT_USER_SETTINGS };
   for (const key of USER_SETTING_KEYS) {
     const checkbox = checkboxes.get(key);
-    settings[key] = checkbox?.checked ?? DEFAULT_USER_SETTINGS[key];
+    const defaultValue = DEFAULT_USER_SETTINGS[key];
+    // Only read checkbox value for boolean settings
+    if (checkbox && typeof defaultValue === 'boolean') {
+      (settings as Record<string, unknown>)[key] = checkbox.checked;
+    }
   }
   return settings;
 }
