@@ -1652,6 +1652,7 @@ if (typeof globalThis !== 'undefined') {
     lightCleanup,
     injectedAppIds,
     processedAppIds,
+    processingAppIds,
     // Timer exports for testing (getters since they're reassigned primitives)
     getBatchDebounceTimer: () => batchDebounceTimer,
     getUrlChangeDebounceTimer: () => urlChangeDebounceTimer,
@@ -1692,6 +1693,11 @@ if (typeof globalThis !== 'undefined') {
     getHltbBatchDebounceTimer: () => hltbBatchDebounceTimer,
     setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => { hltbBatchDebounceTimer = val; },
     HLTB_BATCH_DEBOUNCE_MS,
-    HLTB_MAX_BATCH_SIZE
+    HLTB_MAX_BATCH_SIZE,
+    restoreHltbDataFromEntry,
+    getRenderedIconSummary,
+    // Steam Deck refresh helpers
+    getSteamDeckRefreshInFlight: () => steamDeckRefreshInFlight,
+    setSteamDeckRefreshInFlight: (val: boolean) => { steamDeckRefreshInFlight = val; }
   };
 }

@@ -798,6 +798,55 @@ describe('background.js', () => {
       });
     });
 
+    it('should re-query when cached HLTB data has all zero times', async () => {
+      // Cache has HLTB data with valid ID but all times are 0
+      const cachedEntry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        hltbData: {
+          hltbId: 999,
+          mainStory: 0,
+          mainExtra: 0,
+          completionist: 0,
+          allStyles: 0,
+          steamId: null
+        }
+      };
+      mockCache.getFromCache.mockResolvedValueOnce(cachedEntry);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should re-query since all times are 0
+      expect(mockHltbClient.queryByGameName).toHaveBeenCalledWith('Test Game', '12345');
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      // Throw a string instead of Error
+      mockHltbClient.queryByGameName.mockRejectedValueOnce('String error');
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'String error'
+      });
+    });
+
     it('should update cache with HLTB data', async () => {
       const cachedEntry = { appid: '12345', gameName: 'Test Game', hltbData: null };
       mockCache.getFromCache.mockResolvedValueOnce(cachedEntry);
@@ -1121,6 +1170,55 @@ describe('background.js', () => {
           success: true,
           hltbResults: expect.objectContaining({
             '12345': null
+          })
+        })
+      );
+    });
+
+    it('should update existing cache entry with HLTB data when found', async () => {
+      // Set up: game has a cache entry (from Wikidata) but no HLTB data yet
+      const existingCacheEntry = {
+        appid: '12345',
+        gameName: 'Game 1',
+        hltbData: null,
+        platforms: {}
+      };
+
+      // Return the existing cache entry when checking cache
+      mockCache.getFromCache.mockImplementation(async (appid) => {
+        if (appid === '12345') {
+          return existingCacheEntry;
+        }
+        return null;
+      });
+
+      // HLTB finds a match
+      mockHltbClient.batchQueryByGameNames.mockResolvedValueOnce(
+        new Map([
+          ['12345', {
+            hltbId: 9999,
+            gameName: 'Game 1',
+            similarity: 1,
+            data: { mainStory: 15, mainExtra: 25, completionist: 50, allStyles: 30, steamId: 12345, hltbId: 9999 }
+          }]
+        ])
+      );
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_HLTB_DATA_BATCH',
+        games: [{ appid: '12345', gameName: 'Game 1' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // The cache entry should be updated with HLTB data
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appid: '12345',
+          hltbData: expect.objectContaining({
+            mainStory: 15,
+            hltbId: 9999
           })
         })
       );
