@@ -1956,21 +1956,28 @@ describe('content.js', () => {
       getPendingHltbItems().clear();
     });
 
-    it('should preserve icon containers in DOM', () => {
-      const { lightCleanup, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+    it('should preserve resolved icon containers in DOM (not pending)', () => {
+      const { lightCleanup, createIconsContainer, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
 
-      // Create and attach some icon containers
+      // Create and attach some icon containers (simulating resolved state - not in pendingItems)
       const c1 = createIconsContainer('111', 'Game 1');
       const c2 = createIconsContainer('222', 'Game 2');
       document.body.appendChild(c1);
       document.body.appendChild(c2);
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
 
+      // These are NOT in pendingItems - they're resolved
+      expect(pendingItems.size).toBe(0);
       expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
 
       lightCleanup();
 
-      // Icons should still be in DOM (NOT removed like cleanupAllIcons)
+      // Resolved icons should still be in DOM (NOT removed like cleanupAllIcons)
       expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+      // And still tracked in injectedAppIds
+      expect(injectedAppIds.has('111')).toBe(true);
+      expect(injectedAppIds.has('222')).toBe(true);
     });
 
     it('should preserve injectedAppIds tracking set', () => {
@@ -2003,32 +2010,72 @@ describe('content.js', () => {
       expect(processedAppIds.size).toBe(2);
     });
 
-    it('should clear pendingItems map', () => {
-      const { lightCleanup, pendingItems } = globalThis.SCPW_ContentTestExports;
+    it('should remove containers for pending items and clear from injectedAppIds', () => {
+      const { lightCleanup, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
 
-      // Simulate some pending items
-      pendingItems.set('111', { gameName: 'Game 1', container: document.createElement('span') });
-      pendingItems.set('222', { gameName: 'Game 2', container: document.createElement('span') });
+      // Create containers and add to DOM
+      const c1 = document.createElement('span');
+      c1.className = 'scpw-platforms';
+      c1.setAttribute('data-appid', '111');
+      document.body.appendChild(c1);
+
+      const c2 = document.createElement('span');
+      c2.className = 'scpw-platforms';
+      c2.setAttribute('data-appid', '222');
+      document.body.appendChild(c2);
+
+      // Simulate pending items with containers attached to DOM
+      pendingItems.set('111', { gameName: 'Game 1', container: c1 });
+      pendingItems.set('222', { gameName: 'Game 2', container: c2 });
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
+
       expect(pendingItems.size).toBe(2);
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
 
       lightCleanup();
 
       // Pending items SHOULD be cleared
       expect(pendingItems.size).toBe(0);
+      // Containers for pending items SHOULD be removed from DOM
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(0);
+      // AppIds SHOULD be removed from injectedAppIds so they can be reprocessed
+      expect(injectedAppIds.has('111')).toBe(false);
+      expect(injectedAppIds.has('222')).toBe(false);
     });
 
-    it('should clear pendingHltbItems map', () => {
+    it('should clear pendingHltbItems map and remove HLTB loaders', () => {
       const { lightCleanup, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
 
-      // Simulate some pending HLTB items
-      getPendingHltbItems().set('111', { gameName: 'Game 1', container: document.createElement('span') });
-      getPendingHltbItems().set('222', { gameName: 'Game 2', container: document.createElement('span') });
+      // Create containers with HLTB loaders
+      const c1 = document.createElement('span');
+      c1.className = 'scpw-platforms';
+      const loader1 = document.createElement('span');
+      loader1.className = 'scpw-hltb-loader';
+      c1.appendChild(loader1);
+      document.body.appendChild(c1);
+
+      const c2 = document.createElement('span');
+      c2.className = 'scpw-platforms';
+      const loader2 = document.createElement('span');
+      loader2.className = 'scpw-hltb-loader';
+      c2.appendChild(loader2);
+      document.body.appendChild(c2);
+
+      // Simulate pending HLTB items
+      getPendingHltbItems().set('111', { gameName: 'Game 1', container: c1 });
+      getPendingHltbItems().set('222', { gameName: 'Game 2', container: c2 });
       expect(getPendingHltbItems().size).toBe(2);
+      expect(document.querySelectorAll('.scpw-hltb-loader').length).toBe(2);
 
       lightCleanup();
 
       // Pending HLTB items SHOULD be cleared
       expect(getPendingHltbItems().size).toBe(0);
+      // HLTB loaders SHOULD be removed (containers kept for platform icons)
+      expect(document.querySelectorAll('.scpw-hltb-loader').length).toBe(0);
+      // Containers SHOULD still exist (platform icons may be resolved)
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
     });
 
     it('should clear batch debounce timer when set', () => {

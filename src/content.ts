@@ -59,13 +59,25 @@ function clearPendingTimersAndBatches(): void {
 }
 
 /**
- * Light cleanup for URL changes - keeps icons in DOM to prevent blink.
- * Only clears pending batches and timers. Existing icons stay in place
- * so processItem can reuse them if the same games are still visible.
+ * Light cleanup for URL changes - keeps resolved icons in DOM to prevent blink.
+ * Removes containers for pending items (still loading) so they can be reprocessed.
+ * This prevents loaders from getting stuck when URL changes mid-batch.
  */
 function lightCleanup(): void {
+  // Remove containers for pending items - they have loaders that would get stuck
+  // Also remove from injectedAppIds so they can be reprocessed
+  for (const [appid, { container }] of pendingItems) {
+    container.remove();
+    injectedAppIds.delete(appid);
+  }
+  for (const [appid, { container }] of pendingHltbItems) {
+    // Only remove HLTB loader, not the whole container (platform icons may be resolved)
+    const hltbLoader = container.querySelector('.scpw-hltb-loader');
+    if (hltbLoader) hltbLoader.remove();
+  }
+
   clearPendingTimersAndBatches();
-  if (DEBUG) console.log(`${LOG_PREFIX} Light cleanup complete - pending batches cleared, icons preserved`);
+  if (DEBUG) console.log(`${LOG_PREFIX} Light cleanup complete - pending items removed, resolved icons preserved`);
 }
 
 /**

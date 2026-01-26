@@ -249,10 +249,16 @@ async function refreshStaleEntries(games: Array<{ appid: string; gameName: strin
 
     let refreshedCount = 0;
     for (const { appid, gameName } of games) {
-      const wikidataResult = wikidataResults.get(appid);
-
-      // Get existing entry to preserve hltbData
+      // Get existing entry to check source and preserve hltbData
       const { entry: existingEntry } = await Cache.getFromCacheWithStale(appid);
+
+      // Skip refresh for manual override entries - they should persist until manually changed
+      if (existingEntry?.source === 'manual') {
+        if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Skipping refresh for manual override: ${appid}`);
+        continue;
+      }
+
+      const wikidataResult = wikidataResults.get(appid);
 
       const entry = await wikidataResultToCacheEntry(
         appid,
