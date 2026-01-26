@@ -193,19 +193,47 @@ describe('steamDeckClient.js', () => {
             dataEl.remove();
         });
 
-        it.skip('should return empty Map on timeout when no data element', async () => {
+        it('should return empty Map on timeout when no data element', async () => {
             const SteamDeck = globalThis.SCPW_SteamDeck;
 
             // Don't create the data element - should timeout
             const promise = SteamDeck.waitForDeckData(100);
 
-            // Advance timers past the timeout
-            await jest.advanceTimersByTimeAsync(150);
+            // Advance timers to trigger multiple poll cycles then timeout
+            await jest.advanceTimersByTimeAsync(50);
+            await jest.advanceTimersByTimeAsync(50);
+            await jest.advanceTimersByTimeAsync(50);
 
             const result = await promise;
 
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);
+        });
+
+        it('should poll for data until found', async () => {
+            const SteamDeck = globalThis.SCPW_SteamDeck;
+
+            // Start waiting
+            const promise = SteamDeck.waitForDeckData(500);
+
+            // After 50ms, add the data element
+            await jest.advanceTimersByTimeAsync(50);
+
+            const dataEl = document.createElement('script');
+            dataEl.type = 'application/json';
+            dataEl.id = 'scpw-steamdeck-data';
+            dataEl.textContent = JSON.stringify({ '99999': 2 });
+            document.documentElement.appendChild(dataEl);
+
+            // Advance to next poll
+            await jest.advanceTimersByTimeAsync(100);
+
+            const result = await promise;
+
+            expect(result).toBeInstanceOf(Map);
+            expect(result.get('99999')).toBe(2);
+
+            dataEl.remove();
         });
 
         it('should return empty Map when script injection fails', async () => {
@@ -235,5 +263,6 @@ describe('steamDeckClient.js', () => {
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);
         });
+
     });
 });

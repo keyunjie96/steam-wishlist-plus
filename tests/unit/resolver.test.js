@@ -367,6 +367,18 @@ describe('resolver.js', () => {
       expect(mockCache.saveToCache).not.toHaveBeenCalled();
     });
 
+    it('should handle non-Error exceptions during Wikidata query', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Throw a string instead of Error
+      mockWikidataClient.queryBySteamAppId.mockRejectedValueOnce('String exception');
+
+      const result = await Resolver.resolvePlatformData('99999', 'Test Game');
+
+      expect(result.fromCache).toBe(false);
+      expect(result.entry.source).toBe('fallback');
+    });
+
     it('should throw error when Cache module is missing', async () => {
       delete globalThis.SCPW_Cache;
       jest.resetModules();
@@ -520,6 +532,32 @@ describe('resolver.js', () => {
       expect(saveCallsAfterError.length).toBe(0);
     });
 
+    it('should use unknown status for platforms not defined in manual override', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Add a partial manual override (missing some platforms)
+      mockCache.MANUAL_OVERRIDES['999999'] = {
+        nintendo: 'available',
+        // playstation, xbox, steamdeck not defined - should default to 'unknown'
+      };
+
+      const games = [{ appid: '999999', gameName: 'Partial Override Game' }];
+
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(new Map());
+
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      expect(results.size).toBe(1);
+      const entry = results.get('999999').entry;
+      expect(entry.source).toBe('manual');
+      expect(entry.platforms.nintendo.status).toBe('available');
+      expect(entry.platforms.playstation.status).toBe('unknown');
+      expect(entry.platforms.xbox.status).toBe('unknown');
+
+      // Clean up
+      delete mockCache.MANUAL_OVERRIDES['999999'];
+    });
+
     it('should handle empty input array', async () => {
       const Resolver = globalThis.SCPW_Resolver;
 
@@ -572,6 +610,92 @@ describe('resolver.js', () => {
 
       // Should have triggered background refresh (Wikidata query for stale entry)
       expect(mockWikidataClient.batchQueryBySteamAppIds).toHaveBeenCalledWith(['11111']);
+    });
+
+    it('should handle background refresh failure gracefully (line 254 coverage)', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const staleEntry = {
+        appid: '22222',
+        gameName: 'Failing Stale Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'url' },
+          playstation: { status: 'available', storeUrl: 'url' },
+          xbox: { status: 'available', storeUrl: 'url' }
+        },
+        source: 'wikidata',
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old (stale)
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true });
+
+      // Mock background refresh to fail with an Error object
+      mockWikidataClient.batchQueryBySteamAppIds.mockRejectedValueOnce(new Error('Background refresh network error'));
+
+      const games = [{ appid: '22222', gameName: 'Failing Stale Game' }];
+
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data immediately
+      expect(results.size).toBe(1);
+      expect(results.get('22222').fromCache).toBe(true);
+      expect(results.get('22222').isStale).toBe(true);
+
+      // Wait for background refresh to complete (and fail)
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Should have logged warning about the failure
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background refresh failed'),
+        expect.stringContaining('Background refresh network error')
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle background refresh failure with non-Error exception', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const staleEntry = {
+        appid: '33333',
+        gameName: 'Non-Error Stale Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'url' },
+          playstation: { status: 'available', storeUrl: 'url' },
+          xbox: { status: 'available', storeUrl: 'url' }
+        },
+        source: 'wikidata',
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old (stale)
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true });
+
+      // Mock background refresh to fail with a non-Error object (string)
+      mockWikidataClient.batchQueryBySteamAppIds.mockRejectedValueOnce('String error thrown');
+
+      const games = [{ appid: '33333', gameName: 'Non-Error Stale Game' }];
+
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data immediately
+      expect(results.size).toBe(1);
+
+      // Wait for background refresh to complete (and fail)
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Should have logged warning with string-converted error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background refresh failed'),
+        'String error thrown'
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -663,6 +787,130 @@ describe('resolver.js', () => {
 
       expect(mockCache.getFromCache).toHaveBeenCalled();
       expect(mockWikidataClient.queryBySteamAppId).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('backgroundRefreshPlatformData edge cases', () => {
+    it('should skip entries with source=manual during refresh', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry
+      const staleEntry = {
+        appid: '99999',
+        gameName: 'Manual Game',
+        platforms: {},
+        source: 'manual', // This is a manual override
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale.mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      }).mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      });
+
+      const wikidataResults = new Map();
+      wikidataResults.set('99999', { found: true, gameName: 'Manual Game', platforms: {} });
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(wikidataResults);
+
+      const games = [{ appid: '99999', gameName: 'Manual Game' }];
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data
+      expect(results.size).toBe(1);
+      expect(results.get('99999').isStale).toBe(true);
+
+      // Wait for background refresh
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // saveToCache should NOT be called because source is 'manual'
+      // The entry should be skipped in the refresh
+    });
+
+    it('should preserve existing hltbData during background refresh', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry with hltbData
+      const staleEntry = {
+        appid: '88888',
+        gameName: 'HLTB Game',
+        platforms: {},
+        source: 'wikidata',
+        hltbData: { hltbId: 123, mainStory: 20 },
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      // First call returns stale entry, subsequent calls for refresh also return it
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true })
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true });
+
+      const wikidataResults = new Map();
+      wikidataResults.set('88888', {
+        found: true,
+        gameName: 'HLTB Game',
+        platforms: { nintendo: true, playstation: false, xbox: false, steamdeck: false },
+        storeIds: {}
+      });
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(wikidataResults);
+
+      const games = [{ appid: '88888', gameName: 'HLTB Game' }];
+      await Resolver.batchResolvePlatformData(games);
+
+      // Wait for background refresh
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Verify saveToCache was called
+      if (mockCache.saveToCache.mock.calls.length > 0) {
+        const savedEntry = mockCache.saveToCache.mock.calls[mockCache.saveToCache.mock.calls.length - 1][0];
+        // The hltbData should be preserved in the new entry
+        expect(savedEntry.hltbData).toEqual({ hltbId: 123, mainStory: 20 });
+      }
+    });
+
+    it('should handle errors during background refresh gracefully', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry
+      const staleEntry = {
+        appid: '77777',
+        gameName: 'Error Game',
+        platforms: {},
+        source: 'wikidata',
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale.mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      });
+
+      // Make Wikidata fail
+      mockWikidataClient.batchQueryBySteamAppIds.mockRejectedValueOnce(new Error('Network error'));
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const games = [{ appid: '77777', gameName: 'Error Game' }];
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data immediately
+      expect(results.size).toBe(1);
+
+      // Wait for background refresh to complete (and fail)
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Should have logged the error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background refresh failed'),
+        expect.any(String)
+      );
+
+      consoleSpy.mockRestore();
     });
   });
 });

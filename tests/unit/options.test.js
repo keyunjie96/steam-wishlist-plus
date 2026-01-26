@@ -826,5 +826,219 @@ describe('options.js', () => {
       // Row should be visible again
       expect(hltbDisplayStatSelect.hidden).toBe(false);
     });
+
+    it('should toggle hltb-row class when HLTB checkbox changes with hltb-row element', async () => {
+      // Create the hltb-row element with the exact selector the code looks for:
+      // .toggle-item.has-inline-option[data-platform="hltb"]
+      const hltbRow = document.createElement('div');
+      hltbRow.className = 'toggle-item has-inline-option';
+      hltbRow.setAttribute('data-platform', 'hltb');
+      document.body.appendChild(hltbRow);
+
+      // Also need to recreate showHltbCheckbox for the reinit
+      showHltbCheckbox = document.createElement('input');
+      showHltbCheckbox.type = 'checkbox';
+      showHltbCheckbox.id = 'show-hltb';
+      showHltbCheckbox.checked = true;
+      document.body.appendChild(showHltbCheckbox);
+
+      // Re-require to reinitialize with our DOM
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // With showHltb = true, the hltb-row should not have the class
+      const updatedRow = document.querySelector('.toggle-item.has-inline-option[data-platform="hltb"]');
+      expect(updatedRow.classList.contains('inline-select-hidden')).toBe(false);
+
+      // Now uncheck and verify the class is added
+      const checkbox = document.getElementById('show-hltb');
+      checkbox.checked = false;
+      checkbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(updatedRow.classList.contains('inline-select-hidden')).toBe(true);
+    });
+  });
+
+  describe('updateToggleActiveStates', () => {
+    it('should toggle active class on platform-toggle wrapper', async () => {
+      // Create a platform-toggle wrapper for the checkbox
+      const toggleWrapper = document.createElement('label');
+      toggleWrapper.className = 'platform-toggle';
+
+      // Move checkbox into wrapper
+      showNintendoCheckbox.parentElement.removeChild(showNintendoCheckbox);
+      toggleWrapper.appendChild(showNintendoCheckbox);
+      document.body.appendChild(toggleWrapper);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // With checkbox checked, wrapper should have active class
+      expect(toggleWrapper.classList.contains('active')).toBe(true);
+
+      // Uncheck and trigger change
+      showNintendoCheckbox.checked = false;
+      showNintendoCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Wrapper should not have active class
+      expect(toggleWrapper.classList.contains('active')).toBe(false);
+    });
+
+    it('should toggle active class on option-item wrapper', async () => {
+      // Create option-item wrapper for the checkbox
+      const optionWrapper = document.createElement('label');
+      optionWrapper.className = 'option-item';
+
+      // Move checkbox into wrapper
+      showPlaystationCheckbox.parentElement.removeChild(showPlaystationCheckbox);
+      optionWrapper.appendChild(showPlaystationCheckbox);
+      document.body.appendChild(optionWrapper);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // With checkbox checked, wrapper should have active class
+      expect(optionWrapper.classList.contains('active')).toBe(true);
+    });
+  });
+
+  describe('initializeCollapsibleSections', () => {
+    it('should initialize collapsible sections with collapse button', async () => {
+      // Create a collapsible section structure
+      const section = document.createElement('section');
+      section.setAttribute('data-collapsible', '');
+
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'collapse-btn';
+      collapseBtn.setAttribute('aria-controls', 'test-body');
+      section.appendChild(collapseBtn);
+
+      const body = document.createElement('div');
+      body.id = 'test-body';
+      section.appendChild(body);
+
+      document.body.appendChild(section);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Section should not be collapsed initially
+      expect(section.classList.contains('collapsed')).toBe(false);
+      expect(collapseBtn.getAttribute('aria-expanded')).toBe('true');
+      expect(body.hidden).toBe(false);
+
+      // Click the collapse button
+      collapseBtn.click();
+
+      // Section should be collapsed
+      expect(section.classList.contains('collapsed')).toBe(true);
+      expect(collapseBtn.getAttribute('aria-expanded')).toBe('false');
+      expect(body.hidden).toBe(true);
+
+      // Click again to expand
+      collapseBtn.click();
+
+      // Section should be expanded again
+      expect(section.classList.contains('collapsed')).toBe(false);
+    });
+
+    it('should respect initial collapsed state', async () => {
+      // Create a collapsible section that starts collapsed
+      const section = document.createElement('section');
+      section.setAttribute('data-collapsible', '');
+      section.classList.add('collapsed');
+
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'collapse-btn';
+      collapseBtn.setAttribute('aria-controls', 'test-body-2');
+      section.appendChild(collapseBtn);
+
+      const body = document.createElement('div');
+      body.id = 'test-body-2';
+      section.appendChild(body);
+
+      document.body.appendChild(section);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      // Section should be collapsed
+      expect(section.classList.contains('collapsed')).toBe(true);
+      expect(body.hidden).toBe(true);
+    });
+
+    it('should skip buttons without aria-controls', async () => {
+      // Create a section with a button that has no aria-controls
+      const section = document.createElement('section');
+      section.setAttribute('data-collapsible', '');
+
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'collapse-btn';
+      // No aria-controls attribute
+      section.appendChild(collapseBtn);
+
+      document.body.appendChild(section);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      // Should not throw
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(true).toBe(true); // Just verify no error
+    });
+
+    it('should skip when body element is not found', async () => {
+      // Create a section with aria-controls pointing to non-existent element
+      const section = document.createElement('section');
+      section.setAttribute('data-collapsible', '');
+
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'collapse-btn';
+      collapseBtn.setAttribute('aria-controls', 'non-existent-id');
+      section.appendChild(collapseBtn);
+
+      document.body.appendChild(section);
+
+      // Re-require to reinitialize
+      jest.resetModules();
+      require('../../dist/options.js');
+
+      // Should not throw
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(true).toBe(true); // Just verify no error
+    });
+  });
+
+  describe('initialization', () => {
+    it('should run initializePage when DOM is already loaded', () => {
+      // options.js has already run, just verify it completed without error
+      expect(document.getElementById('cache-status')).toBeTruthy();
+    });
   });
 });
