@@ -147,6 +147,7 @@ Features below were evaluated and declined because established extensions (Augme
 - [x] FEAT-5: HLTB integration (How Long To Beat) - displays completion time estimates as a badge in the icon row
 - [x] MISSING-1: Extension icons for Chrome Web Store (16x16, 48x48, 128x128 PNG icons created)
 - [x] MISSING-2: Popup UI (quick-access popup with cache stats and platform toggles)
+- [x] UX-2: Fix icon blinking on URL change (replaced cleanupAllIcons with lightCleanup to preserve icons in DOM during React SPA navigation)
 
 ---
 

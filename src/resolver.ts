@@ -60,6 +60,19 @@ function getPlatformStatus(available: boolean, foundInWikidata: boolean): Platfo
 }
 
 /**
+ * Creates an empty WikidataResult for games not found in Wikidata.
+ */
+function createEmptyWikidataResult(gameName: string): WikidataResult {
+  return {
+    found: false,
+    platforms: { nintendo: false, playstation: false, xbox: false, steamdeck: false },
+    storeIds: { eshop: null, psStore: null, xbox: null, gog: null, epic: null, appStore: null, playStore: null },
+    wikidataId: null,
+    gameName
+  };
+}
+
+/**
  * Validates a store URL by making a HEAD request.
  * Returns true if the URL is accessible (2xx) and not an error page.
  */
@@ -238,15 +251,11 @@ async function refreshStaleEntries(games: Array<{ appid: string; gameName: strin
       // Get existing entry to preserve hltbData
       const { entry: existingEntry } = await Cache.getFromCacheWithStale(appid);
 
-      const entry = wikidataResult?.found
-        ? await wikidataResultToCacheEntry(appid, gameName, wikidataResult)
-        : await wikidataResultToCacheEntry(appid, gameName, {
-          found: false,
-          platforms: { nintendo: false, playstation: false, xbox: false, steamdeck: false },
-          storeIds: { eshop: null, psStore: null, xbox: null, gog: null, epic: null, appStore: null, playStore: null },
-          wikidataId: null,
-          gameName: gameName
-        });
+      const entry = await wikidataResultToCacheEntry(
+        appid,
+        gameName,
+        wikidataResult?.found ? wikidataResult : createEmptyWikidataResult(gameName)
+      );
 
       // Preserve existing hltbData - it's still valid and shouldn't be lost on refresh
       if (existingEntry?.hltbData) {
@@ -408,15 +417,11 @@ async function batchResolvePlatformData(games: Array<{ appid: string; gameName: 
     for (const { appid, gameName } of needsResolution) {
       const wikidataResult = wikidataResults.get(appid);
 
-      const entry = wikidataResult?.found
-        ? await wikidataResultToCacheEntry(appid, gameName, wikidataResult)
-        : await wikidataResultToCacheEntry(appid, gameName, {
-          found: false,
-          platforms: { nintendo: false, playstation: false, xbox: false, steamdeck: false },
-          storeIds: { eshop: null, psStore: null, xbox: null, gog: null, epic: null, appStore: null, playStore: null },
-          wikidataId: null,
-          gameName: gameName
-        });
+      const entry = await wikidataResultToCacheEntry(
+        appid,
+        gameName,
+        wikidataResult?.found ? wikidataResult : createEmptyWikidataResult(gameName)
+      );
 
       await Cache.saveToCache(entry);
       results.set(appid, { entry, fromCache: false });

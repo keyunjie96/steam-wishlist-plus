@@ -1946,6 +1946,185 @@ describe('content.js', () => {
     });
   });
 
+  describe('lightCleanup (preserves icons on URL change)', () => {
+    beforeEach(() => {
+      // Clear any existing state
+      const { injectedAppIds, processedAppIds, pendingItems, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+      injectedAppIds.clear();
+      processedAppIds.clear();
+      pendingItems.clear();
+      getPendingHltbItems().clear();
+    });
+
+    it('should preserve icon containers in DOM', () => {
+      const { lightCleanup, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+
+      // Create and attach some icon containers
+      const c1 = createIconsContainer('111', 'Game 1');
+      const c2 = createIconsContainer('222', 'Game 2');
+      document.body.appendChild(c1);
+      document.body.appendChild(c2);
+
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+
+      lightCleanup();
+
+      // Icons should still be in DOM (NOT removed like cleanupAllIcons)
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+    });
+
+    it('should preserve injectedAppIds tracking set', () => {
+      const { lightCleanup, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some tracked appids
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
+      expect(injectedAppIds.size).toBe(2);
+
+      lightCleanup();
+
+      // Should NOT be cleared
+      expect(injectedAppIds.size).toBe(2);
+      expect(injectedAppIds.has('111')).toBe(true);
+      expect(injectedAppIds.has('222')).toBe(true);
+    });
+
+    it('should preserve processedAppIds tracking set', () => {
+      const { lightCleanup, processedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some tracked appids
+      processedAppIds.add('111');
+      processedAppIds.add('222');
+      expect(processedAppIds.size).toBe(2);
+
+      lightCleanup();
+
+      // Should NOT be cleared
+      expect(processedAppIds.size).toBe(2);
+    });
+
+    it('should clear pendingItems map', () => {
+      const { lightCleanup, pendingItems } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some pending items
+      pendingItems.set('111', { gameName: 'Game 1', container: document.createElement('span') });
+      pendingItems.set('222', { gameName: 'Game 2', container: document.createElement('span') });
+      expect(pendingItems.size).toBe(2);
+
+      lightCleanup();
+
+      // Pending items SHOULD be cleared
+      expect(pendingItems.size).toBe(0);
+    });
+
+    it('should clear pendingHltbItems map', () => {
+      const { lightCleanup, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some pending HLTB items
+      getPendingHltbItems().set('111', { gameName: 'Game 1', container: document.createElement('span') });
+      getPendingHltbItems().set('222', { gameName: 'Game 2', container: document.createElement('span') });
+      expect(getPendingHltbItems().size).toBe(2);
+
+      lightCleanup();
+
+      // Pending HLTB items SHOULD be cleared
+      expect(getPendingHltbItems().size).toBe(0);
+    });
+
+    it('should clear batch debounce timer when set', () => {
+      const { lightCleanup, setBatchDebounceTimer, getBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setBatchDebounceTimer(fakeTimerId);
+
+      expect(getBatchDebounceTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getBatchDebounceTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should clear HLTB batch debounce timer when set', () => {
+      const { lightCleanup, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setHltbBatchDebounceTimer(fakeTimerId);
+
+      expect(getHltbBatchDebounceTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should clear steamDeckRefreshTimer when set', () => {
+      const { lightCleanup, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setSteamDeckRefreshTimer(fakeTimerId);
+
+      expect(getSteamDeckRefreshTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should reset steamDeckRefreshAttempts to zero', () => {
+      const { lightCleanup, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts } = globalThis.SCPW_ContentTestExports;
+
+      setSteamDeckRefreshAttempts(3);
+      expect(getSteamDeckRefreshAttempts()).toBe(3);
+
+      lightCleanup();
+
+      expect(getSteamDeckRefreshAttempts()).toBe(0);
+    });
+
+    it('should handle null timers gracefully (false branches)', () => {
+      const { lightCleanup, getBatchDebounceTimer, getHltbBatchDebounceTimer, getSteamDeckRefreshTimer, setBatchDebounceTimer, setHltbBatchDebounceTimer, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Ensure all timers are null
+      setBatchDebounceTimer(null);
+      setHltbBatchDebounceTimer(null);
+      setSteamDeckRefreshTimer(null);
+
+      expect(getBatchDebounceTimer()).toBeNull();
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+
+      // Should not throw when timers are null
+      expect(() => lightCleanup()).not.toThrow();
+
+      // Still should be null after cleanup
+      expect(getBatchDebounceTimer()).toBeNull();
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+    });
+
+    it('should preserve data-scpw-processed attributes', () => {
+      const { lightCleanup } = globalThis.SCPW_ContentTestExports;
+
+      // Create elements with processed attribute
+      const el1 = document.createElement('div');
+      el1.setAttribute('data-scpw-processed', 'true');
+      document.body.appendChild(el1);
+
+      expect(document.querySelectorAll('[data-scpw-processed]').length).toBe(1);
+
+      lightCleanup();
+
+      // Should NOT be removed
+      expect(document.querySelectorAll('[data-scpw-processed]').length).toBe(1);
+    });
+  });
+
   describe('stale container handling', () => {
     it('should correctly detect container DOM attachment state', () => {
       const container = document.createElement('span');
@@ -2110,6 +2289,34 @@ describe('content.js', () => {
       cleanupAllIcons();
 
       expect(getBatchDebounceTimer()).toBeNull();
+    });
+
+    it('should clear HLTB batch debounce timer on cleanup', () => {
+      const { cleanupAllIcons, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setHltbBatchDebounceTimer(fakeTimerId);
+
+      expect(getHltbBatchDebounceTimer()).toBe(fakeTimerId);
+
+      cleanupAllIcons();
+
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+    });
+
+    it('should clear steamDeckRefreshTimer on cleanup', () => {
+      const { cleanupAllIcons, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setSteamDeckRefreshTimer(fakeTimerId);
+
+      expect(getSteamDeckRefreshTimer()).toBe(fakeTimerId);
+
+      cleanupAllIcons();
+
+      expect(getSteamDeckRefreshTimer()).toBeNull();
     });
   });
 

@@ -253,13 +253,12 @@ async function searchHltb(gameName: string, steamAppId?: string): Promise<HltbSe
   await registerHeaderRules();
 
   // Clean the game name by removing edition suffixes (HLTB search is strict)
-  const cleanedName = cleanGameNameForSearch(gameName);
-  const searchName = cleanedName !== gameName ? cleanedName : gameName;
+  const searchName = cleanGameNameForSearch(gameName);
 
   if (HLTB_DEBUG) {
     console.log(`${HLTB_LOG_PREFIX} Searching for: ${gameName}`);
-    if (cleanedName !== gameName) {
-      console.log(`${HLTB_LOG_PREFIX} Cleaned name: ${cleanedName}`);
+    if (searchName !== gameName) {
+      console.log(`${HLTB_LOG_PREFIX} Cleaned name: ${searchName}`);
     }
   }
 

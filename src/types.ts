@@ -185,6 +185,7 @@ declare global {
     SCPW_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
     SCPW_Cache: {
       getFromCache: (appid: string) => Promise<CacheEntry | null>;
+      getFromCacheWithStale: (appid: string) => Promise<{ entry: CacheEntry | null; isStale: boolean }>;
       saveToCache: (entry: CacheEntry) => Promise<void>;
       getOrCreatePlatformData: (appid: string, gameName: string) => Promise<{ entry: CacheEntry; fromCache: boolean }>;
       clearCache: () => Promise<void>;
@@ -220,6 +221,7 @@ declare global {
       formatHours: (hours: number) => string;
       normalizeGameName: (name: string) => string;
       calculateSimilarity: (a: string, b: string) => number;
+      cleanGameNameForSearch: (name: string) => string;
       registerHeaderRules: () => Promise<void>;
     };
     SCPW_ContentTestExports?: {
@@ -241,7 +243,9 @@ declare global {
       findWishlistRow: (link: Element) => Element | null;
       findWishlistItems: (root?: Element | Document) => Element[];
       checkDeckFilterActive: () => boolean;
+      clearPendingTimersAndBatches: () => void;
       cleanupAllIcons: () => void;
+      lightCleanup: () => void;
       injectedAppIds: Set<string>;
       processedAppIds: Set<string>;
       getBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
@@ -274,6 +278,7 @@ declare global {
       // HLTB exports for coverage testing
       formatHltbTime: (hours: number) => string;
       createHltbBadge: (hltbData: HltbData) => HTMLElement;
+      createHltbLoader: () => HTMLElement;
       queueForHltbResolution: (appid: string, gameName: string, container: HTMLElement) => void;
       processPendingHltbBatch: () => Promise<void>;
       getHltbDataByAppId: () => Map<string, HltbData | null>;
