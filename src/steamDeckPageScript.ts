@@ -11,7 +11,7 @@
 (function() {
   'use strict';
 
-  const DEBUG = false;
+  const DEBUG = (globalThis as { SCPW_SteamDeckPageDebug?: boolean }).SCPW_SteamDeckPageDebug ?? false;
   const LOG_PREFIX = '[SCPW SteamDeck PageScript]';
   const DATA_ELEMENT_ID = 'scpw-steamdeck-data';
 

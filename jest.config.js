@@ -20,13 +20,19 @@ module.exports = {
     '!coverage/**'
   ],
 
-  // Coverage thresholds (unified for all files)
+  // Coverage thresholds (global + content branch exception)
   coverageThreshold: {
     global: {
-      statements: 80,
-      branches: 75,
-      functions: 85,
-      lines: 80
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
+    './dist/content.js': {
+      statements: 95,
+      branches: 80,
+      functions: 95,
+      lines: 95
     }
   },
 

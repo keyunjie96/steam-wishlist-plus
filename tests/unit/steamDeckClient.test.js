@@ -3,6 +3,15 @@
  */
 
 describe('steamDeckClient.js', () => {
+    const loadSteamDeckClient = ({ debug = false } = {}) => {
+        if (debug) {
+            globalThis.SCPW_SteamDeckDebug = true;
+        } else {
+            delete globalThis.SCPW_SteamDeckDebug;
+        }
+        require('../../dist/steamDeckClient.js');
+    };
+
     beforeEach(() => {
         jest.resetModules();
 
@@ -29,12 +38,13 @@ describe('steamDeckClient.js', () => {
         });
 
         // Load the module
-        require('../../dist/steamDeckClient.js');
+        loadSteamDeckClient();
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
         delete globalThis.SCPW_SteamDeck;
+        delete globalThis.SCPW_SteamDeckDebug;
     });
 
     describe('exports', () => {
@@ -193,7 +203,27 @@ describe('steamDeckClient.js', () => {
             dataEl.remove();
         });
 
-        it.skip('should return empty Map on timeout when no data element', async () => {
+        it('should run injectPageScript debug logs when enabled', async () => {
+            jest.resetModules();
+            loadSteamDeckClient({ debug: true });
+            const SteamDeck = globalThis.SCPW_SteamDeck;
+
+            const dataEl = document.createElement('script');
+            dataEl.type = 'application/json';
+            dataEl.id = 'scpw-steamdeck-data';
+            dataEl.textContent = JSON.stringify({ '999': 2 });
+            document.documentElement.appendChild(dataEl);
+
+            const promise = SteamDeck.waitForDeckData(100);
+            await jest.advanceTimersByTimeAsync(10);
+            const result = await promise;
+
+            expect(result.get('999')).toBe(2);
+
+            dataEl.remove();
+        });
+
+        it('should return empty Map on timeout when no data element', async () => {
             const SteamDeck = globalThis.SCPW_SteamDeck;
 
             // Don't create the data element - should timeout
@@ -202,6 +232,19 @@ describe('steamDeckClient.js', () => {
             // Advance timers past the timeout
             await jest.advanceTimersByTimeAsync(150);
 
+            const result = await promise;
+
+            expect(result).toBeInstanceOf(Map);
+            expect(result.size).toBe(0);
+        });
+
+        it('should log debug output on timeout when enabled', async () => {
+            jest.resetModules();
+            loadSteamDeckClient({ debug: true });
+            const SteamDeck = globalThis.SCPW_SteamDeck;
+
+            const promise = SteamDeck.waitForDeckData(100);
+            await jest.advanceTimersByTimeAsync(150);
             const result = await promise;
 
             expect(result).toBeInstanceOf(Map);
@@ -225,7 +268,7 @@ describe('steamDeckClient.js', () => {
             });
 
             // Reload the module with new mock
-            require('../../dist/steamDeckClient.js');
+            loadSteamDeckClient({ debug: true });
             const SteamDeck = globalThis.SCPW_SteamDeck;
 
             const promise = SteamDeck.waitForDeckData(100);
@@ -234,6 +277,25 @@ describe('steamDeckClient.js', () => {
 
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);
+        });
+    });
+
+    describe('debug logging', () => {
+        it('should log when extracting deck data with debug enabled', () => {
+            jest.resetModules();
+            loadSteamDeckClient({ debug: true });
+            const SteamDeck = globalThis.SCPW_SteamDeck;
+
+            const dataEl = document.createElement('script');
+            dataEl.type = 'application/json';
+            dataEl.id = 'scpw-steamdeck-data';
+            dataEl.textContent = JSON.stringify({ '12345': 3 });
+            document.documentElement.appendChild(dataEl);
+
+            const result = SteamDeck.extractDeckDataFromPage();
+            expect(result.get('12345')).toBe(3);
+
+            dataEl.remove();
         });
     });
 });

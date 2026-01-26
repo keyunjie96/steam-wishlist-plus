@@ -17,10 +17,21 @@ describe('options.js', () => {
   let showSteamDeckCheckbox;
   let showHltbCheckbox;
   let hltbDisplayStatSelect;
+  let hltbRow;
+  let collapsibleSection;
+  let collapsibleBody;
+  let collapsibleButton;
+  let readyStateDescriptor;
 
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
+
+    readyStateDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+    Object.defineProperty(document, 'readyState', {
+      configurable: true,
+      get: () => 'complete'
+    });
 
     // Set up DOM elements that options.js expects using DOM API
     document.body.textContent = '';
@@ -55,35 +66,42 @@ describe('options.js', () => {
     clearCacheBtn.textContent = 'Clear Cache';
     document.body.appendChild(clearCacheBtn);
 
+    const createToggleWrapper = (checkbox) => {
+      const wrapper = document.createElement('label');
+      wrapper.className = 'platform-toggle';
+      wrapper.appendChild(checkbox);
+      return wrapper;
+    };
+
     showNintendoCheckbox = document.createElement('input');
     showNintendoCheckbox.type = 'checkbox';
     showNintendoCheckbox.id = 'show-nintendo';
     showNintendoCheckbox.checked = true;
-    document.body.appendChild(showNintendoCheckbox);
+    document.body.appendChild(createToggleWrapper(showNintendoCheckbox));
 
     showPlaystationCheckbox = document.createElement('input');
     showPlaystationCheckbox.type = 'checkbox';
     showPlaystationCheckbox.id = 'show-playstation';
     showPlaystationCheckbox.checked = true;
-    document.body.appendChild(showPlaystationCheckbox);
+    document.body.appendChild(createToggleWrapper(showPlaystationCheckbox));
 
     showXboxCheckbox = document.createElement('input');
     showXboxCheckbox.type = 'checkbox';
     showXboxCheckbox.id = 'show-xbox';
     showXboxCheckbox.checked = true;
-    document.body.appendChild(showXboxCheckbox);
+    document.body.appendChild(createToggleWrapper(showXboxCheckbox));
 
     showSteamDeckCheckbox = document.createElement('input');
     showSteamDeckCheckbox.type = 'checkbox';
     showSteamDeckCheckbox.id = 'show-steamdeck';
     showSteamDeckCheckbox.checked = true;
-    document.body.appendChild(showSteamDeckCheckbox);
+    document.body.appendChild(createToggleWrapper(showSteamDeckCheckbox));
 
     showHltbCheckbox = document.createElement('input');
     showHltbCheckbox.type = 'checkbox';
     showHltbCheckbox.id = 'show-hltb';
     showHltbCheckbox.checked = true;
-    document.body.appendChild(showHltbCheckbox);
+    document.body.appendChild(createToggleWrapper(showHltbCheckbox));
 
     hltbDisplayStatSelect = document.createElement('select');
     hltbDisplayStatSelect.id = 'hltb-display-stat';
@@ -94,6 +112,26 @@ describe('options.js', () => {
     defaultOption.textContent = 'Main Story';
     hltbDisplayStatSelect.appendChild(defaultOption);
     document.body.appendChild(hltbDisplayStatSelect);
+
+    hltbRow = document.createElement('div');
+    hltbRow.className = 'toggle-item has-inline-option inline-select-hidden';
+    hltbRow.dataset.platform = 'hltb';
+    document.body.appendChild(hltbRow);
+
+    collapsibleSection = document.createElement('section');
+    collapsibleSection.setAttribute('data-collapsible', 'true');
+    collapsibleSection.classList.add('collapsed');
+
+    collapsibleButton = document.createElement('button');
+    collapsibleButton.className = 'collapse-btn';
+    collapsibleButton.setAttribute('aria-controls', 'collapsible-body');
+    collapsibleSection.appendChild(collapsibleButton);
+
+    collapsibleBody = document.createElement('div');
+    collapsibleBody.id = 'collapsible-body';
+    collapsibleSection.appendChild(collapsibleBody);
+
+    document.body.appendChild(collapsibleSection);
 
     // Mock chrome.runtime.sendMessage
     chrome.runtime.sendMessage.mockClear();
@@ -139,6 +177,9 @@ describe('options.js', () => {
   afterEach(() => {
     jest.useRealTimers();
     delete global.confirm;
+    if (readyStateDescriptor) {
+      Object.defineProperty(document, 'readyState', readyStateDescriptor);
+    }
   });
 
   describe('initialization', () => {
@@ -301,6 +342,74 @@ describe('options.js', () => {
       // Display should remain unchanged when response is undefined
       expect(cacheCountEl.textContent).toBe('original');
       expect(cacheAgeEl.textContent).toBe('original');
+    });
+  });
+
+  describe('toggle UI state', () => {
+    it('should toggle active class on platform toggles', async () => {
+      const wrapper = showNintendoCheckbox.closest('.platform-toggle');
+      expect(wrapper.classList.contains('active')).toBe(true);
+
+      showNintendoCheckbox.checked = false;
+      showNintendoCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(wrapper.classList.contains('active')).toBe(false);
+    });
+
+    it('should update HLTB select visibility and row class', async () => {
+      showHltbCheckbox.checked = false;
+      showHltbCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(hltbDisplayStatSelect.hidden).toBe(true);
+      expect(hltbRow.classList.contains('inline-select-hidden')).toBe(true);
+
+      showHltbCheckbox.checked = true;
+      showHltbCheckbox.dispatchEvent(new Event('change'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(hltbDisplayStatSelect.hidden).toBe(false);
+      expect(hltbRow.classList.contains('inline-select-hidden')).toBe(false);
+    });
+  });
+
+  describe('collapsible sections', () => {
+    it('should initialize and toggle collapsible sections', () => {
+      expect(collapsibleSection.classList.contains('collapsed')).toBe(true);
+      expect(collapsibleBody.hidden).toBe(true);
+      expect(collapsibleButton.getAttribute('aria-expanded')).toBe('false');
+
+      collapsibleButton.click();
+
+      expect(collapsibleSection.classList.contains('collapsed')).toBe(false);
+      expect(collapsibleBody.hidden).toBe(false);
+      expect(collapsibleButton.getAttribute('aria-expanded')).toBe('true');
+    });
+  });
+
+  describe('DOMContentLoaded initialization', () => {
+    it('should wait for DOMContentLoaded when document is loading', async () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+
+      jest.resetModules();
+      Object.defineProperty(document, 'readyState', {
+        configurable: true,
+        get: () => 'loading'
+      });
+
+      require('../../dist/options.js');
+
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: 'GET_CACHE_STATS'
+      });
+
+      if (originalDescriptor) {
+        Object.defineProperty(document, 'readyState', originalDescriptor);
+      }
     });
   });
 
@@ -787,7 +896,7 @@ describe('options.js', () => {
       hltbDisplayStatSelect.hidden = false;
 
       // Mock storage to return showHltb: false so loadSettings sets checkbox to unchecked
-      chrome.storage.sync.get.mockResolvedValueOnce({
+      chrome.storage.sync.get.mockResolvedValue({
         scpwSettings: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: false }
       });
 
@@ -797,8 +906,10 @@ describe('options.js', () => {
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
       await jest.advanceTimersByTimeAsync(0);
+      await jest.runAllTimersAsync();
 
       // Row should be hidden
+      expect(showHltbCheckbox.checked).toBe(false);
       expect(hltbDisplayStatSelect.hidden).toBe(true);
     });
 

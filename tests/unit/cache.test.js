@@ -36,6 +36,20 @@ describe('cache.js', () => {
       expect(Cache.MANUAL_OVERRIDES).toBeDefined();
       expect(typeof Cache.MANUAL_OVERRIDES).toBe('object');
     });
+
+    it('should build manual overrides when cache debug is enabled', () => {
+      jest.resetModules();
+      globalThis.SCPW_CacheDebug = true;
+
+      require('../../dist/types.js');
+      require('../../dist/cache.js');
+
+      const Cache = globalThis.SCPW_Cache;
+      expect(Cache.MANUAL_OVERRIDES['367520']).toBeDefined();
+      expect(Cache.MANUAL_OVERRIDES['367520'].nintendo).toBe('available');
+
+      delete globalThis.SCPW_CacheDebug;
+    });
   });
 
   describe('isCacheValid', () => {

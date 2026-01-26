@@ -11,7 +11,7 @@ import type { Platform, PlatformStatus, CacheEntry, PlatformData } from './types
 const StoreUrls = globalThis.SCPW_StoreUrls;
 const CACHE_VERSION = globalThis.SCPW_CacheVersion;
 
-const CACHE_DEBUG = false; // Set to true to enable manual test overrides
+const CACHE_DEBUG = globalThis.SCPW_CacheDebug ?? false; // Set to true to enable manual test overrides
 const CACHE_KEY_PREFIX = 'xcpw_cache_';
 const DEFAULT_TTL_DAYS = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

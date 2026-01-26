@@ -21,6 +21,7 @@ describe('steamDeckPageScript.js', () => {
 
     afterEach(() => {
         delete window.SSR;
+        delete globalThis.SCPW_SteamDeckPageDebug;
         const el = document.getElementById('scpw-steamdeck-data');
         if (el) el.remove();
     });
@@ -258,6 +259,29 @@ describe('steamDeckPageScript.js', () => {
 
             expect(data['11111']).toBe(2);
             expect(data['old']).toBeUndefined();
+        });
+
+        it('should emit debug logs when enabled', () => {
+            globalThis.SCPW_SteamDeckPageDebug = true;
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_22222', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 3 } }
+                            }
+                        ]
+                    })
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            expect(data['22222']).toBe(3);
         });
     });
 });

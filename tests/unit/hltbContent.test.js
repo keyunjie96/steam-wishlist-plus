@@ -50,6 +50,16 @@ describe('hltbContent.js', () => {
     expect(script.src).toContain('dist/hltbPageScript.js');
   });
 
+  it('should resolve injectPageScript on load event', async () => {
+    const script = document.querySelector('script[data-scpw-hltb]');
+    expect(script).not.toBeNull();
+
+    script.onload();
+    await flushPromises();
+
+    expect(document.querySelectorAll('script[data-scpw-hltb]').length).toBe(1);
+  });
+
   it('should append script to documentElement when head is missing', () => {
     cleanupInjectedScripts();
 
@@ -175,6 +185,61 @@ describe('hltbContent.js', () => {
 
     const afterScripts = document.querySelectorAll('script[data-scpw-hltb]').length;
     expect(afterScripts).toBe(initialScripts);
+  });
+
+  it('should handle multiple concurrent requests', async () => {
+    const sendResponseOne = jest.fn();
+    const sendResponseTwo = jest.fn();
+
+    runtimeMessageHandler({
+      type: 'HLTB_QUERY',
+      requestId: 'req-1',
+      gameName: 'Game One'
+    }, {}, sendResponseOne);
+
+    runtimeMessageHandler({
+      type: 'HLTB_QUERY',
+      requestId: 'req-2',
+      gameName: 'Game Two'
+    }, {}, sendResponseTwo);
+
+    await flushPromises();
+
+    const handler = messageHandlers[messageHandlers.length - 1];
+    handler({
+      data: {
+        type: 'SCPW_HLTB_RESPONSE',
+        requestId: 'req-2',
+        success: true,
+        data: null
+      },
+      source: window
+    });
+
+    handler({
+      data: {
+        type: 'SCPW_HLTB_RESPONSE',
+        requestId: 'req-1',
+        success: true,
+        data: null
+      },
+      source: window
+    });
+
+    expect(sendResponseOne).toHaveBeenCalledWith({
+      type: 'HLTB_QUERY_RESPONSE',
+      requestId: 'req-1',
+      success: true,
+      data: null,
+      error: undefined
+    });
+    expect(sendResponseTwo).toHaveBeenCalledWith({
+      type: 'HLTB_QUERY_RESPONSE',
+      requestId: 'req-2',
+      success: true,
+      data: null,
+      error: undefined
+    });
   });
 
   it('should ignore messages not from window', () => {

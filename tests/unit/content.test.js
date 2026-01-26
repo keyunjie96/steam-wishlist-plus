@@ -10,6 +10,7 @@ describe('content.js', () => {
   let mockIcons;
   let mockPlatformInfo;
   let mockStatusInfo;
+  let consoleLogSpy;
 
   beforeEach(() => {
     jest.resetModules();
@@ -17,6 +18,10 @@ describe('content.js', () => {
     // Set up DOM
     document.body.innerHTML = '';
     document.head.innerHTML = '';
+
+    if (typeof global.setInterval !== 'function') {
+      global.setInterval = jest.fn();
+    }
 
     // Mock icons module (loaded before content.js)
     mockIcons = {
@@ -94,6 +99,9 @@ describe('content.js', () => {
       }
     });
 
+    globalThis.SCPW_ContentDebug = true;
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
     // Load content.js - this will run init() if DOM is ready
     require('../../dist/content.js');
   });
@@ -103,6 +111,9 @@ describe('content.js', () => {
     delete globalThis.SCPW_PlatformInfo;
     delete globalThis.SCPW_StatusInfo;
     delete globalThis.SCPW_StoreUrls;
+    delete globalThis.SCPW_SteamDeck;
+    delete globalThis.SCPW_ContentDebug;
+    consoleLogSpy?.mockRestore();
   });
 
   describe('styles', () => {
@@ -4772,18 +4783,6 @@ describe('content.js', () => {
     });
   });
 
-  describe('DEBUG log branches', () => {
-    it('should skip debug logs when DEBUG is false', () => {
-      const DEBUG = false;
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
-      if (DEBUG) console.log('This should not be called');
-
-      expect(consoleSpy).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
-    });
-  });
-
   describe('processItem early returns', () => {
     beforeEach(() => {
       const { injectedAppIds, processedAppIds, setUserSettings } = globalThis.SCPW_ContentTestExports;
@@ -5056,6 +5055,597 @@ describe('content.js', () => {
 
       container.remove();
       getCachedEntriesByAppId().clear();
+    });
+  });
+
+  describe('coverage gaps', () => {
+    it('should include unknown platforms via default switch branch', () => {
+      const { getEnabledPlatforms, getAllPlatforms } = globalThis.SCPW_ContentTestExports;
+      const platforms = getAllPlatforms();
+      platforms.push('mystery');
+
+      const enabled = getEnabledPlatforms();
+      expect(enabled).toContain('mystery');
+
+      platforms.pop();
+    });
+
+    it('should restore HLTB data from cached entry', async () => {
+      const { processItem, getCachedEntriesByAppId, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-555-0');
+      item.setAttribute('role', 'button');
+
+      const link = document.createElement('a');
+      link.href = '/app/555/Test_Game';
+      link.textContent = 'Test Game';
+      item.appendChild(link);
+
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_WindowsLogo');
+      item.appendChild(svg);
+
+      document.body.appendChild(item);
+
+      getCachedEntriesByAppId().set('555', {
+        appid: '555',
+        gameName: 'Test Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: globalThis.SCPW_CacheVersion,
+        source: 'cache',
+        wikidataId: null,
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://example.com/ns' },
+          playstation: { status: 'unknown', storeUrl: 'https://example.com/ps' },
+          xbox: { status: 'unknown', storeUrl: 'https://example.com/xb' },
+          steamdeck: { status: 'unknown', storeUrl: 'https://example.com/sd' }
+        },
+        hltbData: {
+          hltbId: 42,
+          gameName: 'Test Game',
+          mainStory: 10,
+          mainExtra: 0,
+          completionist: 0,
+          allStyles: 0,
+          steamId: null
+        }
+      });
+
+      await processItem(item);
+
+      expect(getHltbDataByAppId().get('555')).toMatchObject({ hltbId: 42 });
+    });
+
+    it('should render HLTB badge and summarize icon statuses', () => {
+      const {
+        createIconsContainer,
+        updateIconsWithData,
+        getRenderedIconSummary,
+        getHltbDataByAppId,
+        setUserSettings
+      } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: true });
+
+      const container = createIconsContainer('123', 'Badge Game');
+      document.body.appendChild(container);
+      getHltbDataByAppId().set('123', {
+        hltbId: 12,
+        gameName: 'Badge Game',
+        mainStory: 5,
+        mainExtra: 0,
+        completionist: 0,
+        allStyles: 0,
+        steamId: null
+      });
+
+      updateIconsWithData(container, {
+        appid: '123',
+        gameName: 'Badge Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: globalThis.SCPW_CacheVersion,
+        source: 'cache',
+        wikidataId: null,
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://example.com/ns' },
+          playstation: { status: 'unavailable', storeUrl: 'https://example.com/ps' },
+          xbox: { status: 'unknown', storeUrl: 'https://example.com/xb' },
+          steamdeck: { status: 'unknown', storeUrl: 'https://example.com/sd' }
+        }
+      });
+
+      const unavailableIcon = document.createElement('span');
+      unavailableIcon.className = 'scpw-platform-icon scpw-unavailable';
+      unavailableIcon.setAttribute('data-platform', 'playstation');
+      container.appendChild(unavailableIcon);
+
+      const unknownIcon = document.createElement('span');
+      unknownIcon.className = 'scpw-platform-icon';
+      unknownIcon.setAttribute('data-platform', 'xbox');
+      container.appendChild(unknownIcon);
+
+      expect(container.querySelector('.scpw-hltb-badge')).not.toBeNull();
+
+      const summary = getRenderedIconSummary(container);
+      expect(summary).toContain('nintendo:available');
+      expect(summary).toContain('playstation:unavailable');
+      expect(summary).toContain('xbox:unknown');
+    });
+
+    it('should throw on unexpected sendMessageWithRetry state', async () => {
+      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+
+      await expect(sendMessageWithRetry({ type: 'NOOP' }, -1)).rejects.toThrow(
+        'Unexpected state in sendMessageWithRetry'
+      );
+    });
+
+    it('should clear existing HLTB debounce timer when queueing', () => {
+      const {
+        queueForHltbResolution,
+        setHltbBatchDebounceTimer,
+        getHltbBatchDebounceTimer
+      } = globalThis.SCPW_ContentTestExports;
+
+      const container = document.createElement('span');
+      const existingTimer = setTimeout(() => {}, 1000);
+      const clearSpy = jest.spyOn(global, 'clearTimeout');
+
+      setHltbBatchDebounceTimer(existingTimer);
+      queueForHltbResolution('999', 'Queued Game', container);
+
+      expect(clearSpy).toHaveBeenCalledWith(existingTimer);
+      expect(getHltbBatchDebounceTimer()).not.toBeNull();
+
+      jest.advanceTimersByTime(globalThis.SCPW_ContentTestExports.HLTB_BATCH_DEBOUNCE_MS);
+
+      clearSpy.mockRestore();
+    });
+
+    it('should return early from HLTB batch processing when disabled', async () => {
+      const { processPendingHltbBatch, getPendingHltbItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: false });
+      getPendingHltbItems().set('101', { gameName: 'No HLTB', container: document.createElement('span') });
+
+      await processPendingHltbBatch();
+
+      expect(chrome.runtime.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('should process HLTB batches and update icons', async () => {
+      const {
+        processPendingHltbBatch,
+        getPendingHltbItems,
+        getCachedEntriesByAppId,
+        createIconsContainer,
+        getHltbDataByAppId,
+        setUserSettings
+      } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: true });
+      chrome.runtime.sendMessage = jest.fn().mockImplementation(({ games }) => {
+        const hltbResults = Object.fromEntries(games.map(({ appid, gameName }) => [
+          appid,
+          {
+            hltbId: Number(appid),
+            gameName,
+            mainStory: 4,
+            mainExtra: 0,
+            completionist: 0,
+            allStyles: 0,
+            steamId: null
+          }
+        ]));
+        return Promise.resolve({ success: true, hltbResults });
+      });
+
+      for (let i = 0; i < 6; i += 1) {
+        const appid = String(200 + i);
+        const container = createIconsContainer(appid, `Game ${i}`);
+        document.body.appendChild(container);
+        getPendingHltbItems().set(appid, { gameName: `Game ${i}`, container });
+        getCachedEntriesByAppId().set(appid, {
+          appid,
+          gameName: `Game ${i}`,
+          resolvedAt: Date.now(),
+          ttlDays: 7,
+          cacheVersion: globalThis.SCPW_CacheVersion,
+          source: 'cache',
+          wikidataId: null,
+          platforms: {
+            nintendo: { status: 'available', storeUrl: 'https://example.com/ns' },
+            playstation: { status: 'unknown', storeUrl: 'https://example.com/ps' },
+            xbox: { status: 'unknown', storeUrl: 'https://example.com/xb' },
+            steamdeck: { status: 'unknown', storeUrl: 'https://example.com/sd' }
+          }
+        });
+      }
+
+      await processPendingHltbBatch();
+
+      expect(getHltbDataByAppId().size).toBeGreaterThan(0);
+    });
+
+    it('should remove loaders when batch results have no data', async () => {
+      const {
+        processPendingBatch,
+        pendingItems,
+        createIconsContainer
+      } = globalThis.SCPW_ContentTestExports;
+
+      chrome.runtime.sendMessage = jest.fn().mockResolvedValue({
+        success: true,
+        results: {
+          '404': { data: null, fromCache: false }
+        }
+      });
+
+      const container = createIconsContainer('404', 'Missing Game');
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
+      document.body.appendChild(container);
+
+      pendingItems.set('404', { gameName: 'Missing Game', container });
+
+      await processPendingBatch();
+
+      expect(container.querySelector('.scpw-loader')).toBeNull();
+    });
+
+    it('should handle empty HLTB batch responses', async () => {
+      const { processPendingHltbBatch, getPendingHltbItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: true });
+      chrome.runtime.sendMessage = jest.fn().mockResolvedValue({ success: true });
+
+      const container = document.createElement('span');
+      getPendingHltbItems().set('777', { gameName: 'Empty Batch', container });
+
+      await processPendingHltbBatch();
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalled();
+    });
+
+    it('should continue when HLTB batch requests fail', async () => {
+      const { processPendingHltbBatch, getPendingHltbItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: true });
+      chrome.runtime.sendMessage = jest.fn().mockRejectedValue(new Error('HLTB down'));
+
+      const container = document.createElement('span');
+      getPendingHltbItems().set('888', { gameName: 'Error Batch', container });
+
+      await processPendingHltbBatch();
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalled();
+    });
+
+    it('should time out waiting for injection point', async () => {
+      const { waitForInjectionPoint } = globalThis.SCPW_ContentTestExports;
+
+      const item = document.createElement('div');
+      document.body.appendChild(item);
+
+      jest.useFakeTimers();
+      const promise = waitForInjectionPoint(item);
+      await jest.advanceTimersByTimeAsync(20000);
+      const result = await promise;
+
+      expect(result).toBeNull();
+      jest.useRealTimers();
+    });
+
+    it('should return early when all platforms are disabled', async () => {
+      const { processItem, setUserSettings } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: false });
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-909-0');
+      item.setAttribute('role', 'button');
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      expect(item.querySelector('.scpw-platforms')).toBeNull();
+    });
+
+    it('should use persistent cache entries and queue HLTB', async () => {
+      const {
+        processItem,
+        getCachedEntriesByAppId,
+        getPendingHltbItems,
+        setUserSettings
+      } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showHltb: true });
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-333-0');
+      item.setAttribute('role', 'button');
+      const link = document.createElement('a');
+      link.href = '/app/333/Persisted_Game';
+      link.textContent = 'Persisted Game';
+      item.appendChild(link);
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_WindowsLogo');
+      item.appendChild(svg);
+      document.body.appendChild(item);
+
+      const entry = {
+        appid: '333',
+        gameName: 'Persisted Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: globalThis.SCPW_CacheVersion,
+        source: 'cache',
+        wikidataId: null,
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://example.com/ns' },
+          playstation: { status: 'unknown', storeUrl: 'https://example.com/ps' },
+          xbox: { status: 'unknown', storeUrl: 'https://example.com/xb' },
+          steamdeck: { status: 'unknown', storeUrl: 'https://example.com/sd' }
+        }
+      };
+
+      chrome.storage.local.get.mockResolvedValueOnce({ 'xcpw_cache_333': entry });
+
+      await processItem(item);
+
+      expect(getCachedEntriesByAppId().get('333')).toBeDefined();
+      expect(getPendingHltbItems().has('333')).toBe(true);
+    });
+
+    it('should fall back to item container when injection point is missing', async () => {
+      const { processItem } = globalThis.SCPW_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-777-0');
+      item.setAttribute('role', 'button');
+      const link = document.createElement('a');
+      link.href = '/app/777/NoSvgGame';
+      link.textContent = 'No Svg Game';
+      item.appendChild(link);
+      document.body.appendChild(item);
+
+      jest.useFakeTimers();
+      const promise = processItem(item);
+      await jest.advanceTimersByTimeAsync(20000);
+      await promise;
+
+      expect(item.querySelector('.scpw-platforms')).not.toBeNull();
+      jest.useRealTimers();
+    });
+
+    it('should insert icons after the last wrapper when available', async () => {
+      const { processItem, setUserSettings } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showNintendo: true });
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-4242-0');
+      item.setAttribute('role', 'button');
+
+      const link = document.createElement('a');
+      link.href = '/app/4242/Wrapper_Game';
+      link.textContent = 'Wrapper Game';
+      item.appendChild(link);
+
+      const group = document.createElement('div');
+      const wrapper1 = document.createElement('span');
+      const svg1 = document.createElement('svg');
+      svg1.setAttribute('class', 'SVGIcon_WindowsLogo');
+      wrapper1.appendChild(svg1);
+      const wrapper2 = document.createElement('span');
+      const svg2 = document.createElement('svg');
+      svg2.setAttribute('class', 'SVGIcon_MacOSLogo');
+      wrapper2.appendChild(svg2);
+      group.appendChild(wrapper1);
+      group.appendChild(wrapper2);
+      item.appendChild(group);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      expect(wrapper2.nextSibling?.classList?.contains('scpw-platforms')).toBe(true);
+    });
+
+    it('should skip processing when appId is already in flight', async () => {
+      const { processItem } = globalThis.SCPW_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-606-0');
+      item.setAttribute('role', 'button');
+      const link = document.createElement('a');
+      link.href = '/app/606/InFlight';
+      link.textContent = 'In Flight';
+      item.appendChild(link);
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_WindowsLogo');
+      item.appendChild(svg);
+      document.body.appendChild(item);
+
+      jest.useFakeTimers();
+      const firstCall = processItem(item);
+      await processItem(item);
+      await jest.advanceTimersByTimeAsync(20000);
+      await firstCall;
+
+      expect(item.getAttribute('data-scpw-processed')).toBe('606');
+      jest.useRealTimers();
+    });
+
+    it('should reset reused rows with new appIds', async () => {
+      const { processItem } = globalThis.SCPW_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-707-0');
+      item.setAttribute('role', 'button');
+      item.setAttribute('data-scpw-processed', '123');
+      const link = document.createElement('a');
+      link.href = '/app/707/Reused';
+      link.textContent = 'Reused';
+      item.appendChild(link);
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_WindowsLogo');
+      item.appendChild(svg);
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      expect(item.getAttribute('data-scpw-processed')).toBe('707');
+    });
+
+    it('should refresh Steam Deck data and schedule retry when missing', async () => {
+      const {
+        refreshSteamDeckData,
+        setUserSettings,
+        getMissingSteamDeckAppIds,
+        setSteamDeckRefreshAttempts,
+        getSteamDeckRefreshTimer
+      } = globalThis.SCPW_ContentTestExports;
+
+      setUserSettings({ showSteamDeck: true });
+      getMissingSteamDeckAppIds().add('9999');
+      setSteamDeckRefreshAttempts(0);
+
+      globalThis.SCPW_SteamDeck = {
+        waitForDeckData: jest.fn().mockResolvedValue(new Map([['1234', 3]]))
+      };
+
+      await refreshSteamDeckData('test');
+
+      expect(getSteamDeckRefreshTimer()).not.toBeNull();
+    });
+
+    it('should remove loaders when all platforms are disabled', () => {
+      const { createIconsContainer, getCachedEntriesByAppId } = globalThis.SCPW_ContentTestExports;
+      const listener = chrome.storage.onChanged.addListener.mock.calls[0][0];
+
+      const container = createIconsContainer('111', 'No Cache Game');
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
+      document.body.appendChild(container);
+
+      getCachedEntriesByAppId().clear();
+
+      listener({
+        scpwSettings: {
+          oldValue: { showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true },
+          newValue: { showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: false }
+        }
+      }, 'sync');
+
+      expect(container.querySelector('.scpw-loader')).toBeNull();
+    });
+
+    it('should debounce MutationObserver attribute changes', async () => {
+      jest.useFakeTimers();
+
+      const item = document.createElement('div');
+      document.body.appendChild(item);
+
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-1-0');
+      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(60);
+
+      jest.useRealTimers();
+    });
+
+    it('should refresh Steam Deck data on URL changes', async () => {
+      const originalLocation = window.location;
+
+      jest.useFakeTimers();
+      globalThis.SCPW_SteamDeck = {
+        waitForDeckData: jest.fn().mockResolvedValue(new Map([['500', 3]]))
+      };
+
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { href: 'https://example.com/wishlist' }
+      });
+
+      jest.resetModules();
+      require('../../dist/content.js');
+      const { getSteamDeckData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      setUserSettings({ showSteamDeck: true });
+      await Promise.resolve();
+
+      window.location.href = 'https://example.com/wishlist?step=1';
+      await jest.advanceTimersByTimeAsync(500);
+
+      window.location.href = 'https://example.com/wishlist?step=2';
+      await jest.advanceTimersByTimeAsync(500);
+      await jest.advanceTimersByTimeAsync(globalThis.SCPW_ContentTestExports.URL_CHANGE_DEBOUNCE_MS);
+      await Promise.resolve();
+
+      expect(globalThis.SCPW_SteamDeck.waitForDeckData).toHaveBeenCalled();
+      expect(getSteamDeckData()?.size).toBeGreaterThan(0);
+
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation
+      });
+      jest.useRealTimers();
+    });
+
+    it('should increment Steam Deck refresh attempts on schedule', async () => {
+      const {
+        scheduleSteamDeckRefresh,
+        setUserSettings,
+        setSteamDeckRefreshAttempts,
+        getSteamDeckRefreshAttempts,
+        setSteamDeckRefreshTimer
+      } = globalThis.SCPW_ContentTestExports;
+
+      jest.useFakeTimers();
+      setUserSettings({ showSteamDeck: true });
+      setSteamDeckRefreshAttempts(0);
+      setSteamDeckRefreshTimer(null);
+
+      globalThis.SCPW_SteamDeck = {
+        waitForDeckData: jest.fn().mockResolvedValue(new Map())
+      };
+
+      scheduleSteamDeckRefresh('timer-test');
+      await jest.runAllTimersAsync();
+
+      expect(getSteamDeckRefreshAttempts()).toBeGreaterThan(0);
+      jest.useRealTimers();
+    });
+
+    it('should attach DOMContentLoaded listener when document is loading', () => {
+      const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+      const addListenerSpy = jest.spyOn(document, 'addEventListener');
+
+      jest.resetModules();
+      Object.defineProperty(document, 'readyState', {
+        configurable: true,
+        get: () => 'loading'
+      });
+
+      require('../../dist/content.js');
+
+      expect(addListenerSpy).toHaveBeenCalledWith('DOMContentLoaded', expect.any(Function));
+
+      if (originalDescriptor) {
+        Object.defineProperty(document, 'readyState', originalDescriptor);
+      }
+      addListenerSpy.mockRestore();
+    });
+
+    it('should expose user settings and HLTB cache helpers', () => {
+      const { getUserSettings, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+
+      expect(getUserSettings()).toBeDefined();
+      expect(getHltbDataByAppId()).toBeInstanceOf(Map);
     });
   });
 });

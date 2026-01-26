@@ -10,7 +10,7 @@
 
 import type { DeckCategory, DeckStatus } from './types';
 
-const STEAM_DECK_DEBUG = false;
+const STEAM_DECK_DEBUG = globalThis.SCPW_SteamDeckDebug ?? false;
 const STEAM_DECK_LOG_PREFIX = '[SCPW SteamDeck]';
 const DATA_ELEMENT_ID = 'scpw-steamdeck-data';
 

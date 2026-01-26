@@ -16,7 +16,7 @@ const CACHE_VERSION = globalThis.SCPW_CacheVersion;
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
 const LOG_PREFIX = '[Steam Cross-Platform Wishlist]';
-const DEBUG = false; // Set to true for verbose debugging
+const DEBUG = globalThis.SCPW_ContentDebug ?? false; // Set to true for verbose debugging
 
 /** Set of appids that have been processed to avoid duplicate logging */
 const processedAppIds = new Set<string>();
@@ -1666,6 +1666,7 @@ if (typeof globalThis !== 'undefined') {
     scheduleSteamDeckRefresh,
     markMissingSteamDeckData,
     getEnabledPlatforms,
+    getAllPlatforms: () => ALL_PLATFORMS,
     isAnyConsolePlatformEnabled,
     setupSettingsChangeListener,
     getMissingSteamDeckAppIds: () => missingSteamDeckAppIds,
@@ -1681,6 +1682,7 @@ if (typeof globalThis !== 'undefined') {
     formatHltbTime,
     createHltbBadge,
     createHltbLoader,
+    getRenderedIconSummary,
     queueForHltbResolution,
     processPendingHltbBatch,
     getHltbDataByAppId: () => hltbDataByAppId,

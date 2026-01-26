@@ -2,8 +2,16 @@
  * Tests for hltbClient.js
  */
 
-// Load the HLTB client
-require('../../dist/hltbClient.js');
+const loadHltbClient = ({ debug = false } = {}) => {
+  jest.resetModules();
+  if (debug) {
+    globalThis.SCPW_HltbDebug = true;
+  } else {
+    delete globalThis.SCPW_HltbDebug;
+  }
+  require('../../dist/hltbClient.js');
+  return globalThis.SCPW_HltbClient;
+};
 
 /**
  * Creates a mock fetch that handles both auth token and search endpoints
@@ -47,8 +55,16 @@ function createHltbFetchMock(searchResponse, options = {}) {
 describe('hltbClient.js', () => {
   let HltbClient;
 
-  beforeAll(() => {
-    HltbClient = globalThis.SCPW_HltbClient;
+  beforeEach(() => {
+    chrome.declarativeNetRequest = {
+      getDynamicRules: jest.fn().mockResolvedValue([]),
+      updateDynamicRules: jest.fn().mockResolvedValue(undefined),
+      RuleActionType: { MODIFY_HEADERS: 'modifyHeaders' },
+      HeaderOperation: { SET: 'set' },
+      ResourceType: { XMLHTTPREQUEST: 'xmlhttprequest' }
+    };
+
+    HltbClient = loadHltbClient();
   });
 
   describe('exports', () => {
@@ -62,6 +78,29 @@ describe('hltbClient.js', () => {
       expect(HltbClient.formatHours).toBeInstanceOf(Function);
       expect(HltbClient.normalizeGameName).toBeInstanceOf(Function);
       expect(HltbClient.calculateSimilarity).toBeInstanceOf(Function);
+    });
+  });
+
+  describe('registerHeaderRules', () => {
+    it('should register header rules and remove existing ones', async () => {
+      HltbClient = loadHltbClient({ debug: true });
+      chrome.declarativeNetRequest.getDynamicRules.mockResolvedValue([{ id: 9 }, { id: 12 }]);
+
+      await HltbClient.registerHeaderRules();
+
+      expect(chrome.declarativeNetRequest.updateDynamicRules).toHaveBeenNthCalledWith(1, {
+        removeRuleIds: [9, 12]
+      });
+      expect(chrome.declarativeNetRequest.updateDynamicRules).toHaveBeenNthCalledWith(2, {
+        addRules: expect.any(Array)
+      });
+    });
+
+    it('should skip registration when rules are already registered', async () => {
+      await HltbClient.registerHeaderRules();
+      await HltbClient.registerHeaderRules();
+
+      expect(chrome.declarativeNetRequest.updateDynamicRules).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -288,6 +327,14 @@ describe('hltbClient.js', () => {
       expect(result).toBeNull();
     });
 
+    it('should return null when auth token request throws', async () => {
+      HltbClient = loadHltbClient({ debug: true });
+      global.fetch = jest.fn().mockRejectedValue(new Error('Auth token network error'));
+
+      const result = await HltbClient.queryByGameName('Token Failure Game');
+      expect(result).toBeNull();
+    });
+
     it('should return null when auth token response has no token field', async () => {
       global.fetch = createHltbFetchMock({ data: [] }, { tokenResponse: {} });
 
@@ -410,6 +457,14 @@ describe('hltbClient.js', () => {
       const result = await HltbClient.queryByGameName('Test Game');
       expect(result).toBeNull();
     });
+
+    it('should emit debug logs for cleaned search names', async () => {
+      HltbClient = loadHltbClient({ debug: true });
+      global.fetch = createHltbFetchMock({ data: [] });
+
+      const result = await HltbClient.queryByGameName('Test Game - Definitive Edition');
+      expect(result).toBeNull();
+    });
   });
 
   describe('batchQueryByGameNames', () => {
@@ -530,6 +585,20 @@ describe('hltbClient.js', () => {
       expect(results.size).toBe(2);
       expect(results.get('100')).not.toBeNull();
       expect(results.get('200')).toBeNull();
+    });
+
+    it('should set null when rate limiting throws', async () => {
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = jest.fn(() => {
+        throw new Error('Timer failure');
+      });
+
+      const games = [{ appid: '300', gameName: 'Exploding Timer Game' }];
+      const results = await HltbClient.batchQueryByGameNames(games);
+
+      expect(results.get('300')).toBeNull();
+
+      global.setTimeout = originalSetTimeout;
     });
   });
 });
