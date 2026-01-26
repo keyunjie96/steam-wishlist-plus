@@ -14,6 +14,9 @@
 
 import type { Platform, PlatformStatus, CacheEntry, PlatformData, WikidataResult, WikidataStoreIds } from './types';
 
+// Use globalThis for shared values (set by types.ts at runtime)
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+
 // Type for StoreUrls (used for type checking the globalThis value)
 type StoreUrlsType = {
   nintendo: (gameName: string) => string;
@@ -60,6 +63,19 @@ function getPlatformStatus(available: boolean, foundInWikidata: boolean): Platfo
 }
 
 /**
+ * Creates an empty WikidataResult for games not found in Wikidata.
+ */
+function createEmptyWikidataResult(gameName: string): WikidataResult {
+  return {
+    found: false,
+    platforms: { nintendo: false, playstation: false, xbox: false, steamdeck: false },
+    storeIds: { eshop: null, psStore: null, xbox: null, gog: null, epic: null, appStore: null, playStore: null },
+    wikidataId: null,
+    gameName
+  };
+}
+
+/**
  * Validates a store URL by making a HEAD request.
  * Returns true if the URL is accessible (2xx) and not an error page.
  */
@@ -103,7 +119,8 @@ function createFallbackEntry(appid: string, gameName: string): CacheEntry {
     source: 'fallback',
     wikidataId: null,
     resolvedAt: Date.now(),
-    ttlDays: 7
+    ttlDays: 7,
+    cacheVersion: CACHE_VERSION
   };
 }
 
@@ -122,7 +139,8 @@ function createManualOverrideEntry(appid: string, gameName: string, override: Re
     source: 'manual',
     wikidataId: null,
     resolvedAt: Date.now(),
-    ttlDays: 7
+    ttlDays: 7,
+    cacheVersion: CACHE_VERSION
   };
 }
 
@@ -181,7 +199,8 @@ async function wikidataResultToCacheEntry(appid: string, gameName: string, wikid
     source: wikidataResult.found ? 'wikidata' : 'fallback',
     wikidataId: wikidataResult.wikidataId,
     resolvedAt: Date.now(),
-    ttlDays: 7
+    ttlDays: 7,
+    cacheVersion: CACHE_VERSION
   };
 }
 
@@ -210,6 +229,58 @@ async function updateCachedEntryIfNeeded(cached: CacheEntry, gameName: string): 
 interface ResolveResult {
   entry: CacheEntry;
   fromCache: boolean;
+  isStale?: boolean;
+}
+
+/**
+ * Background refresh for stale cache entries (fire-and-forget).
+ * Fetches fresh data from Wikidata and updates cache for next page load.
+ * Preserves existing hltbData since it's still valid (HLTB data rarely changes).
+ */
+async function refreshStaleEntries(games: Array<{ appid: string; gameName: string }>): Promise<void> {
+  const Cache = globalThis.SCPW_Cache;
+  const WikidataClient = globalThis.SCPW_WikidataClient;
+
+  console.log(`${RESOLVER_LOG_PREFIX} Background refresh starting for ${games.length} stale entries`);
+
+  try {
+    const appIds = games.map(g => g.appid);
+    const wikidataResults = await WikidataClient.batchQueryBySteamAppIds(appIds);
+
+    let refreshedCount = 0;
+    for (const { appid, gameName } of games) {
+      // Get existing entry to check source and preserve hltbData
+      const { entry: existingEntry } = await Cache.getFromCacheWithStale(appid);
+
+      // Skip refresh for manual override entries - they should persist until manually changed
+      if (existingEntry?.source === 'manual') {
+        if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} Skipping refresh for manual override: ${appid}`);
+        continue;
+      }
+
+      const wikidataResult = wikidataResults.get(appid);
+
+      const entry = await wikidataResultToCacheEntry(
+        appid,
+        gameName,
+        wikidataResult?.found ? wikidataResult : createEmptyWikidataResult(gameName)
+      );
+
+      // Preserve existing hltbData - it's still valid and shouldn't be lost on refresh
+      if (existingEntry?.hltbData) {
+        entry.hltbData = existingEntry.hltbData;
+      }
+
+      await Cache.saveToCache(entry);
+      refreshedCount++;
+    }
+
+    console.log(`${RESOLVER_LOG_PREFIX} Background refresh complete: ${refreshedCount} entries updated`);
+  } catch (error) {
+    // Background refresh failed - not critical, next load will try again
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`${RESOLVER_LOG_PREFIX} Background refresh failed:`, errorMessage);
+  }
 }
 
 /**
@@ -285,30 +356,50 @@ async function resolvePlatformData(appid: string, gameName: string): Promise<Res
 
 /**
  * Batch resolves platform availability for multiple games.
- * More efficient for bulk operations.
+ * Uses stale-while-revalidate pattern: returns stale data immediately,
+ * triggers background refresh (fire-and-forget) for expired entries.
  */
 async function batchResolvePlatformData(games: Array<{ appid: string; gameName: string }>): Promise<Map<string, ResolveResult>> {
   const Cache = globalThis.SCPW_Cache;
   const WikidataClient = globalThis.SCPW_WikidataClient;
   const results = new Map<string, ResolveResult>();
 
-  // 1. Check cache for all games
+  // 1. Check cache for all games (including stale entries)
   const uncached: Array<{ appid: string; gameName: string }> = [];
+  const staleEntries: Array<{ appid: string; gameName: string }> = [];
+
   for (const { appid, gameName } of games) {
-    const cached = await Cache.getFromCache(appid);
-    if (cached) {
-      results.set(appid, { entry: cached, fromCache: true });
+    const { entry, isStale } = await Cache.getFromCacheWithStale(appid);
+    if (entry) {
+      // Return cached data immediately (even if stale)
+      results.set(appid, { entry, fromCache: true, isStale });
+      if (isStale) {
+        staleEntries.push({ appid, gameName });
+      }
     } else {
       uncached.push({ appid, gameName });
     }
   }
 
-  if (uncached.length === 0) {
-    console.log(`${RESOLVER_LOG_PREFIX} All ${games.length} games found in cache`);
+  // Log cache status
+  const freshCount = games.length - uncached.length - staleEntries.length;
+  if (uncached.length === 0 && staleEntries.length === 0) {
+    console.log(`${RESOLVER_LOG_PREFIX} All ${games.length} games found in cache (fresh)`);
     return results;
   }
 
-  console.log(`${RESOLVER_LOG_PREFIX} Batch resolving ${uncached.length} games (${games.length - uncached.length} cached)`);
+  if (staleEntries.length > 0) {
+    console.log(`${RESOLVER_LOG_PREFIX} ${freshCount} fresh, ${staleEntries.length} stale (will refresh in background), ${uncached.length} uncached`);
+  } else {
+    console.log(`${RESOLVER_LOG_PREFIX} Batch resolving ${uncached.length} games (${freshCount} cached)`);
+  }
+
+  // Fire-and-forget background refresh for stale entries
+  if (staleEntries.length > 0) {
+    refreshStaleEntries(staleEntries).catch(err => {
+      console.warn(`${RESOLVER_LOG_PREFIX} Background refresh failed:`, err instanceof Error ? err.message : String(err));
+    });
+  }
 
   // 2. Check for manual overrides
   const needsResolution: Array<{ appid: string; gameName: string }> = [];
@@ -335,15 +426,11 @@ async function batchResolvePlatformData(games: Array<{ appid: string; gameName: 
     for (const { appid, gameName } of needsResolution) {
       const wikidataResult = wikidataResults.get(appid);
 
-      const entry = wikidataResult?.found
-        ? await wikidataResultToCacheEntry(appid, gameName, wikidataResult)
-        : await wikidataResultToCacheEntry(appid, gameName, {
-          found: false,
-          platforms: { nintendo: false, playstation: false, xbox: false, steamdeck: false },
-          storeIds: { eshop: null, psStore: null, xbox: null, gog: null, epic: null, appStore: null, playStore: null },
-          wikidataId: null,
-          gameName: gameName
-        });
+      const entry = await wikidataResultToCacheEntry(
+        appid,
+        gameName,
+        wikidataResult?.found ? wikidataResult : createEmptyWikidataResult(gameName)
+      );
 
       await Cache.saveToCache(entry);
       results.set(appid, { entry, fromCache: false });

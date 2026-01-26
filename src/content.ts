@@ -10,6 +10,9 @@
 
 import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse } from './types';
 
+// Use globalThis for shared values (set by types.ts at runtime)
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
 const LOG_PREFIX = '[Steam Cross-Platform Wishlist]';
@@ -31,13 +34,10 @@ let urlChangeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const URL_CHANGE_DEBOUNCE_MS = 200;
 
 /**
- * Removes all injected icon elements and clears tracking state.
- * Called on URL changes (filter/sort) to prevent orphaned icons.
- * This is critical because Steam's React-based UI can detach our containers
- * while keeping them in shared parent elements.
+ * Clears all pending timers and batches.
+ * Shared by both light and full cleanup functions.
  */
-function cleanupAllIcons(): void {
-  // Clear any pending batch timer (prevent stale batch from firing)
+function clearPendingTimersAndBatches(): void {
   if (batchDebounceTimer) {
     clearTimeout(batchDebounceTimer);
     batchDebounceTimer = null;
@@ -54,6 +54,39 @@ function cleanupAllIcons(): void {
   }
   steamDeckRefreshAttempts = 0;
 
+  pendingItems.clear();
+  pendingHltbItems.clear();
+}
+
+/**
+ * Light cleanup for URL changes - keeps resolved icons in DOM to prevent blink.
+ * Removes containers for pending items (still loading) so they can be reprocessed.
+ * This prevents loaders from getting stuck when URL changes mid-batch.
+ */
+function lightCleanup(): void {
+  // Remove containers for pending items - they have loaders that would get stuck
+  // Also remove from injectedAppIds so they can be reprocessed
+  for (const [appid, { container }] of pendingItems) {
+    container.remove();
+    injectedAppIds.delete(appid);
+  }
+  for (const [appid, { container }] of pendingHltbItems) {
+    // Only remove HLTB loader, not the whole container (platform icons may be resolved)
+    const hltbLoader = container.querySelector('.scpw-hltb-loader');
+    if (hltbLoader) hltbLoader.remove();
+  }
+
+  clearPendingTimersAndBatches();
+  if (DEBUG) console.log(`${LOG_PREFIX} Light cleanup complete - pending items removed, resolved icons preserved`);
+}
+
+/**
+ * Full cleanup - removes all injected icons and clears all tracking state.
+ * Used when a complete reset is needed.
+ */
+function cleanupAllIcons(): void {
+  clearPendingTimersAndBatches();
+
   // Remove all icon containers from DOM
   document.querySelectorAll('.scpw-platforms').forEach(el => el.remove());
 
@@ -62,10 +95,6 @@ function cleanupAllIcons(): void {
   processedAppIds.clear();
   missingSteamDeckAppIds.clear();
   hltbDataByAppId.clear();
-
-  // Clear pending batch (stale container references)
-  pendingItems.clear();
-  pendingHltbItems.clear();
 
   // Clear processed attributes
   document.querySelectorAll(`[${PROCESSED_ATTR}]`).forEach(el => {
@@ -104,6 +133,16 @@ const cachedEntriesByAppId = new Map<string, CacheEntry>();
 
 /** Cached HLTB data entries */
 const hltbDataByAppId = new Map<string, HltbData | null>();
+
+/**
+ * Restores HLTB data from a cache entry if not already present.
+ * Handles the special case where hltbId === -1 means "searched but not found".
+ */
+function restoreHltbDataFromEntry(appid: string, entry: CacheEntry): void {
+  if (!entry.hltbData || hltbDataByAppId.has(appid)) return;
+  const hltbValue = entry.hltbData.hltbId === -1 ? null : entry.hltbData;
+  hltbDataByAppId.set(appid, hltbValue);
+}
 
 /** Pending items waiting for HLTB data resolution */
 const pendingHltbItems = new Map<string, { gameName: string; container: HTMLElement }>();
@@ -552,22 +591,15 @@ function parseSvg(svgString: string): SVGElement | null {
 // ============================================================================
 
 /**
- * Creates the platform icons container with a subtle loading indicator.
+ * Creates the platform icons container (empty, no loader).
+ * Loader is only added when we need to make a network call (cold start).
  * Icons are added dynamically in updateIconsWithData() once data is resolved.
- * This prevents visual noise from showing 4 pulsing icons that then disappear.
  */
 function createIconsContainer(appid: string, gameName: string): HTMLElement {
   const container = document.createElement('span');
   container.className = 'scpw-platforms';
   container.setAttribute('data-appid', appid);
   container.setAttribute('data-game-name', gameName);
-
-  // Single subtle loader instead of 4 platform icons
-  const loader = document.createElement('span');
-  loader.className = 'scpw-loader';
-  loader.setAttribute('aria-hidden', 'true');
-  container.appendChild(loader);
-
   return container;
 }
 
@@ -699,6 +731,19 @@ function createHltbBadge(hltbData: HltbData): HTMLElement {
 }
 
 /**
+ * Creates an HLTB loading indicator element.
+ * Shown while HLTB data is being fetched.
+ */
+function createHltbLoader(): HTMLElement {
+  const loader = document.createElement('span');
+  loader.className = 'scpw-hltb-loader';
+  loader.textContent = '···';
+  loader.setAttribute('title', 'Loading completion time...');
+  loader.setAttribute('aria-label', 'Loading completion time');
+  return loader;
+}
+
+/**
  * Updates the icons container with platform data from cache.
  * Dynamically adds icons for available platforms (none exist initially).
  * Steam Deck icons are fetched separately from Steam's store pages.
@@ -713,7 +758,7 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   const iconsToAdd: HTMLElement[] = [];
 
   // Reset previous icons to keep updates idempotent
-  container.querySelectorAll('.scpw-platform-icon, .scpw-separator, .scpw-hltb-badge').forEach(el => el.remove());
+  container.querySelectorAll('.scpw-platform-icon, .scpw-separator, .scpw-hltb-badge, .scpw-hltb-loader').forEach(el => el.remove());
 
   // Get Steam Deck client if available
   const SteamDeck = globalThis.SCPW_SteamDeck;
@@ -763,12 +808,14 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   if (loader) loader.remove();
 
   // Get HLTB data if available
-  const hltbData = appid ? hltbDataByAppId.get(appid) : null;
+  const hltbKnown = appid ? hltbDataByAppId.has(appid) : false;
+  const hltbData = hltbKnown && appid ? hltbDataByAppId.get(appid) : null;
   const hasHltbTime = hltbData && (hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0);
   const showHltbBadge = userSettings.showHltb && hasHltbTime;
+  const showHltbLoader = userSettings.showHltb && !hltbKnown;
 
-  // Only add separator and icons if we have visible icons or HLTB badge
-  if (iconsToAdd.length > 0 || showHltbBadge) {
+  // Only add separator and icons if we have visible icons, HLTB badge, or HLTB loader
+  if (iconsToAdd.length > 0 || showHltbBadge || showHltbLoader) {
     const separator = document.createElement('span');
     separator.className = 'scpw-separator';
     container.appendChild(separator);
@@ -777,10 +824,12 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
       container.appendChild(icon);
     }
 
-    // Add HLTB badge after platform icons
+    // Add HLTB badge or loader after platform icons
     if (showHltbBadge && hltbData) {
       const hltbBadge = createHltbBadge(hltbData);
       container.appendChild(hltbBadge);
+    } else if (showHltbLoader) {
+      container.appendChild(createHltbLoader());
     }
   }
 }
@@ -797,11 +846,14 @@ function getRenderedIconSummary(container: HTMLElement): string {
     const tier = icon.getAttribute('data-tier');
     if (tier) return `${platform}:${tier}`;
 
-    const status = icon.classList.contains('scpw-available')
-      ? 'available'
-      : icon.classList.contains('scpw-unavailable')
-        ? 'unavailable'
-        : 'unknown';
+    let status: string;
+    if (icon.classList.contains('scpw-available')) {
+      status = 'available';
+    } else if (icon.classList.contains('scpw-unavailable')) {
+      status = 'unavailable';
+    } else {
+      status = 'unknown';
+    }
     return `${platform}:${status}`;
   });
 
@@ -1052,14 +1104,8 @@ async function processPendingBatch(): Promise<void> {
         // This ensures data is available for cache-reuse when game reappears
         if (result.data) {
           cachedEntriesByAppId.set(appid, result.data);
-          // Also populate HLTB data if present in cache entry
-          // This prevents re-fetching HLTB data that was already cached
-          // Note: hltbId === -1 means "searched but not found" - store as null for consistency
-          if (result.data.hltbData && !hltbDataByAppId.has(appid)) {
-            const hltbValue = result.data.hltbData.hltbId === -1 ? null : result.data.hltbData;
-            hltbDataByAppId.set(appid, hltbValue);
-            if (DEBUG) console.log(`${LOG_PREFIX} HLTB from platform cache: ${appid} (hltbId=${result.data.hltbData.hltbId}, stored=${hltbValue ? 'data' : 'null'})`);
-          }
+          // Restore HLTB data if present in cache entry
+          restoreHltbDataFromEntry(appid, result.data);
         }
 
         // BUG-13 FIX: Update ALL containers for this appid, not just the one in containerMap
@@ -1383,8 +1429,34 @@ async function processItem(item: Element): Promise<void> {
   processingAppIds.delete(appId);
 
   // Check if we already have cached data for this game
-  // This happens when React re-renders and destroys/recreates DOM elements
-  const cachedEntry = cachedEntriesByAppId.get(appId);
+  // First check in-memory cache (fast), then persistent storage
+  let cachedEntry = cachedEntriesByAppId.get(appId);
+
+  // Restore HLTB data from in-memory cache if needed
+  // (hltbDataByAppId may have been cleared on URL change while cachedEntriesByAppId wasn't)
+  if (cachedEntry) {
+    restoreHltbDataFromEntry(appId, cachedEntry);
+  }
+
+  // If not in memory, check chrome.storage.local before showing loader
+  if (!cachedEntry) {
+    const storageKey = `xcpw_cache_${appId}`;
+    const storageResult = await chrome.storage.local.get(storageKey);
+    const persistentEntry = storageResult[storageKey] as CacheEntry | undefined;
+
+    if (persistentEntry?.resolvedAt && persistentEntry?.ttlDays) {
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
+      const expiresAt = persistentEntry.resolvedAt + persistentEntry.ttlDays * MS_PER_DAY;
+      const isValid = Date.now() < expiresAt && persistentEntry.cacheVersion === CACHE_VERSION;
+
+      if (isValid) {
+        cachedEntry = persistentEntry;
+        cachedEntriesByAppId.set(appId, persistentEntry);
+        restoreHltbDataFromEntry(appId, persistentEntry);
+      }
+    }
+  }
+
   if (cachedEntry) {
     if (DEBUG) console.log(`${LOG_PREFIX} Using cached data for appid ${appId}`);
     updateIconsWithData(iconsContainer, cachedEntry);
@@ -1392,7 +1464,6 @@ async function processItem(item: Element): Promise<void> {
     console.log(`${LOG_PREFIX} Rendered (cache-reuse): ${appId} - ${gameName} [icons: ${iconSummary}]`);
 
     // Queue HLTB request even for cache-reuse (HLTB data fetched separately)
-    // Use English name from cache for better HLTB matching
     if (userSettings.showHltb && !hltbDataByAppId.has(appId)) {
       const englishName = cachedEntry.gameName || gameName;
       queueForHltbResolution(appId, englishName, iconsContainer);
@@ -1400,8 +1471,13 @@ async function processItem(item: Element): Promise<void> {
     return;
   }
 
+  // No cached data - need network call (cold start), so add loader now
+  const loader = document.createElement('span');
+  loader.className = 'scpw-loader';
+  loader.setAttribute('aria-hidden', 'true');
+  iconsContainer.appendChild(loader);
+
   // Queue for batch resolution instead of individual request
-  // This dramatically reduces Wikidata API calls by batching multiple games together
   if (DEBUG) console.log(`${LOG_PREFIX} Queuing appid ${appId} for batch resolution`);
   queueForBatchResolution(appId, gameName, iconsContainer);
 }
@@ -1501,9 +1577,9 @@ async function init(): Promise<void> {
       lastUrl = location.href;
       if (DEBUG) console.log(`${LOG_PREFIX} URL changed, scheduling cleanup and re-processing`);
 
-      // Full cleanup immediately (remove old icons)
-      // Prevents orphaned icons and stale references (BUG-1, BUG-2, BUG-5, BUG-6)
-      cleanupAllIcons();
+      // Light cleanup - preserve icons in DOM to prevent blink
+      // Icons will be reused by processItem if the same games are still visible
+      lightCleanup();
 
       // Clear any existing debounce timer
       if (urlChangeDebounceTimer) {
@@ -1567,7 +1643,9 @@ if (typeof globalThis !== 'undefined') {
     findWishlistItems,
     checkDeckFilterActive,
     // Icon lifecycle management exports (BUG-1, BUG-2, BUG-5, BUG-6, BUG-12)
+    clearPendingTimersAndBatches,
     cleanupAllIcons,
+    lightCleanup,
     injectedAppIds,
     processedAppIds,
     // Timer exports for testing (getters since they're reassigned primitives)
@@ -1602,6 +1680,7 @@ if (typeof globalThis !== 'undefined') {
     // HLTB exports for coverage testing
     formatHltbTime,
     createHltbBadge,
+    createHltbLoader,
     queueForHltbResolution,
     processPendingHltbBatch,
     getHltbDataByAppId: () => hltbDataByAppId,

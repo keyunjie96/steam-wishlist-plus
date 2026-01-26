@@ -13,6 +13,19 @@ export type PlatformStatus = 'available' | 'unavailable' | 'unknown';
 export type HltbDisplayStat = 'mainStory' | 'mainExtra' | 'completionist';
 
 // ============================================================================
+// Cache Constants - SINGLE SOURCE OF TRUTH
+// ============================================================================
+/**
+ * Cache schema version - increment when cache format changes.
+ * When version mismatches, cached entries are treated as stale.
+ * This ensures users get fresh data after extension updates that change data handling.
+ *
+ * IMPORTANT: This constant is shared across content script and service worker.
+ * Both cache.ts (service worker) and content.ts (content script) import this value.
+ */
+export const CACHE_VERSION = 1;
+
+// ============================================================================
 // User Settings - SINGLE SOURCE OF TRUTH
 // ============================================================================
 // When adding a new setting:
@@ -84,6 +97,7 @@ export interface CacheEntry {
   hltbData?: HltbData | null;  // Optional HLTB completion time data
   resolvedAt: number;
   ttlDays: number;
+  cacheVersion?: number;  // Cache schema version for invalidation on updates
 }
 
 export type CacheStorage = Record<string, CacheEntry>;
@@ -182,8 +196,10 @@ declare global {
     SCPW_PlatformInfo: Record<Platform, { name: string; abbr: string; searchLabel: string }>;
     SCPW_StatusInfo: Record<PlatformStatus, { tooltip: (platform: Platform) => string; className: string }>;
     SCPW_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
+    SCPW_CacheVersion: number;
     SCPW_Cache: {
       getFromCache: (appid: string) => Promise<CacheEntry | null>;
+      getFromCacheWithStale: (appid: string) => Promise<{ entry: CacheEntry | null; isStale: boolean }>;
       saveToCache: (entry: CacheEntry) => Promise<void>;
       getOrCreatePlatformData: (appid: string, gameName: string) => Promise<{ entry: CacheEntry; fromCache: boolean }>;
       clearCache: () => Promise<void>;
@@ -219,6 +235,7 @@ declare global {
       formatHours: (hours: number) => string;
       normalizeGameName: (name: string) => string;
       calculateSimilarity: (a: string, b: string) => number;
+      cleanGameNameForSearch: (name: string) => string;
       registerHeaderRules: () => Promise<void>;
     };
     SCPW_ContentTestExports?: {
@@ -240,7 +257,9 @@ declare global {
       findWishlistRow: (link: Element) => Element | null;
       findWishlistItems: (root?: Element | Document) => Element[];
       checkDeckFilterActive: () => boolean;
+      clearPendingTimersAndBatches: () => void;
       cleanupAllIcons: () => void;
+      lightCleanup: () => void;
       injectedAppIds: Set<string>;
       processedAppIds: Set<string>;
       getBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
@@ -273,6 +292,7 @@ declare global {
       // HLTB exports for coverage testing
       formatHltbTime: (hours: number) => string;
       createHltbBadge: (hltbData: HltbData) => HTMLElement;
+      createHltbLoader: () => HTMLElement;
       queueForHltbResolution: (appid: string, gameName: string, container: HTMLElement) => void;
       processPendingHltbBatch: () => Promise<void>;
       getHltbDataByAppId: () => Map<string, HltbData | null>;
@@ -375,4 +395,7 @@ if (!globalThis.SCPW_UserSettings) {
     SETTING_CHECKBOX_IDS,
     USER_SETTING_KEYS
   };
+}
+if (globalThis.SCPW_CacheVersion === undefined) {
+  globalThis.SCPW_CacheVersion = CACHE_VERSION;
 }

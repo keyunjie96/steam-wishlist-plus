@@ -7,8 +7,9 @@
 
 import type { Platform, PlatformStatus, CacheEntry, PlatformData } from './types';
 
-// Use globalThis for StoreUrls (set by types.ts at runtime)
+// Use globalThis for shared values (set by types.ts at runtime)
 const StoreUrls = globalThis.SCPW_StoreUrls;
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
 
 const CACHE_DEBUG = false; // Set to true to enable manual test overrides
 const CACHE_KEY_PREFIX = 'xcpw_cache_';
@@ -57,10 +58,15 @@ function getCacheKey(appid: string): string {
 }
 
 /**
- * Checks if a cache entry is still valid based on TTL
+ * Checks if a cache entry is still valid based on TTL and cache version.
+ * Entries with mismatched cache version are treated as stale (triggers background refresh).
  */
 function isCacheValid(entry: CacheEntry | null | undefined): boolean {
   if (!entry?.resolvedAt || !entry?.ttlDays) {
+    return false;
+  }
+  // Version mismatch means entry is stale (needs refresh after extension update)
+  if (entry.cacheVersion !== CACHE_VERSION) {
     return false;
   }
   const expiresAt = entry.resolvedAt + entry.ttlDays * MS_PER_DAY;
@@ -89,8 +95,17 @@ function createCacheEntry(appid: string, gameName: string): CacheEntry {
     source: override ? 'manual' : 'none',
     wikidataId: null,
     resolvedAt: Date.now(),
-    ttlDays: DEFAULT_TTL_DAYS
+    ttlDays: DEFAULT_TTL_DAYS,
+    cacheVersion: CACHE_VERSION
   };
+}
+
+/**
+ * Result from cache lookup with staleness information
+ */
+interface CacheResult {
+  entry: CacheEntry | null;
+  isStale: boolean;
 }
 
 /**
@@ -106,6 +121,25 @@ async function getFromCache(appid: string): Promise<CacheEntry | null> {
   }
 
   return null;
+}
+
+/**
+ * Retrieves cached data with staleness information.
+ * Returns stale entries (for stale-while-revalidate pattern) along with an isStale flag.
+ */
+async function getFromCacheWithStale(appid: string): Promise<CacheResult> {
+  const key = getCacheKey(appid);
+  const result = await chrome.storage.local.get(key);
+  const entry = result[key] as CacheEntry | undefined;
+
+  if (!entry) {
+    return { entry: null, isStale: false };
+  }
+
+  return {
+    entry,
+    isStale: !isCacheValid(entry)
+  };
 }
 
 /**
@@ -178,6 +212,7 @@ async function getCacheStats(): Promise<{ count: number; oldestEntry: number | n
 // Export for service worker
 globalThis.SCPW_Cache = {
   getFromCache,
+  getFromCacheWithStale,
   saveToCache,
   getOrCreatePlatformData,
   clearCache,
@@ -190,6 +225,7 @@ globalThis.SCPW_Cache = {
 // Also export for module imports in tests
 export {
   getFromCache,
+  getFromCacheWithStale,
   saveToCache,
   getOrCreatePlatformData,
   clearCache,
@@ -198,5 +234,8 @@ export {
   MANUAL_OVERRIDES,
   PLATFORMS,
   CACHE_KEY_PREFIX,
-  DEFAULT_TTL_DAYS
+  DEFAULT_TTL_DAYS,
+  CACHE_VERSION
 };
+
+export type { CacheResult };

@@ -23,6 +23,7 @@ describe('cache.js', () => {
     it('should export all required functions', () => {
       const Cache = globalThis.SCPW_Cache;
       expect(typeof Cache.getFromCache).toBe('function');
+      expect(typeof Cache.getFromCacheWithStale).toBe('function');
       expect(typeof Cache.saveToCache).toBe('function');
       expect(typeof Cache.getOrCreatePlatformData).toBe('function');
       expect(typeof Cache.clearCache).toBe('function');
@@ -62,7 +63,8 @@ describe('cache.js', () => {
       const Cache = globalThis.SCPW_Cache;
       const entry = {
         resolvedAt: Date.now(),
-        ttlDays: 7
+        ttlDays: 7,
+        cacheVersion: 1  // Must match CACHE_VERSION
       };
       expect(Cache.isCacheValid(entry)).toBe(true);
     });
@@ -71,7 +73,8 @@ describe('cache.js', () => {
       const Cache = globalThis.SCPW_Cache;
       const entry = {
         resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days ago
-        ttlDays: 7
+        ttlDays: 7,
+        cacheVersion: 1
       };
       expect(Cache.isCacheValid(entry)).toBe(false);
     });
@@ -80,9 +83,30 @@ describe('cache.js', () => {
       const Cache = globalThis.SCPW_Cache;
       const entry = {
         resolvedAt: Date.now() - (6 * 24 * 60 * 60 * 1000), // 6 days ago
-        ttlDays: 7
+        ttlDays: 7,
+        cacheVersion: 1
       };
       expect(Cache.isCacheValid(entry)).toBe(true);
+    });
+
+    it('should return false for entry with missing cacheVersion', () => {
+      const Cache = globalThis.SCPW_Cache;
+      const entry = {
+        resolvedAt: Date.now(),
+        ttlDays: 7
+        // No cacheVersion - simulates old cached data
+      };
+      expect(Cache.isCacheValid(entry)).toBe(false);
+    });
+
+    it('should return false for entry with mismatched cacheVersion', () => {
+      const Cache = globalThis.SCPW_Cache;
+      const entry = {
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: 999  // Wrong version
+      };
+      expect(Cache.isCacheValid(entry)).toBe(false);
     });
   });
 
@@ -100,6 +124,7 @@ describe('cache.js', () => {
         gameName: 'Test Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
+        cacheVersion: 1,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'https://example.com' },
           playstation: { status: 'unavailable', storeUrl: 'https://example.com' },
@@ -137,6 +162,70 @@ describe('cache.js', () => {
     });
   });
 
+  describe('getFromCacheWithStale', () => {
+    it('should return entry with isStale false for valid entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+      const entry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: 1,
+        platforms: {}
+      };
+
+      setMockStorageData({ 'xcpw_cache_12345': entry });
+
+      const result = await Cache.getFromCacheWithStale('12345');
+      expect(result.entry).toEqual(entry);
+      expect(result.isStale).toBe(false);
+    });
+
+    it('should return entry with isStale true for expired entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+      const expiredEntry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        resolvedAt: Date.now() - (10 * 24 * 60 * 60 * 1000), // 10 days ago
+        ttlDays: 7,
+        cacheVersion: 1,
+        platforms: {}
+      };
+
+      setMockStorageData({ 'xcpw_cache_12345': expiredEntry });
+
+      const result = await Cache.getFromCacheWithStale('12345');
+      expect(result.entry).toEqual(expiredEntry);
+      expect(result.isStale).toBe(true);
+    });
+
+    it('should return entry with isStale true for version mismatch', async () => {
+      const Cache = globalThis.SCPW_Cache;
+      const entry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        cacheVersion: 999, // Wrong version
+        platforms: {}
+      };
+
+      setMockStorageData({ 'xcpw_cache_12345': entry });
+
+      const result = await Cache.getFromCacheWithStale('12345');
+      expect(result.entry).toEqual(entry);
+      expect(result.isStale).toBe(true); // Version mismatch = stale
+    });
+
+    it('should return null entry with isStale false for non-existent entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+
+      const result = await Cache.getFromCacheWithStale('999999');
+      expect(result.entry).toBeNull();
+      expect(result.isStale).toBe(false);
+    });
+  });
+
   describe('saveToCache', () => {
     it('should save entry with correct key', async () => {
       const Cache = globalThis.SCPW_Cache;
@@ -162,6 +251,7 @@ describe('cache.js', () => {
         gameName: 'Another Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
+        cacheVersion: 1,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'url' },
           playstation: { status: 'available', storeUrl: 'url' },
@@ -184,6 +274,7 @@ describe('cache.js', () => {
         gameName: 'Cached Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
+        cacheVersion: 1,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'url' },
           playstation: { status: 'available', storeUrl: 'url' },
@@ -240,6 +331,7 @@ describe('cache.js', () => {
         gameName: 'Old Name',
         resolvedAt: Date.now(),
         ttlDays: 7,
+        cacheVersion: 1,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'old-url' },
           playstation: { status: 'available', storeUrl: 'old-url' },

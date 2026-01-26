@@ -1045,6 +1045,11 @@ describe('content.js', () => {
       const { removeLoadingState, createIconsContainer } = globalThis.SCPW_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
+      // Manually add loader (simulating cold start)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
+
       // Verify loader exists
       expect(container.querySelector('.scpw-loader')).toBeTruthy();
 
@@ -1075,9 +1080,13 @@ describe('content.js', () => {
     it('should dynamically add available icons (UX-1 refactor)', () => {
       const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
+      // Manually add loader (simulating cold start)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
       document.body.appendChild(container);
 
-      // Initially only has loader, no icons
+      // Initially has loader, no icons
       expect(container.querySelector('.scpw-loader')).toBeTruthy();
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
 
@@ -1158,7 +1167,9 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons are available', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer, setUserSettings, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      // Disable HLTB to test pure platform icon behavior
+      setUserSettings({ showHltb: false });
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1174,6 +1185,9 @@ describe('content.js', () => {
 
       expect(container.querySelector('.scpw-separator')).toBeNull();
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
+
+      // Restore HLTB setting
+      setUserSettings({ showHltb: true });
     });
 
     it('should add separator when at least one icon is available', () => {
@@ -1556,7 +1570,7 @@ describe('content.js', () => {
   });
 
   describe('createIconsContainer (exported function)', () => {
-    it('should create container with loader instead of platform icons (UX-1 fix)', () => {
+    it('should create empty container without loader (loader added only on cold start)', () => {
       const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
@@ -1564,21 +1578,27 @@ describe('content.js', () => {
       expect(container.classList.contains('scpw-platforms')).toBe(true);
       expect(container.getAttribute('data-appid')).toBe('12345');
       expect(container.getAttribute('data-game-name')).toBe('Test Game');
-      // Should have loader instead of 4 platform icons
-      expect(container.querySelector('.scpw-loader')).toBeTruthy();
+      // Should NOT have loader (added only when network call needed)
+      expect(container.querySelector('.scpw-loader')).toBeNull();
       // Should NOT have platform icons initially
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
       // Should NOT have separator initially (added when icons are populated)
       expect(container.querySelector('.scpw-separator')).toBeNull();
     });
 
-    it('should have aria-hidden on loader for accessibility', () => {
+    it('should allow loader to be added manually for cold start', () => {
       const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
-      const loader = container.querySelector('.scpw-loader');
 
-      expect(loader.getAttribute('aria-hidden')).toBe('true');
+      // Manually add loader (simulating cold start behavior)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      loader.setAttribute('aria-hidden', 'true');
+      container.appendChild(loader);
+
+      expect(container.querySelector('.scpw-loader')).toBeTruthy();
+      expect(container.querySelector('.scpw-loader').getAttribute('aria-hidden')).toBe('true');
     });
   });
 
@@ -1749,7 +1769,12 @@ describe('content.js', () => {
       const { createIconsContainer, updateIconsWithData } = globalThis.SCPW_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
-      // Verify loader exists initially
+      // Manually add loader (simulating cold start)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
+
+      // Verify loader exists
       expect(container.querySelector('.scpw-loader')).toBeTruthy();
 
       const data = {
@@ -1775,7 +1800,9 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons available', () => {
-      const { createIconsContainer, updateIconsWithData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      // Disable HLTB to test pure platform icon behavior
+      setUserSettings({ showHltb: false });
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1789,9 +1816,12 @@ describe('content.js', () => {
 
       updateIconsWithData(container, data);
 
-      // No separator when no visible icons
+      // No separator when no visible icons (and HLTB disabled)
       expect(container.querySelector('.scpw-separator')).toBeNull();
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
+
+      // Restore HLTB setting
+      setUserSettings({ showHltb: true });
     });
 
     it('should use data-game-name attribute as fallback', () => {
@@ -1913,6 +1943,232 @@ describe('content.js', () => {
       cleanupAllIcons();
 
       expect(document.querySelectorAll('[data-scpw-icons]').length).toBe(0);
+    });
+  });
+
+  describe('lightCleanup (preserves icons on URL change)', () => {
+    beforeEach(() => {
+      // Clear any existing state
+      const { injectedAppIds, processedAppIds, pendingItems, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+      injectedAppIds.clear();
+      processedAppIds.clear();
+      pendingItems.clear();
+      getPendingHltbItems().clear();
+    });
+
+    it('should preserve resolved icon containers in DOM (not pending)', () => {
+      const { lightCleanup, createIconsContainer, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Create and attach some icon containers (simulating resolved state - not in pendingItems)
+      const c1 = createIconsContainer('111', 'Game 1');
+      const c2 = createIconsContainer('222', 'Game 2');
+      document.body.appendChild(c1);
+      document.body.appendChild(c2);
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
+
+      // These are NOT in pendingItems - they're resolved
+      expect(pendingItems.size).toBe(0);
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+
+      lightCleanup();
+
+      // Resolved icons should still be in DOM (NOT removed like cleanupAllIcons)
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+      // And still tracked in injectedAppIds
+      expect(injectedAppIds.has('111')).toBe(true);
+      expect(injectedAppIds.has('222')).toBe(true);
+    });
+
+    it('should preserve injectedAppIds tracking set', () => {
+      const { lightCleanup, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some tracked appids
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
+      expect(injectedAppIds.size).toBe(2);
+
+      lightCleanup();
+
+      // Should NOT be cleared
+      expect(injectedAppIds.size).toBe(2);
+      expect(injectedAppIds.has('111')).toBe(true);
+      expect(injectedAppIds.has('222')).toBe(true);
+    });
+
+    it('should preserve processedAppIds tracking set', () => {
+      const { lightCleanup, processedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Simulate some tracked appids
+      processedAppIds.add('111');
+      processedAppIds.add('222');
+      expect(processedAppIds.size).toBe(2);
+
+      lightCleanup();
+
+      // Should NOT be cleared
+      expect(processedAppIds.size).toBe(2);
+    });
+
+    it('should remove containers for pending items and clear from injectedAppIds', () => {
+      const { lightCleanup, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+
+      // Create containers and add to DOM
+      const c1 = document.createElement('span');
+      c1.className = 'scpw-platforms';
+      c1.setAttribute('data-appid', '111');
+      document.body.appendChild(c1);
+
+      const c2 = document.createElement('span');
+      c2.className = 'scpw-platforms';
+      c2.setAttribute('data-appid', '222');
+      document.body.appendChild(c2);
+
+      // Simulate pending items with containers attached to DOM
+      pendingItems.set('111', { gameName: 'Game 1', container: c1 });
+      pendingItems.set('222', { gameName: 'Game 2', container: c2 });
+      injectedAppIds.add('111');
+      injectedAppIds.add('222');
+
+      expect(pendingItems.size).toBe(2);
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+
+      lightCleanup();
+
+      // Pending items SHOULD be cleared
+      expect(pendingItems.size).toBe(0);
+      // Containers for pending items SHOULD be removed from DOM
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(0);
+      // AppIds SHOULD be removed from injectedAppIds so they can be reprocessed
+      expect(injectedAppIds.has('111')).toBe(false);
+      expect(injectedAppIds.has('222')).toBe(false);
+    });
+
+    it('should clear pendingHltbItems map and remove HLTB loaders', () => {
+      const { lightCleanup, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+
+      // Create containers with HLTB loaders
+      const c1 = document.createElement('span');
+      c1.className = 'scpw-platforms';
+      const loader1 = document.createElement('span');
+      loader1.className = 'scpw-hltb-loader';
+      c1.appendChild(loader1);
+      document.body.appendChild(c1);
+
+      const c2 = document.createElement('span');
+      c2.className = 'scpw-platforms';
+      const loader2 = document.createElement('span');
+      loader2.className = 'scpw-hltb-loader';
+      c2.appendChild(loader2);
+      document.body.appendChild(c2);
+
+      // Simulate pending HLTB items
+      getPendingHltbItems().set('111', { gameName: 'Game 1', container: c1 });
+      getPendingHltbItems().set('222', { gameName: 'Game 2', container: c2 });
+      expect(getPendingHltbItems().size).toBe(2);
+      expect(document.querySelectorAll('.scpw-hltb-loader').length).toBe(2);
+
+      lightCleanup();
+
+      // Pending HLTB items SHOULD be cleared
+      expect(getPendingHltbItems().size).toBe(0);
+      // HLTB loaders SHOULD be removed (containers kept for platform icons)
+      expect(document.querySelectorAll('.scpw-hltb-loader').length).toBe(0);
+      // Containers SHOULD still exist (platform icons may be resolved)
+      expect(document.querySelectorAll('.scpw-platforms').length).toBe(2);
+    });
+
+    it('should clear batch debounce timer when set', () => {
+      const { lightCleanup, setBatchDebounceTimer, getBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setBatchDebounceTimer(fakeTimerId);
+
+      expect(getBatchDebounceTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getBatchDebounceTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should clear HLTB batch debounce timer when set', () => {
+      const { lightCleanup, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setHltbBatchDebounceTimer(fakeTimerId);
+
+      expect(getHltbBatchDebounceTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should clear steamDeckRefreshTimer when set', () => {
+      const { lightCleanup, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setSteamDeckRefreshTimer(fakeTimerId);
+
+      expect(getSteamDeckRefreshTimer()).toBe(fakeTimerId);
+
+      lightCleanup();
+
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+      clearTimeout(fakeTimerId); // Clean up
+    });
+
+    it('should reset steamDeckRefreshAttempts to zero', () => {
+      const { lightCleanup, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts } = globalThis.SCPW_ContentTestExports;
+
+      setSteamDeckRefreshAttempts(3);
+      expect(getSteamDeckRefreshAttempts()).toBe(3);
+
+      lightCleanup();
+
+      expect(getSteamDeckRefreshAttempts()).toBe(0);
+    });
+
+    it('should handle null timers gracefully (false branches)', () => {
+      const { lightCleanup, getBatchDebounceTimer, getHltbBatchDebounceTimer, getSteamDeckRefreshTimer, setBatchDebounceTimer, setHltbBatchDebounceTimer, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Ensure all timers are null
+      setBatchDebounceTimer(null);
+      setHltbBatchDebounceTimer(null);
+      setSteamDeckRefreshTimer(null);
+
+      expect(getBatchDebounceTimer()).toBeNull();
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+
+      // Should not throw when timers are null
+      expect(() => lightCleanup()).not.toThrow();
+
+      // Still should be null after cleanup
+      expect(getBatchDebounceTimer()).toBeNull();
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+      expect(getSteamDeckRefreshTimer()).toBeNull();
+    });
+
+    it('should preserve data-scpw-processed attributes', () => {
+      const { lightCleanup } = globalThis.SCPW_ContentTestExports;
+
+      // Create elements with processed attribute
+      const el1 = document.createElement('div');
+      el1.setAttribute('data-scpw-processed', 'true');
+      document.body.appendChild(el1);
+
+      expect(document.querySelectorAll('[data-scpw-processed]').length).toBe(1);
+
+      lightCleanup();
+
+      // Should NOT be removed
+      expect(document.querySelectorAll('[data-scpw-processed]').length).toBe(1);
     });
   });
 
@@ -2080,6 +2336,34 @@ describe('content.js', () => {
       cleanupAllIcons();
 
       expect(getBatchDebounceTimer()).toBeNull();
+    });
+
+    it('should clear HLTB batch debounce timer on cleanup', () => {
+      const { cleanupAllIcons, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setHltbBatchDebounceTimer(fakeTimerId);
+
+      expect(getHltbBatchDebounceTimer()).toBe(fakeTimerId);
+
+      cleanupAllIcons();
+
+      expect(getHltbBatchDebounceTimer()).toBeNull();
+    });
+
+    it('should clear steamDeckRefreshTimer on cleanup', () => {
+      const { cleanupAllIcons, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+
+      // Set up a fake timer
+      const fakeTimerId = setTimeout(() => {}, 1000);
+      setSteamDeckRefreshTimer(fakeTimerId);
+
+      expect(getSteamDeckRefreshTimer()).toBe(fakeTimerId);
+
+      cleanupAllIcons();
+
+      expect(getSteamDeckRefreshTimer()).toBeNull();
     });
   });
 
@@ -2446,6 +2730,34 @@ describe('content.js', () => {
 
       // Should fall back to mainStory (first available)
       expect(badge.textContent).toBe('25h');
+    });
+  });
+
+  describe('createHltbLoader', () => {
+    it('should create a span element with scpw-hltb-loader class', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.tagName.toLowerCase()).toBe('span');
+      expect(loader.classList.contains('scpw-hltb-loader')).toBe(true);
+    });
+
+    it('should have loading text content', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.textContent).toBe('···');
+    });
+
+    it('should have appropriate title and aria-label', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.getAttribute('title')).toBe('Loading completion time...');
+      expect(loader.getAttribute('aria-label')).toBe('Loading completion time');
     });
   });
 
@@ -2943,6 +3255,11 @@ describe('content.js', () => {
       // Create a container but don't add to DOM
       const container = createIconsContainer('12345', 'Test Game');
 
+      // Manually add loader (simulating cold start)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
+
       // Add entry to cache
       const cacheEntry = {
         appid: '12345',
@@ -2959,7 +3276,7 @@ describe('content.js', () => {
       // Should not throw
       refreshIconsFromCache('test');
 
-      // Container should still just have loader
+      // Container should still have loader (not in DOM, so not updated)
       expect(container.querySelector('.scpw-loader')).toBeTruthy();
     });
   });
@@ -3066,8 +3383,11 @@ describe('content.js', () => {
         setUserSettings
       } = globalThis.SCPW_ContentTestExports;
 
-      // Create a container with loader
+      // Create a container and add loader (simulating cold start)
       const container = createIconsContainer('12345', 'Test Game');
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
       document.body.appendChild(container);
 
       // Verify loader exists
@@ -3578,6 +3898,10 @@ describe('content.js', () => {
       const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
 
       const container = createIconsContainer('77777', 'No Data Game');
+      // Manually add loader (simulating cold start)
+      const loader = document.createElement('span');
+      loader.className = 'scpw-loader';
+      container.appendChild(loader);
       document.body.appendChild(container);
 
       // Verify loader exists
