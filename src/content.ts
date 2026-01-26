@@ -1396,6 +1396,13 @@ async function processItem(item: Element): Promise<void> {
   // First check in-memory cache (fast), then persistent storage
   let cachedEntry = cachedEntriesByAppId.get(appId);
 
+  // Restore HLTB data from in-memory cache if needed
+  // (hltbDataByAppId may have been cleared on URL change while cachedEntriesByAppId wasn't)
+  if (cachedEntry?.hltbData && !hltbDataByAppId.has(appId)) {
+    const hltbValue = cachedEntry.hltbData.hltbId === -1 ? null : cachedEntry.hltbData;
+    hltbDataByAppId.set(appId, hltbValue);
+  }
+
   // If not in memory, check chrome.storage.local before showing loader
   if (!cachedEntry) {
     const storageKey = `xcpw_cache_${appId}`;
