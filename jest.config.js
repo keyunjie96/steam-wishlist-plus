@@ -20,14 +20,44 @@ module.exports = {
     '!coverage/**'
   ],
 
-  // Coverage thresholds (unified for all files)
+  // Coverage thresholds (per plan in glimmering-wondering-metcalfe.md)
   coverageThreshold: {
     global: {
-      statements: 80,
-      branches: 75,
-      functions: 85,
-      lines: 80
-    }
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
+    './dist/content.js': {
+      statements: 95,
+      branches: 85,
+      functions: 95,
+      lines: 95
+    },
+    './dist/background.js': {
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
+    './dist/resolver.js': {
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
+    './dist/wikidataClient.js': {
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
+    './dist/hltbClient.js': {
+      statements: 95,
+      branches: 90,
+      functions: 95,
+      lines: 95
+    },
   },
 
   // Coverage reporters

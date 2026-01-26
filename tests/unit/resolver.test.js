@@ -665,4 +665,128 @@ describe('resolver.js', () => {
       expect(mockWikidataClient.queryBySteamAppId).not.toHaveBeenCalled();
     });
   });
+
+  describe('backgroundRefreshPlatformData edge cases', () => {
+    it('should skip entries with source=manual during refresh', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry
+      const staleEntry = {
+        appid: '99999',
+        gameName: 'Manual Game',
+        platforms: {},
+        source: 'manual', // This is a manual override
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale.mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      }).mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      });
+
+      const wikidataResults = new Map();
+      wikidataResults.set('99999', { found: true, gameName: 'Manual Game', platforms: {} });
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(wikidataResults);
+
+      const games = [{ appid: '99999', gameName: 'Manual Game' }];
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data
+      expect(results.size).toBe(1);
+      expect(results.get('99999').isStale).toBe(true);
+
+      // Wait for background refresh
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // saveToCache should NOT be called because source is 'manual'
+      // The entry should be skipped in the refresh
+    });
+
+    it('should preserve existing hltbData during background refresh', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry with hltbData
+      const staleEntry = {
+        appid: '88888',
+        gameName: 'HLTB Game',
+        platforms: {},
+        source: 'wikidata',
+        hltbData: { hltbId: 123, mainStory: 20 },
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      // First call returns stale entry, subsequent calls for refresh also return it
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true })
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true });
+
+      const wikidataResults = new Map();
+      wikidataResults.set('88888', {
+        found: true,
+        gameName: 'HLTB Game',
+        platforms: { nintendo: true, playstation: false, xbox: false, steamdeck: false },
+        storeIds: {}
+      });
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(wikidataResults);
+
+      const games = [{ appid: '88888', gameName: 'HLTB Game' }];
+      await Resolver.batchResolvePlatformData(games);
+
+      // Wait for background refresh
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Verify saveToCache was called
+      if (mockCache.saveToCache.mock.calls.length > 0) {
+        const savedEntry = mockCache.saveToCache.mock.calls[mockCache.saveToCache.mock.calls.length - 1][0];
+        // The hltbData should be preserved in the new entry
+        expect(savedEntry.hltbData).toEqual({ hltbId: 123, mainStory: 20 });
+      }
+    });
+
+    it('should handle errors during background refresh gracefully', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      // Set up stale cache entry
+      const staleEntry = {
+        appid: '77777',
+        gameName: 'Error Game',
+        platforms: {},
+        source: 'wikidata',
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale.mockResolvedValueOnce({
+        entry: staleEntry,
+        isStale: true
+      });
+
+      // Make Wikidata fail
+      mockWikidataClient.batchQueryBySteamAppIds.mockRejectedValueOnce(new Error('Network error'));
+
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const games = [{ appid: '77777', gameName: 'Error Game' }];
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data immediately
+      expect(results.size).toBe(1);
+
+      // Wait for background refresh to complete (and fail)
+      await new Promise(resolve => setTimeout(resolve, 20));
+
+      // Should have logged the error
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Background refresh failed'),
+        expect.any(String)
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
 });

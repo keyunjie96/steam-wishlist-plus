@@ -159,6 +159,23 @@ const syncStorageMock = {
 };
 
 /**
+ * Mock chrome.declarativeNetRequest API
+ */
+const declarativeNetRequestMock = {
+  getDynamicRules: jest.fn(() => Promise.resolve([])),
+  updateDynamicRules: jest.fn(() => Promise.resolve()),
+  RuleActionType: {
+    MODIFY_HEADERS: 'modifyHeaders'
+  },
+  HeaderOperation: {
+    SET: 'set'
+  },
+  ResourceType: {
+    XMLHTTPREQUEST: 'xmlhttprequest'
+  }
+};
+
+/**
  * Full chrome mock object
  */
 const chromeMock = {
@@ -166,7 +183,8 @@ const chromeMock = {
     local: storageMock,
     sync: syncStorageMock
   },
-  runtime: runtimeMock
+  runtime: runtimeMock,
+  declarativeNetRequest: declarativeNetRequestMock
 };
 
 /**
@@ -213,6 +231,7 @@ module.exports = {
   storageMock,
   syncStorageMock,
   runtimeMock,
+  declarativeNetRequestMock,
   clearMockStorage,
   setMockStorageData,
   getMockStorageData

@@ -65,6 +65,50 @@ describe('hltbClient.js', () => {
     });
   });
 
+  describe('registerHeaderRules', () => {
+    it('should remove existing rules before adding new ones', async () => {
+      // Mock getDynamicRules to return existing rules
+      chrome.declarativeNetRequest.getDynamicRules.mockResolvedValueOnce([
+        { id: 1 },
+        { id: 2 }
+      ]);
+
+      // Reset rulesRegistered flag by reloading module
+      jest.resetModules();
+      require('../../dist/hltbClient.js');
+      const freshClient = globalThis.SCPW_HltbClient;
+
+      await freshClient.registerHeaderRules();
+
+      // Should have called updateDynamicRules to remove existing rules
+      expect(chrome.declarativeNetRequest.updateDynamicRules).toHaveBeenCalledWith({
+        removeRuleIds: [1, 2]
+      });
+    });
+
+    it('should handle errors gracefully when registering rules', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Mock to throw an error
+      chrome.declarativeNetRequest.getDynamicRules.mockRejectedValueOnce(new Error('API error'));
+
+      // Reset rulesRegistered flag by reloading module
+      jest.resetModules();
+      require('../../dist/hltbClient.js');
+      const freshClient = globalThis.SCPW_HltbClient;
+
+      // Should not throw, just log error
+      await freshClient.registerHeaderRules();
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[SCPW HLTB]'),
+        expect.stringContaining('API error')
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('formatHours', () => {
     it('should return empty string for 0', () => {
       expect(HltbClient.formatHours(0)).toBe('');
@@ -290,6 +334,19 @@ describe('hltbClient.js', () => {
 
     it('should return null when auth token response has no token field', async () => {
       global.fetch = createHltbFetchMock({ data: [] }, { tokenResponse: {} });
+
+      const result = await HltbClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    });
+
+    it('should return null when auth token fetch throws error', async () => {
+      global.fetch = jest.fn().mockImplementation((url) => {
+        if (url.includes('/api/search/init')) {
+          return Promise.reject(new Error('Network failure'));
+        }
+        // Should not reach search endpoint
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ data: [] }) });
+      });
 
       const result = await HltbClient.queryByGameName('Test Game');
       expect(result).toBeNull();
