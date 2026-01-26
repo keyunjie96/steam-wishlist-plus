@@ -94,6 +94,14 @@ function createCacheEntry(appid: string, gameName: string): CacheEntry {
 }
 
 /**
+ * Result from cache lookup with staleness information
+ */
+interface CacheResult {
+  entry: CacheEntry | null;
+  isStale: boolean;
+}
+
+/**
  * Retrieves cached data for a given appid
  */
 async function getFromCache(appid: string): Promise<CacheEntry | null> {
@@ -106,6 +114,25 @@ async function getFromCache(appid: string): Promise<CacheEntry | null> {
   }
 
   return null;
+}
+
+/**
+ * Retrieves cached data with staleness information.
+ * Returns stale entries (for stale-while-revalidate pattern) along with an isStale flag.
+ */
+async function getFromCacheWithStale(appid: string): Promise<CacheResult> {
+  const key = getCacheKey(appid);
+  const result = await chrome.storage.local.get(key);
+  const entry = result[key] as CacheEntry | undefined;
+
+  if (!entry) {
+    return { entry: null, isStale: false };
+  }
+
+  return {
+    entry,
+    isStale: !isCacheValid(entry)
+  };
 }
 
 /**
@@ -178,6 +205,7 @@ async function getCacheStats(): Promise<{ count: number; oldestEntry: number | n
 // Export for service worker
 globalThis.SCPW_Cache = {
   getFromCache,
+  getFromCacheWithStale,
   saveToCache,
   getOrCreatePlatformData,
   clearCache,
@@ -190,6 +218,7 @@ globalThis.SCPW_Cache = {
 // Also export for module imports in tests
 export {
   getFromCache,
+  getFromCacheWithStale,
   saveToCache,
   getOrCreatePlatformData,
   clearCache,
@@ -200,3 +229,5 @@ export {
   CACHE_KEY_PREFIX,
   DEFAULT_TTL_DAYS
 };
+
+export type { CacheResult };

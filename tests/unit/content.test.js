@@ -1158,7 +1158,9 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons are available', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer, setUserSettings, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      // Disable HLTB to test pure platform icon behavior
+      setUserSettings({ showHltb: false });
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1174,6 +1176,9 @@ describe('content.js', () => {
 
       expect(container.querySelector('.scpw-separator')).toBeNull();
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
+
+      // Restore HLTB setting
+      setUserSettings({ showHltb: true });
     });
 
     it('should add separator when at least one icon is available', () => {
@@ -1775,7 +1780,9 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons available', () => {
-      const { createIconsContainer, updateIconsWithData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      // Disable HLTB to test pure platform icon behavior
+      setUserSettings({ showHltb: false });
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1789,9 +1796,12 @@ describe('content.js', () => {
 
       updateIconsWithData(container, data);
 
-      // No separator when no visible icons
+      // No separator when no visible icons (and HLTB disabled)
       expect(container.querySelector('.scpw-separator')).toBeNull();
       expect(container.querySelectorAll('[data-platform]').length).toBe(0);
+
+      // Restore HLTB setting
+      setUserSettings({ showHltb: true });
     });
 
     it('should use data-game-name attribute as fallback', () => {
@@ -2446,6 +2456,34 @@ describe('content.js', () => {
 
       // Should fall back to mainStory (first available)
       expect(badge.textContent).toBe('25h');
+    });
+  });
+
+  describe('createHltbLoader', () => {
+    it('should create a span element with scpw-hltb-loader class', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.tagName.toLowerCase()).toBe('span');
+      expect(loader.classList.contains('scpw-hltb-loader')).toBe(true);
+    });
+
+    it('should have loading text content', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.textContent).toBe('···');
+    });
+
+    it('should have appropriate title and aria-label', () => {
+      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+
+      const loader = createHltbLoader();
+
+      expect(loader.getAttribute('title')).toBe('Loading completion time...');
+      expect(loader.getAttribute('aria-label')).toBe('Loading completion time');
     });
   });
 

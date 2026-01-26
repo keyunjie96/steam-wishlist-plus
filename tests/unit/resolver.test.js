@@ -30,6 +30,7 @@ describe('resolver.js', () => {
     // Create mock Cache
     mockCache = {
       getFromCache: jest.fn().mockResolvedValue(null),
+      getFromCacheWithStale: jest.fn().mockResolvedValue({ entry: null, isStale: false }),
       saveToCache: jest.fn().mockResolvedValue(undefined),
       MANUAL_OVERRIDES: {
         '367520': { // Hollow Knight
@@ -428,9 +429,9 @@ describe('resolver.js', () => {
         ttlDays: 7
       };
 
-      mockCache.getFromCache
-        .mockResolvedValueOnce(cachedEntry)
-        .mockResolvedValueOnce(null);
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: cachedEntry, isStale: false })
+        .mockResolvedValueOnce({ entry: null, isStale: false });
 
       const games = [
         { appid: '11111', gameName: 'Cached Game' },
@@ -463,9 +464,9 @@ describe('resolver.js', () => {
       const cachedEntry1 = { appid: '11111', gameName: 'Game 1', platforms: {}, source: 'cache', resolvedAt: Date.now(), ttlDays: 7 };
       const cachedEntry2 = { appid: '22222', gameName: 'Game 2', platforms: {}, source: 'cache', resolvedAt: Date.now(), ttlDays: 7 };
 
-      mockCache.getFromCache
-        .mockResolvedValueOnce(cachedEntry1)
-        .mockResolvedValueOnce(cachedEntry2);
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: cachedEntry1, isStale: false })
+        .mockResolvedValueOnce({ entry: cachedEntry2, isStale: false });
 
       const games = [
         { appid: '11111', gameName: 'Game 1' },
@@ -525,6 +526,52 @@ describe('resolver.js', () => {
       const results = await Resolver.batchResolvePlatformData([]);
 
       expect(results.size).toBe(0);
+    });
+
+    it('should return stale data immediately and trigger background refresh', async () => {
+      const Resolver = globalThis.SCPW_Resolver;
+
+      const staleEntry = {
+        appid: '11111',
+        gameName: 'Stale Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'url' },
+          playstation: { status: 'available', storeUrl: 'url' },
+          xbox: { status: 'available', storeUrl: 'url' }
+        },
+        source: 'wikidata',
+        resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days old (stale)
+        ttlDays: 7
+      };
+
+      mockCache.getFromCacheWithStale
+        .mockResolvedValueOnce({ entry: staleEntry, isStale: true });
+
+      // Mock for background refresh
+      const wikidataResults = new Map();
+      wikidataResults.set('11111', {
+        found: true,
+        wikidataId: 'Q11111',
+        gameName: 'Stale Game',
+        platforms: { nintendo: true, playstation: true, xbox: true, steamdeck: false },
+        storeIds: {}
+      });
+      mockWikidataClient.batchQueryBySteamAppIds.mockResolvedValueOnce(wikidataResults);
+
+      const games = [{ appid: '11111', gameName: 'Stale Game' }];
+
+      const results = await Resolver.batchResolvePlatformData(games);
+
+      // Should return stale data immediately
+      expect(results.size).toBe(1);
+      expect(results.get('11111').fromCache).toBe(true);
+      expect(results.get('11111').isStale).toBe(true);
+
+      // Background refresh is fire-and-forget, wait a tick for it to trigger
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // Should have triggered background refresh (Wikidata query for stale entry)
+      expect(mockWikidataClient.batchQueryBySteamAppIds).toHaveBeenCalledWith(['11111']);
     });
   });
 

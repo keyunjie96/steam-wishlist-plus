@@ -699,6 +699,19 @@ function createHltbBadge(hltbData: HltbData): HTMLElement {
 }
 
 /**
+ * Creates an HLTB loading indicator element.
+ * Shown while HLTB data is being fetched.
+ */
+function createHltbLoader(): HTMLElement {
+  const loader = document.createElement('span');
+  loader.className = 'scpw-hltb-loader';
+  loader.textContent = '···';
+  loader.setAttribute('title', 'Loading completion time...');
+  loader.setAttribute('aria-label', 'Loading completion time');
+  return loader;
+}
+
+/**
  * Updates the icons container with platform data from cache.
  * Dynamically adds icons for available platforms (none exist initially).
  * Steam Deck icons are fetched separately from Steam's store pages.
@@ -713,7 +726,7 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
   const iconsToAdd: HTMLElement[] = [];
 
   // Reset previous icons to keep updates idempotent
-  container.querySelectorAll('.scpw-platform-icon, .scpw-separator, .scpw-hltb-badge').forEach(el => el.remove());
+  container.querySelectorAll('.scpw-platform-icon, .scpw-separator, .scpw-hltb-badge, .scpw-hltb-loader').forEach(el => el.remove());
 
   // Get Steam Deck client if available
   const SteamDeck = globalThis.SCPW_SteamDeck;
@@ -764,11 +777,13 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
 
   // Get HLTB data if available
   const hltbData = appid ? hltbDataByAppId.get(appid) : null;
+  const hltbKnown = appid ? hltbDataByAppId.has(appid) : false;
   const hasHltbTime = hltbData && (hltbData.mainStory > 0 || hltbData.mainExtra > 0 || hltbData.completionist > 0);
   const showHltbBadge = userSettings.showHltb && hasHltbTime;
+  const showHltbLoader = userSettings.showHltb && !hltbKnown;
 
-  // Only add separator and icons if we have visible icons or HLTB badge
-  if (iconsToAdd.length > 0 || showHltbBadge) {
+  // Only add separator and icons if we have visible icons, HLTB badge, or HLTB loader
+  if (iconsToAdd.length > 0 || showHltbBadge || showHltbLoader) {
     const separator = document.createElement('span');
     separator.className = 'scpw-separator';
     container.appendChild(separator);
@@ -777,10 +792,12 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry): void {
       container.appendChild(icon);
     }
 
-    // Add HLTB badge after platform icons
+    // Add HLTB badge or loader after platform icons
     if (showHltbBadge && hltbData) {
       const hltbBadge = createHltbBadge(hltbData);
       container.appendChild(hltbBadge);
+    } else if (showHltbLoader) {
+      container.appendChild(createHltbLoader());
     }
   }
 }
@@ -1602,6 +1619,7 @@ if (typeof globalThis !== 'undefined') {
     // HLTB exports for coverage testing
     formatHltbTime,
     createHltbBadge,
+    createHltbLoader,
     queueForHltbResolution,
     processPendingHltbBatch,
     getHltbDataByAppId: () => hltbDataByAppId,

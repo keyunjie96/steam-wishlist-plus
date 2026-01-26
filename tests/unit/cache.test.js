@@ -23,6 +23,7 @@ describe('cache.js', () => {
     it('should export all required functions', () => {
       const Cache = globalThis.SCPW_Cache;
       expect(typeof Cache.getFromCache).toBe('function');
+      expect(typeof Cache.getFromCacheWithStale).toBe('function');
       expect(typeof Cache.saveToCache).toBe('function');
       expect(typeof Cache.getOrCreatePlatformData).toBe('function');
       expect(typeof Cache.clearCache).toBe('function');
@@ -134,6 +135,50 @@ describe('cache.js', () => {
       await Cache.getFromCache('67890');
 
       expect(chrome.storage.local.get).toHaveBeenCalledWith('xcpw_cache_67890');
+    });
+  });
+
+  describe('getFromCacheWithStale', () => {
+    it('should return entry with isStale false for valid entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+      const entry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        platforms: {}
+      };
+
+      setMockStorageData({ 'xcpw_cache_12345': entry });
+
+      const result = await Cache.getFromCacheWithStale('12345');
+      expect(result.entry).toEqual(entry);
+      expect(result.isStale).toBe(false);
+    });
+
+    it('should return entry with isStale true for expired entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+      const expiredEntry = {
+        appid: '12345',
+        gameName: 'Test Game',
+        resolvedAt: Date.now() - (10 * 24 * 60 * 60 * 1000), // 10 days ago
+        ttlDays: 7,
+        platforms: {}
+      };
+
+      setMockStorageData({ 'xcpw_cache_12345': expiredEntry });
+
+      const result = await Cache.getFromCacheWithStale('12345');
+      expect(result.entry).toEqual(expiredEntry);
+      expect(result.isStale).toBe(true);
+    });
+
+    it('should return null entry with isStale false for non-existent entry', async () => {
+      const Cache = globalThis.SCPW_Cache;
+
+      const result = await Cache.getFromCacheWithStale('999999');
+      expect(result.entry).toBeNull();
+      expect(result.isStale).toBe(false);
     });
   });
 
