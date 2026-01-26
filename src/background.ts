@@ -10,7 +10,7 @@
 // Import dependencies via importScripts (Chrome extension service workers)
 // TypeScript will handle the types through the global declarations
 declare function importScripts(...urls: string[]): void;
-importScripts('types.js', 'cache.js', 'wikidataClient.js', 'hltbClient.js', 'resolver.js');
+importScripts('types.js', 'cache.js', 'wikidataClient.js', 'hltbClient.js', 'reviewScoresClient.js', 'resolver.js');
 
 import type {
   ExtensionMessage,
@@ -24,13 +24,20 @@ import type {
   GetHltbDataRequest,
   GetHltbDataResponse,
   GetHltbDataBatchRequest,
-  GetHltbDataBatchResponse
+  GetHltbDataBatchResponse,
+  ReviewScoreData,
+  GetReviewScoresRequest,
+  GetReviewScoresResponse,
+  GetReviewScoresBatchRequest
 } from './types';
 
 const LOG_PREFIX = '[SCPW Background]';
 
 // Sentinel value for "searched HLTB but no match found" - prevents repeated searches
 const HLTB_NOT_FOUND_ID = -1;
+
+// Sentinel value for "searched review scores but no match found" - prevents repeated searches
+const REVIEW_SCORES_NOT_FOUND_ID = -1;
 
 /**
  * Creates a "not found" marker for HLTB data to prevent repeated searches.
@@ -46,15 +53,29 @@ function createHltbNotFoundMarker(): HltbData {
   };
 }
 
+/**
+ * Creates a "not found" marker for review scores to prevent repeated searches.
+ */
+function createReviewScoresNotFoundMarker(): ReviewScoreData {
+  return {
+    openCriticId: REVIEW_SCORES_NOT_FOUND_ID,
+    score: 0,
+    tier: 'Unknown',
+    numReviews: 0,
+    percentRecommended: 0
+  };
+}
+
 interface AsyncResponse {
   success: boolean;
-  data?: CacheEntry | HltbData | null;
+  data?: CacheEntry | HltbData | ReviewScoreData | null;
   fromCache?: boolean;
   error?: string;
   count?: number;
   oldestEntry?: number | null;
   results?: Record<string, { data: CacheEntry; fromCache: boolean }>;
   hltbResults?: Record<string, HltbData | null>;
+  reviewScoresResults?: Record<string, ReviewScoreData | null>;
 }
 
 /**
@@ -116,6 +137,14 @@ function handleMessage(
 
     case 'GET_HLTB_DATA_BATCH':
       handleAsync(() => getBatchHltbData(message as GetHltbDataBatchRequest), sendResponse, { success: false, hltbResults: {} });
+      return true;
+
+    case 'GET_REVIEW_SCORES':
+      handleAsync(() => getReviewScores(message as GetReviewScoresRequest), sendResponse, { success: false, data: null });
+      return true;
+
+    case 'GET_REVIEW_SCORES_BATCH':
+      handleAsync(() => getBatchReviewScores(message as GetReviewScoresBatchRequest), sendResponse, { success: false, reviewScoresResults: {} });
       return true;
 
     default:
@@ -367,6 +396,147 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
 
   console.log(`${LOG_PREFIX} HLTB batch complete: ${Object.keys(hltbResults).length} results`);
   return { success: true, hltbResults };
+}
+
+/**
+ * Gets review scores for a single game
+ */
+async function getReviewScores(message: GetReviewScoresRequest): Promise<GetReviewScoresResponse> {
+  const { appid, gameName } = message;
+
+  if (!appid || !gameName) {
+    return { success: false, data: null, error: 'Missing appid or gameName' };
+  }
+
+  if (!globalThis.SCPW_ReviewScoresClient) {
+    return { success: false, data: null, error: 'Review scores client not loaded' };
+  }
+
+  // Check if we have cached review score data first
+  const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+  const reviewScore = cached?.reviewScoreData;
+
+  // Check for "not found" marker - don't re-search
+  if (reviewScore && reviewScore.openCriticId === REVIEW_SCORES_NOT_FOUND_ID) {
+    console.log(`${LOG_PREFIX} Review scores cache hit (not found) for appid ${appid}`);
+    return { success: true, data: null };
+  }
+
+  // Check for valid cached data
+  if (reviewScore && reviewScore.openCriticId > 0 && reviewScore.score > 0) {
+    console.log(`${LOG_PREFIX} Review scores cache hit for appid ${appid} (openCriticId=${reviewScore.openCriticId})`);
+    return { success: true, data: reviewScore };
+  }
+
+  // Query OpenCritic
+  try {
+    console.log(`${LOG_PREFIX} Review scores querying for "${gameName}" (appid: ${appid})`);
+    const result = await globalThis.SCPW_ReviewScoresClient.queryByGameName(gameName);
+
+    if (result) {
+      // Update cache with review score data
+      if (cached) {
+        cached.reviewScoreData = result.data;
+        await globalThis.SCPW_Cache.saveToCache(cached);
+      }
+      console.log(`${LOG_PREFIX} Review scores resolved for appid ${appid}: ${result.data.score}`);
+      return { success: true, data: result.data };
+    }
+
+    // Save "not found" marker to cache to prevent repeated searches
+    if (cached) {
+      cached.reviewScoreData = createReviewScoresNotFoundMarker();
+      await globalThis.SCPW_Cache.saveToCache(cached);
+    }
+    console.log(`${LOG_PREFIX} Review scores no match for appid ${appid} (cached as not found)`);
+    return { success: true, data: null };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`${LOG_PREFIX} Review scores error for ${appid}:`, errorMessage);
+    return { success: false, data: null, error: errorMessage };
+  }
+}
+
+/**
+ * Gets review scores for multiple games in batch
+ */
+async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promise<AsyncResponse> {
+  const { games } = message;
+
+  if (!games || !Array.isArray(games) || games.length === 0) {
+    return { success: false, reviewScoresResults: {} };
+  }
+
+  if (!globalThis.SCPW_ReviewScoresClient) {
+    return { success: false, reviewScoresResults: {}, error: 'Review scores client not loaded' };
+  }
+
+  console.log(`${LOG_PREFIX} Review scores batch request for ${games.length} games`);
+
+  const reviewScoresResults: Record<string, ReviewScoreData | null> = {};
+  const uncached: Array<{ appid: string; gameName: string }> = [];
+
+  // Check cache first
+  for (const { appid, gameName } of games) {
+    const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+    const reviewScore = cached?.reviewScoreData;
+
+    // Check for "not found" marker - don't re-search, return null
+    if (reviewScore && reviewScore.openCriticId === REVIEW_SCORES_NOT_FOUND_ID) {
+      reviewScoresResults[appid] = null;
+      continue;
+    }
+
+    // Require valid openCriticId and score
+    const hasValidData = reviewScore && reviewScore.openCriticId > 0 && reviewScore.score > 0;
+    if (hasValidData) {
+      reviewScoresResults[appid] = reviewScore;
+    } else {
+      uncached.push({ appid, gameName });
+    }
+  }
+
+  // Query OpenCritic for uncached games
+  console.log(`${LOG_PREFIX} Review scores: ${games.length} total, ${games.length - uncached.length} cached, ${uncached.length} to query`);
+  if (uncached.length > 0) {
+    try {
+      const batchResults = await globalThis.SCPW_ReviewScoresClient.batchQueryByGameNames(uncached);
+      console.log(`${LOG_PREFIX} Review scores batch returned ${batchResults.size} results`);
+
+      for (const { appid } of uncached) {
+        const result = batchResults.get(appid);
+
+        // Update cache
+        const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+        if (result) {
+          reviewScoresResults[appid] = result.data;
+          if (cached) {
+            cached.reviewScoreData = result.data;
+            await globalThis.SCPW_Cache.saveToCache(cached);
+          }
+        } else {
+          // Save "not found" marker to prevent repeated searches
+          reviewScoresResults[appid] = null;
+          if (cached) {
+            cached.reviewScoreData = createReviewScoresNotFoundMarker();
+            await globalThis.SCPW_Cache.saveToCache(cached);
+          }
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`${LOG_PREFIX} Review scores batch error:`, errorMessage);
+      // Mark uncached as null
+      for (const { appid } of uncached) {
+        if (!(appid in reviewScoresResults)) {
+          reviewScoresResults[appid] = null;
+        }
+      }
+    }
+  }
+
+  console.log(`${LOG_PREFIX} Review scores batch complete: ${Object.keys(reviewScoresResults).length} results`);
+  return { success: true, reviewScoresResults };
 }
 
 chrome.runtime.onMessage.addListener(handleMessage);

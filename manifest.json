@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Steam Cross-Platform Wishlist",
-  "version": "0.6.3",
-  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox/Steam Deck) on Steam wishlist pages using Wikidata and Steam",
+  "version": "0.7.0",
+  "description": "Shows cross-platform availability (Switch/PlayStation/Xbox/Steam Deck) and review scores on Steam wishlist pages",
   "icons": {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
@@ -13,6 +13,7 @@
     "https://store.steampowered.com/*",
     "https://query.wikidata.org/*",
     "https://howlongtobeat.com/*",
+    "https://api.opencritic.com/*",
     "https://store.playstation.com/*",
     "https://www.nintendo.com/*",
     "https://www.xbox.com/*"

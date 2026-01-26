@@ -45,6 +45,7 @@ export interface UserSettings {
   showSteamDeck: boolean;
   showHltb: boolean;
   hltbDisplayStat: HltbDisplayStat;
+  showReviewScores: boolean;
 }
 
 /**
@@ -57,7 +58,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   showXbox: true,
   showSteamDeck: true,
   showHltb: true,
-  hltbDisplayStat: 'mainStory'
+  hltbDisplayStat: 'mainStory',
+  showReviewScores: true
 };
 
 /**
@@ -70,7 +72,8 @@ export const SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>> =
   showPlaystation: 'show-playstation',
   showXbox: 'show-xbox',
   showSteamDeck: 'show-steamdeck',
-  showHltb: 'show-hltb'
+  showHltb: 'show-hltb',
+  showReviewScores: 'show-review-scores'
 } as Partial<Record<keyof UserSettings, string>>;
 
 /**
@@ -95,6 +98,7 @@ export interface CacheEntry {
   source?: DataSource;
   wikidataId?: string | null;
   hltbData?: HltbData | null;  // Optional HLTB completion time data
+  reviewScoreData?: ReviewScoreData | null;  // Optional review score data
   resolvedAt: number;
   ttlDays: number;
   cacheVersion?: number;  // Cache schema version for invalidation on updates
@@ -164,6 +168,29 @@ export interface GetHltbDataBatchResponse {
   error?: string;
 }
 
+export interface GetReviewScoresRequest {
+  type: 'GET_REVIEW_SCORES';
+  appid: string;
+  gameName: string;
+}
+
+export interface GetReviewScoresBatchRequest {
+  type: 'GET_REVIEW_SCORES_BATCH';
+  games: Array<{ appid: string; gameName: string }>;
+}
+
+export interface GetReviewScoresResponse {
+  success: boolean;
+  data: ReviewScoreData | null;
+  error?: string;
+}
+
+export interface GetReviewScoresBatchResponse {
+  success: boolean;
+  results: Record<string, ReviewScoreData | null>;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | GetPlatformDataRequest
   | GetPlatformDataBatchRequest
@@ -171,7 +198,9 @@ export type ExtensionMessage =
   | GetCacheStatsRequest
   | ClearCacheRequest
   | GetHltbDataRequest
-  | GetHltbDataBatchRequest;
+  | GetHltbDataBatchRequest
+  | GetReviewScoresRequest
+  | GetReviewScoresBatchRequest;
 
 // Store URL builders
 export const StoreUrls = {
@@ -238,6 +267,14 @@ declare global {
       cleanGameNameForSearch: (name: string) => string;
       registerHeaderRules: () => Promise<void>;
     };
+    SCPW_ReviewScoresClient: {
+      queryByGameName: (gameName: string) => Promise<ReviewScoreSearchResult | null>;
+      batchQueryByGameNames: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, ReviewScoreSearchResult | null>>;
+      normalizeGameName: (name: string) => string;
+      calculateSimilarity: (a: string, b: string) => number;
+      formatScore: (score: number) => string;
+      getTierColor: (tier: ReviewScoreTier) => string;
+    };
     SCPW_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
       processPendingBatch: () => Promise<void>;
@@ -262,6 +299,7 @@ declare global {
       lightCleanup: () => void;
       injectedAppIds: Set<string>;
       processedAppIds: Set<string>;
+      processingAppIds: Set<string>;
       getBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
       getUrlChangeDebounceTimer: () => ReturnType<typeof setTimeout> | null;
       setBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
@@ -301,6 +339,21 @@ declare global {
       setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
       HLTB_BATCH_DEBOUNCE_MS: number;
       HLTB_MAX_BATCH_SIZE: number;
+      restoreHltbDataFromEntry: (appid: string, entry: CacheEntry) => void;
+      getRenderedIconSummary: (container: HTMLElement) => string;
+      // Review scores exports for coverage testing
+      getTierColor: (tier: ReviewScoreTier) => string;
+      createReviewScoreBadge: (reviewScoreData: ReviewScoreData) => HTMLElement;
+      createReviewScoreLoader: () => HTMLElement;
+      queueForReviewScoreResolution: (appid: string, gameName: string, container: HTMLElement) => void;
+      processPendingReviewScoreBatch: () => Promise<void>;
+      getReviewScoreDataByAppId: () => Map<string, ReviewScoreData | null>;
+      getPendingReviewScoreItems: () => Map<string, { gameName: string; container: HTMLElement }>;
+      getReviewScoreBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
+      setReviewScoreBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
+      REVIEW_SCORE_BATCH_DEBOUNCE_MS: number;
+      REVIEW_SCORE_MAX_BATCH_SIZE: number;
+      restoreReviewScoreDataFromEntry: (appid: string, entry: CacheEntry) => void;
     };
     SSR?: {
       renderContext?: {
@@ -329,6 +382,8 @@ declare global {
   var SCPW_SteamDeck: Window['SCPW_SteamDeck'];
   // eslint-disable-next-line no-var
   var SCPW_HltbClient: Window['SCPW_HltbClient'];
+  // eslint-disable-next-line no-var
+  var SCPW_ReviewScoresClient: Window['SCPW_ReviewScoresClient'];
   // eslint-disable-next-line no-var
   var SCPW_ContentTestExports: Window['SCPW_ContentTestExports'];
   // eslint-disable-next-line no-var
@@ -382,6 +437,24 @@ export interface HltbSearchResult {
   gameName: string;
   similarity: number;  // 0-1 match confidence
   data: HltbData;
+}
+
+// Review Scores types (OpenCritic)
+export interface ReviewScoreData {
+  openCriticId: number;     // OpenCritic game ID for linking
+  score: number;            // Top Critic Average score (0-100)
+  tier: ReviewScoreTier;    // Mighty, Strong, Fair, Weak
+  numReviews: number;       // Number of critic reviews
+  percentRecommended: number; // Percentage of critics recommending (0-100)
+}
+
+export type ReviewScoreTier = 'Mighty' | 'Strong' | 'Fair' | 'Weak' | 'Unknown';
+
+export interface ReviewScoreSearchResult {
+  openCriticId: number;
+  gameName: string;
+  similarity: number;  // 0-1 match confidence
+  data: ReviewScoreData;
 }
 
 // Export globally for content scripts (ES modules not fully supported in Chrome extensions)

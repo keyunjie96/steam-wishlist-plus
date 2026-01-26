@@ -1,0 +1,419 @@
+/**
+ * Tests for reviewScoresClient.js
+ */
+
+// Load the review scores client
+require('../../dist/reviewScoresClient.js');
+
+/**
+ * Creates a mock fetch for OpenCritic API
+ * @param {Object} options - Options for mock behavior
+ */
+function createOpenCriticFetchMock(options = {}) {
+  const {
+    searchResults = [],
+    gameDetails = null,
+    searchStatus = 200,
+    detailsStatus = 200
+  } = options;
+
+  // Mock headers object
+  const mockHeaders = {
+    get: () => 'application/json'
+  };
+
+  return jest.fn().mockImplementation((url) => {
+    // Search endpoint
+    if (url.includes('/api/game/search')) {
+      if (searchStatus !== 200) {
+        return Promise.resolve({ ok: false, status: searchStatus, headers: mockHeaders });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: mockHeaders,
+        json: () => Promise.resolve(searchResults)
+      });
+    }
+    // Game details endpoint
+    if (url.match(/\/api\/game\/\d+$/)) {
+      if (detailsStatus !== 200) {
+        return Promise.resolve({ ok: false, status: detailsStatus, headers: mockHeaders });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        headers: mockHeaders,
+        json: () => Promise.resolve(gameDetails)
+      });
+    }
+    // Unknown endpoint
+    return Promise.resolve({ ok: false, status: 404, headers: mockHeaders });
+  });
+}
+
+describe('reviewScoresClient.js', () => {
+  let ReviewScoresClient;
+  let originalFetch;
+
+  beforeAll(() => {
+    ReviewScoresClient = globalThis.SCPW_ReviewScoresClient;
+  });
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  describe('exports', () => {
+    it('should export SCPW_ReviewScoresClient to globalThis', () => {
+      expect(globalThis.SCPW_ReviewScoresClient).toBeDefined();
+    });
+
+    it('should export all required functions', () => {
+      expect(ReviewScoresClient.queryByGameName).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.batchQueryByGameNames).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.normalizeGameName).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.calculateSimilarity).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.formatScore).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.getTierColor).toBeInstanceOf(Function);
+    });
+  });
+
+  describe('formatScore', () => {
+    it.each([
+      [0, ''],
+      [-5, ''],
+      [null, ''],
+      [undefined, ''],
+      [85, '85'],
+      [92.4, '92'],
+      [77.9, '78'],
+      [100, '100'],
+      [50.5, '51']
+    ])('formatScore(%s) should return %s', (input, expected) => {
+      expect(ReviewScoresClient.formatScore(input)).toBe(expected);
+    });
+  });
+
+  describe('getTierColor', () => {
+    it('should return green for Mighty', () => {
+      expect(ReviewScoresClient.getTierColor('Mighty')).toBe('#66cc33');
+    });
+
+    it('should return yellow-green for Strong', () => {
+      expect(ReviewScoresClient.getTierColor('Strong')).toBe('#99cc33');
+    });
+
+    it('should return yellow for Fair', () => {
+      expect(ReviewScoresClient.getTierColor('Fair')).toBe('#ffcc33');
+    });
+
+    it('should return orange-red for Weak', () => {
+      expect(ReviewScoresClient.getTierColor('Weak')).toBe('#ff6633');
+    });
+
+    it('should return gray for Unknown', () => {
+      expect(ReviewScoresClient.getTierColor('Unknown')).toBe('#888888');
+    });
+
+    it('should return gray for invalid tier', () => {
+      expect(ReviewScoresClient.getTierColor('InvalidTier')).toBe('#888888');
+    });
+  });
+
+  describe('normalizeGameName', () => {
+    it('should convert to lowercase', () => {
+      expect(ReviewScoresClient.normalizeGameName('HOLLOW KNIGHT')).toBe('hollowknight');
+    });
+
+    it('should remove special characters', () => {
+      expect(ReviewScoresClient.normalizeGameName('Elden Ring: Shadow of the Erdtree')).toBe('eldenringshadowoftheerdtree');
+    });
+
+    it('should remove spaces and punctuation', () => {
+      expect(ReviewScoresClient.normalizeGameName('The Witcher 3: Wild Hunt')).toBe('thewitcher3wildhunt');
+    });
+
+    it('should handle empty string', () => {
+      expect(ReviewScoresClient.normalizeGameName('')).toBe('');
+    });
+  });
+
+  describe('calculateSimilarity', () => {
+    it('should return 1 for identical strings', () => {
+      expect(ReviewScoresClient.calculateSimilarity('Hollow Knight', 'hollow knight')).toBe(1);
+    });
+
+    it('should return 1 for identical normalized strings', () => {
+      expect(ReviewScoresClient.calculateSimilarity('Elden Ring', 'ELDEN RING')).toBe(1);
+    });
+
+    it('should return 0 for completely different strings', () => {
+      expect(ReviewScoresClient.calculateSimilarity('abc', 'xyz')).toBe(0);
+    });
+
+    it('should return 0 for empty strings when comparing to non-empty', () => {
+      expect(ReviewScoresClient.calculateSimilarity('', 'test')).toBe(0);
+      expect(ReviewScoresClient.calculateSimilarity('test', '')).toBe(0);
+    });
+
+    it('should return 1 for both empty strings (identical)', () => {
+      expect(ReviewScoresClient.calculateSimilarity('', '')).toBe(1);
+    });
+
+    it('should return high similarity for substring matches', () => {
+      const similarity = ReviewScoresClient.calculateSimilarity('Hollow', 'Hollow Knight');
+      expect(similarity).toBeGreaterThanOrEqual(0.5);
+    });
+
+    it('should return positive similarity for similar strings', () => {
+      const similarity = ReviewScoresClient.calculateSimilarity('Baldurs Gate 3', 'Baldurs Gate III');
+      expect(similarity).toBeGreaterThan(0);
+    });
+
+    it('should return 0 for single character strings (no n-grams possible)', () => {
+      expect(ReviewScoresClient.calculateSimilarity('a', 'b')).toBe(0);
+    });
+
+    it('should calculate containment similarity when one string contains the other', () => {
+      const similarity = ReviewScoresClient.calculateSimilarity('test', 'testing');
+      expect(similarity).toBeGreaterThan(0);
+      expect(similarity).toBeLessThan(1);
+    });
+  });
+
+  describe('queryByGameName', () => {
+    it('should return null when search returns empty results', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchResults: [] });
+      const result = await ReviewScoresClient.queryByGameName('Nonexistent Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should return null when search fails', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchStatus: 500 });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should return null when best match is below similarity threshold', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Completely Different Name' }],
+        gameDetails: { id: 123, name: 'Completely Different Name', topCriticScore: 85, tier: 'Strong', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game XYZ');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should return null when game details have no score', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Hollow Knight' }],
+        gameDetails: { id: 123, name: 'Hollow Knight', topCriticScore: 0, tier: 'Unknown', numTopCriticReviews: 0 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Hollow Knight');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should return null when game details request fails', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Hollow Knight' }],
+        detailsStatus: 404
+      });
+      const result = await ReviewScoresClient.queryByGameName('Hollow Knight');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should return result when game is found with good match', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 7015, name: 'Hollow Knight' }],
+        gameDetails: {
+          id: 7015,
+          name: 'Hollow Knight',
+          topCriticScore: 90,
+          tier: 'Mighty',
+          numTopCriticReviews: 75,
+          percentRecommended: 95
+        }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Hollow Knight');
+      expect(result).not.toBeNull();
+      expect(result.openCriticId).toBe(7015);
+      expect(result.gameName).toBe('Hollow Knight');
+      expect(result.data.score).toBe(90);
+      expect(result.data.tier).toBe('Mighty');
+      expect(result.data.numReviews).toBe(75);
+      expect(result.data.percentRecommended).toBe(95);
+    }, 15000);
+
+    it('should handle fetch throwing an error', async () => {
+      globalThis.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should parse tier string correctly for mighty', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'mighty', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Mighty');
+    }, 15000);
+
+    it('should parse tier string correctly for strong', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'strong', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Strong');
+    }, 15000);
+
+    it('should parse tier string correctly for fair', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'fair', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Fair');
+    }, 15000);
+
+    it('should parse tier string correctly for weak', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'weak', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Weak');
+    }, 15000);
+
+    it('should parse null tier as Unknown', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: null, numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Unknown');
+    }, 15000);
+
+    it('should parse empty tier as Unknown', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: '', numTopCriticReviews: 50 }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result.data.tier).toBe('Unknown');
+    }, 15000);
+
+    it('should select best match from multiple search results', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [
+          { id: 1, name: 'Hollow Knight Silksong' },
+          { id: 2, name: 'Hollow Knight' },
+          { id: 3, name: 'Knight Hollow' }
+        ],
+        gameDetails: {
+          id: 2,
+          name: 'Hollow Knight',
+          topCriticScore: 90,
+          tier: 'Mighty',
+          numTopCriticReviews: 75
+        }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Hollow Knight');
+      expect(result).not.toBeNull();
+      expect(result.openCriticId).toBe(2);
+    }, 15000);
+
+    it('should handle missing percentRecommended gracefully', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: {
+          id: 123,
+          name: 'Test Game',
+          topCriticScore: 85,
+          tier: 'Strong',
+          numTopCriticReviews: 50
+        }
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).not.toBeNull();
+      expect(result.data.percentRecommended).toBe(0);
+    }, 15000);
+
+    it('should handle non-array search response', async () => {
+      globalThis.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ error: 'not an array' })
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+  });
+
+  describe('batchQueryByGameNames', () => {
+    it('should return empty map for empty games array', async () => {
+      const result = await ReviewScoresClient.batchQueryByGameNames([]);
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return results for multiple games', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: {
+          id: 123,
+          name: 'Test Game',
+          topCriticScore: 85,
+          tier: 'Strong',
+          numTopCriticReviews: 50
+        }
+      });
+
+      const games = [
+        { appid: '123', gameName: 'Test Game' },
+        { appid: '456', gameName: 'Test Game' }
+      ];
+
+      const result = await ReviewScoresClient.batchQueryByGameNames(games);
+      expect(result).toBeInstanceOf(Map);
+      expect(result.size).toBe(2);
+    }, 30000);
+
+    it('should handle null results for games not found', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchResults: [] });
+      const games = [{ appid: '999', gameName: 'Nonexistent Game' }];
+      const result = await ReviewScoresClient.batchQueryByGameNames(games);
+      expect(result.get('999')).toBeNull();
+    }, 15000);
+
+    it('should catch and return null for individual game errors', async () => {
+      globalThis.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+      const games = [{ appid: '123', gameName: 'Test Game' }];
+      const result = await ReviewScoresClient.batchQueryByGameNames(games);
+      expect(result.get('123')).toBeNull();
+    }, 15000);
+  });
+
+  describe('rate limiting', () => {
+    it('should apply rate limiting between requests', async () => {
+      const fetchSpy = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'Strong', numTopCriticReviews: 50 }
+      });
+      globalThis.fetch = fetchSpy;
+
+      // Start two queries
+      await Promise.all([
+        ReviewScoresClient.queryByGameName('Test Game 1'),
+        ReviewScoresClient.queryByGameName('Test Game 2')
+      ]);
+
+      // Both queries should have been made (rate limiting doesn't prevent, just delays)
+      expect(fetchSpy).toHaveBeenCalled();
+    }, 30000);
+  });
+});
