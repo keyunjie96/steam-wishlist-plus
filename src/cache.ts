@@ -7,21 +7,15 @@
 
 import type { Platform, PlatformStatus, CacheEntry, PlatformData } from './types';
 
-// Use globalThis for StoreUrls (set by types.ts at runtime)
+// Use globalThis for shared values (set by types.ts at runtime)
 const StoreUrls = globalThis.SCPW_StoreUrls;
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
 
 const CACHE_DEBUG = false; // Set to true to enable manual test overrides
 const CACHE_KEY_PREFIX = 'xcpw_cache_';
 const DEFAULT_TTL_DAYS = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PLATFORMS: Platform[] = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
-
-/**
- * Cache schema version - increment when cache format changes.
- * When version mismatches, cached entries are treated as stale (triggers background refresh).
- * This ensures users get fresh data after extension updates that change data handling.
- */
-const CACHE_VERSION = 1;
 
 interface PlatformStatusOptions {
   allAvailable?: boolean;

@@ -10,6 +10,9 @@
 
 import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse } from './types';
 
+// Use globalThis for shared values (set by types.ts at runtime)
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
 const LOG_PREFIX = '[Steam Cross-Platform Wishlist]';
@@ -1432,7 +1435,7 @@ async function processItem(item: Element): Promise<void> {
     if (persistentEntry?.resolvedAt && persistentEntry?.ttlDays) {
       const MS_PER_DAY = 24 * 60 * 60 * 1000;
       const expiresAt = persistentEntry.resolvedAt + persistentEntry.ttlDays * MS_PER_DAY;
-      const isValid = Date.now() < expiresAt && persistentEntry.cacheVersion === 1;
+      const isValid = Date.now() < expiresAt && persistentEntry.cacheVersion === CACHE_VERSION;
 
       if (isValid) {
         cachedEntry = persistentEntry;

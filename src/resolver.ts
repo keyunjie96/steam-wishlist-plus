@@ -14,6 +14,9 @@
 
 import type { Platform, PlatformStatus, CacheEntry, PlatformData, WikidataResult, WikidataStoreIds } from './types';
 
+// Use globalThis for shared values (set by types.ts at runtime)
+const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+
 // Type for StoreUrls (used for type checking the globalThis value)
 type StoreUrlsType = {
   nintendo: (gameName: string) => string;
@@ -117,7 +120,7 @@ function createFallbackEntry(appid: string, gameName: string): CacheEntry {
     wikidataId: null,
     resolvedAt: Date.now(),
     ttlDays: 7,
-    cacheVersion: 1
+    cacheVersion: CACHE_VERSION
   };
 }
 
@@ -137,7 +140,7 @@ function createManualOverrideEntry(appid: string, gameName: string, override: Re
     wikidataId: null,
     resolvedAt: Date.now(),
     ttlDays: 7,
-    cacheVersion: 1
+    cacheVersion: CACHE_VERSION
   };
 }
 
@@ -197,7 +200,7 @@ async function wikidataResultToCacheEntry(appid: string, gameName: string, wikid
     wikidataId: wikidataResult.wikidataId,
     resolvedAt: Date.now(),
     ttlDays: 7,
-    cacheVersion: 1
+    cacheVersion: CACHE_VERSION
   };
 }
 
