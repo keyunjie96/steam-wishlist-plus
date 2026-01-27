@@ -66,7 +66,8 @@ async function searchHltb(gameName, authToken) {
       'Content-Type': 'application/json',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       'Referer': HLTB_BASE,
-      'Authorization': `Bearer ${authToken}`,
+      'Origin': HLTB_BASE,
+      'X-Auth-Token': authToken,
     },
     body: JSON.stringify({
       searchType: 'games',
