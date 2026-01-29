@@ -17,19 +17,28 @@
       --card-bg: rgba(255, 255, 255, 0.05);
       --card-border: rgba(255, 255, 255, 0.10);
       --card-bg-hover: rgba(255, 255, 255, 0.075);
-      --card-border-hover: rgba(255, 255, 255, 0.14);
       --accent: #4aa3ff;
       --accent-ring: rgba(74, 163, 255, 0.65);
+      --bg-input: #32404f;
       --danger-bg: rgba(150, 54, 54, 0.85);
       --danger-bg-hover: rgba(176, 68, 68, 0.90);
       --danger-border: rgba(192, 48, 48, 0.35);
+
+      /* Platform colors */
+      --nintendo: #e60012;
+      --playstation: #006fcd;
+      --xbox: #107c10;
+      --steamdeck-from: #c957e6;
+      --steamdeck-to: #1a9fff;
+      --hltb: #4aa3ff;
+      --reviews: #ffcc33;
     }
 
     body {
       font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
-      width: 296px;
+      width: 280px;
       margin: 0;
-      padding: 16px;
+      padding: 14px;
       background: linear-gradient(to bottom, var(--bg-0) 0%, var(--bg-1) 100%);
       color: var(--text);
       line-height: 1.5;
@@ -40,16 +49,16 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--card-border);
     }
 
     .header-icon {
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       flex-shrink: 0;
-      border-radius: 6px;
+      border-radius: 5px;
       overflow: hidden;
     }
 
@@ -61,7 +70,7 @@
 
     .header h1 {
       color: #ffffff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       margin: 0;
       flex: 1;
@@ -87,21 +96,26 @@
       background: var(--card-bg-hover);
     }
 
+    .settings-btn:hover svg {
+      transform: rotate(90deg);
+    }
+
     .settings-btn:focus-visible {
       outline: 2px solid var(--accent-ring);
       outline-offset: 2px;
     }
 
     .settings-btn svg {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
+      transition: transform 0.3s ease;
     }
 
     /* Stats */
     .stats {
       display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .stat {
@@ -110,26 +124,26 @@
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 8px;
-      padding: 12px 8px;
+      padding: 10px 8px;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .stat-value {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 600;
       color: var(--accent);
       font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
       margin-top: 2px;
     }
 
     /* Section groups */
     .section-group {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .section-title {
@@ -137,54 +151,106 @@
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .platform-toggles {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
     }
 
+    /* Toggle rows — clean, no card borders */
     .platform-toggle {
       display: flex;
       align-items: center;
       gap: 8px;
       width: 100%;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 8px 10px;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 8px;
       cursor: pointer;
-      transition: background-color 0.15s, border-color 0.15s;
+      transition: background-color 0.15s;
       font-size: 12px;
       color: var(--text);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .platform-toggle:hover {
       background: var(--card-bg-hover);
-      border-color: var(--card-border-hover);
     }
 
-    .platform-toggle input[type="checkbox"] {
-      width: 15px;
-      height: 15px;
-      margin: 0;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
 
-    .platform-toggle span {
+    .platform-toggle span.label {
+      flex: 1;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .platform-toggle:focus-within,
-    button:focus-visible {
+    /* Mini toggle switch (32x16) */
+    .mini-switch {
+      position: relative;
+      width: 32px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .mini-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .mini-switch .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--bg-input);
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .mini-switch .slider::before {
+      position: absolute;
+      content: "";
+      height: 10px;
+      width: 10px;
+      left: 3px;
+      top: 3px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .mini-switch input:checked + .slider {
+      background: var(--accent);
+    }
+
+    .mini-switch input:checked + .slider::before {
+      transform: translateX(16px);
+      background: white;
+    }
+
+    .mini-switch input:focus-visible + .slider {
       outline: 2px solid var(--accent-ring);
       outline-offset: 2px;
+    }
+
+    /* Dim unchecked toggles */
+    .platform-toggle:has(input:not(:checked)) {
+      opacity: 0.55;
+    }
+
+    .platform-toggle:has(input:checked) {
+      opacity: 1;
+    }
+
+    .platform-toggle:focus-within {
+      outline: 2px solid var(--accent-ring);
+      outline-offset: 1px;
+      border-radius: 4px;
     }
 
     .platform-toggle,
@@ -192,25 +258,10 @@
       user-select: none;
     }
 
-    /* Dim unchecked toggles */
-    .platform-toggle:has(input:not(:checked)) {
-      opacity: 0.6;
-    }
-
-    .platform-toggle:has(input:checked) {
-      opacity: 1;
-      border-color: rgba(74, 163, 255, 0.32);
-      box-shadow: 0 0 0 2px rgba(74, 163, 255, 0.10);
-    }
-
-    .platform-toggle.disabled {
-      opacity: 0.5;
-    }
-
     /* Clear Cache button */
     .btn-danger {
       width: 100%;
-      padding: 8px 12px;
+      padding: 7px 12px;
       border: 1px solid var(--danger-border);
       border-radius: 8px;
       font-size: 11px;
@@ -219,7 +270,8 @@
       background: var(--danger-bg);
       color: #ffffff;
       transition: background-color 0.15s, opacity 0.15s;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      margin-top: 4px;
+      font-family: inherit;
     }
 
     .btn-danger:hover:not(:disabled) {
@@ -229,6 +281,11 @@
     .btn-danger:disabled {
       opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--accent-ring);
+      outline-offset: 2px;
     }
 
     /* Status */
@@ -322,21 +379,26 @@
   <div class="section-group">
     <div class="section-title">Platforms</div>
     <div class="platform-toggles">
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-nintendo">
-        <span>Switch</span>
+      <label class="platform-toggle" data-platform="nintendo">
+        <span class="label">Switch</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-nintendo">
+          <span class="slider"></span>
+        </span>
       </label>
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-playstation">
-        <span>PlayStation</span>
+      <label class="platform-toggle" data-platform="playstation">
+        <span class="label">PlayStation</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-playstation">
+          <span class="slider"></span>
+        </span>
       </label>
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-xbox">
-        <span>Xbox</span>
-      </label>
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-steamdeck">
-        <span>Deck</span>
+      <label class="platform-toggle" data-platform="xbox">
+        <span class="label">Xbox</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-xbox">
+          <span class="slider"></span>
+        </span>
       </label>
     </div>
   </div>
@@ -344,13 +406,26 @@
   <div class="section-group">
     <div class="section-title">Game Info</div>
     <div class="platform-toggles">
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-hltb">
-        <span>Play Time</span>
+      <label class="platform-toggle" data-platform="steamdeck">
+        <span class="label">Steam Deck</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-steamdeck">
+          <span class="slider"></span>
+        </span>
       </label>
-      <label class="platform-toggle">
-        <input type="checkbox" id="show-review-scores">
-        <span>Reviews</span>
+      <label class="platform-toggle" data-platform="hltb">
+        <span class="label">Play Time</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-hltb">
+          <span class="slider"></span>
+        </span>
+      </label>
+      <label class="platform-toggle" data-platform="reviews">
+        <span class="label">Reviews</span>
+        <span class="mini-switch">
+          <input type="checkbox" id="show-review-scores">
+          <span class="slider"></span>
+        </span>
       </label>
     </div>
   </div>
