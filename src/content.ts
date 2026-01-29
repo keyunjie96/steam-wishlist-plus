@@ -15,7 +15,7 @@ const CACHE_VERSION = globalThis.SWP_CacheVersion;
 
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
-const LOG_PREFIX = '[Steam Wishlist Plus]';
+const LOG_PREFIX = '[SWP Content]';
 const DEBUG = false; // Set to true for verbose debugging
 
 /** Set of appids that have been processed to avoid duplicate logging */

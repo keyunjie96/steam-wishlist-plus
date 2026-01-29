@@ -106,7 +106,7 @@ async function queryWikidata(steamAppId) {
   const response = await fetch(url.toString(), {
     headers: {
       'Accept': 'application/sparql-results+json',
-      'User-Agent': 'SteamCrossPlatformWishlist-IntegrationTest/1.0',
+      'User-Agent': 'SteamWishlistPlus-IntegrationTest/1.0',
     },
   });
 

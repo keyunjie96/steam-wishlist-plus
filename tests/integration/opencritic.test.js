@@ -43,7 +43,7 @@ async function getGameDetails(gameId) {
   const response = await fetch(url, {
     headers: {
       'Accept': 'application/json',
-      'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0',
+      'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0',
     },
   });
 
@@ -62,7 +62,7 @@ async function getGameReviews(gameId) {
   const response = await fetch(url, {
     headers: {
       'Accept': 'application/json',
-      'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0',
+      'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0',
     },
   });
 
@@ -152,7 +152,7 @@ describe('OpenCritic Integration (Sanity Check)', () => {
     it('should be reachable via game details endpoint', async () => {
       // Use game details endpoint (search now requires API key)
       const response = await fetch(`${OPENCRITIC_API_BASE}/game/7324`, {
-        headers: { 'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0' }
+        headers: { 'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0' }
       });
 
       expect(response.status).toBe(200);
