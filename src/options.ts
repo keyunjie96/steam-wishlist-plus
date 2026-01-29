@@ -4,7 +4,7 @@
  * Handles the options UI for managing the cache.
  */
 
-import type { UserSettings, HltbDisplayStat } from './types';
+import type { UserSettings } from './types';
 
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -12,7 +12,7 @@ const MS_PER_DAY = MS_PER_HOUR * 24;
 const LOG_PREFIX = '[SCPW Options]';
 
 // Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.SCPW_UserSettings;
+const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, SETTING_SELECT_IDS, USER_SETTING_KEYS } = globalThis.SCPW_UserSettings;
 
 // DOM Elements (initialized in DOMContentLoaded)
 let cacheStatusEl: HTMLElement;
@@ -25,9 +25,13 @@ let clearCacheBtn: HTMLButtonElement;
 // Dynamic checkbox map - populated from SETTING_CHECKBOX_IDS
 const checkboxes = new Map<keyof UserSettings, HTMLInputElement | null>();
 
-// Select elements (not checkboxes)
-let hltbDisplayStatSelect: HTMLSelectElement | null = null;
-let hltbRow: HTMLElement | null = null;
+// Dynamic select elements map - populated from SETTING_SELECT_IDS
+interface SelectElementEntry {
+  select: HTMLSelectElement | null;
+  row: HTMLElement | null;
+  visibilityKey: keyof UserSettings;
+}
+const selectElements = new Map<keyof UserSettings, SelectElementEntry>();
 
 /**
  * Formats a duration in milliseconds to a human-readable string
@@ -85,9 +89,11 @@ async function loadSettings(): Promise<void> {
       }
     }
 
-    // Update select elements
-    if (hltbDisplayStatSelect) {
-      hltbDisplayStatSelect.value = settings.hltbDisplayStat;
+    // Dynamically update all select elements from SETTING_SELECT_IDS
+    for (const [key, entry] of selectElements) {
+      if (entry.select && settings[key] !== undefined) {
+        entry.select.value = settings[key] as string;
+      }
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Error loading settings:`, error);
@@ -113,29 +119,38 @@ async function saveSettings(settings: UserSettings): Promise<void> {
  */
 function getCurrentSettings(): UserSettings {
   const settings = { ...DEFAULT_USER_SETTINGS };
+
+  // Dynamically read all checkbox values
   for (const key of USER_SETTING_KEYS) {
     const checkbox = checkboxes.get(key);
     if (checkbox && typeof DEFAULT_USER_SETTINGS[key] === 'boolean') {
       (settings as Record<string, unknown>)[key] = checkbox.checked;
     }
   }
-  // Handle select elements
-  if (hltbDisplayStatSelect) {
-    settings.hltbDisplayStat = hltbDisplayStatSelect.value as HltbDisplayStat;
+
+  // Dynamically read all select element values
+  for (const [key, entry] of selectElements) {
+    if (entry.select) {
+      (settings as Record<string, unknown>)[key] = entry.select.value;
+    }
   }
+
   return settings;
 }
 
 /**
- * Updates HLTB select visibility based on checkbox state
+ * Updates visibility of all select elements based on their associated checkbox state.
+ * Uses SETTING_SELECT_IDS.visibilityKey to determine which checkbox controls each select.
  */
-function updateHltbSelectVisibility(): void {
-  const hltbCheckbox = checkboxes.get('showHltb');
-  if (hltbDisplayStatSelect && hltbCheckbox) {
-    const shouldShow = hltbCheckbox.checked;
-    hltbDisplayStatSelect.hidden = !shouldShow;
-    if (hltbRow) {
-      hltbRow.classList.toggle('inline-select-hidden', !shouldShow);
+function updateSelectVisibilities(): void {
+  for (const [, entry] of selectElements) {
+    const checkbox = checkboxes.get(entry.visibilityKey);
+    if (entry.select && checkbox) {
+      const shouldShow = checkbox.checked;
+      entry.select.hidden = !shouldShow;
+      if (entry.row) {
+        entry.row.classList.toggle('inline-select-hidden', !shouldShow);
+      }
     }
   }
 }
@@ -160,7 +175,7 @@ function updateToggleActiveStates(): void {
  */
 async function handlePlatformToggle(): Promise<void> {
   updateToggleActiveStates();
-  updateHltbSelectVisibility();
+  updateSelectVisibilities();
   const settings = getCurrentSettings();
   await saveSettings(settings);
 }
@@ -289,11 +304,28 @@ function initializePage(): void {
     }
   }
 
-  // HLTB display stat select (visibility controlled directly on the select)
-  hltbDisplayStatSelect = document.getElementById('hltb-display-stat') as HTMLSelectElement | null;
-  hltbRow = document.querySelector('.toggle-item.has-inline-option[data-platform="hltb"]') as HTMLElement | null;
-  if (hltbDisplayStatSelect) {
-    hltbDisplayStatSelect.addEventListener('change', handlePlatformToggle);
+  // Dynamically populate select elements map and add event listeners
+  // This automatically includes any new selects added to SETTING_SELECT_IDS
+  for (const key of USER_SETTING_KEYS) {
+    const config = SETTING_SELECT_IDS[key];
+    if (config) {
+      const select = document.getElementById(config.elementId) as HTMLSelectElement | null;
+      // Find the row element by looking for the parent toggle-item of the visibility checkbox
+      const visibilityCheckbox = checkboxes.get(config.visibilityKey);
+      const row = visibilityCheckbox
+        ? visibilityCheckbox.closest('.toggle-item.has-inline-option') as HTMLElement | null
+        : null;
+
+      selectElements.set(key, {
+        select,
+        row,
+        visibilityKey: config.visibilityKey
+      });
+
+      if (select) {
+        select.addEventListener('change', handlePlatformToggle);
+      }
+    }
   }
 
   // Initialize collapsible sections (CSP-compliant)
@@ -305,9 +337,9 @@ function initializePage(): void {
 
   // Load initial data, then reveal UI
   Promise.all([loadCacheStats(), loadSettings()]).then(() => {
-    // Update toggle active states and HLTB row visibility based on loaded settings
+    // Update toggle active states and select visibility based on loaded settings
     updateToggleActiveStates();
-    updateHltbSelectVisibility();
+    updateSelectVisibilities();
     // Remove loading class to reveal content with smooth transition
     document.body.classList.remove('is-loading');
   });

@@ -32,6 +32,7 @@
       --playstation: #006fcd;
       --xbox: #107c10;
       --hltb: #4aa3ff;
+      --review-scores: #ffcc33;
 
       /* Steam Deck special colors */
       --sd-tile-base: #343a43;
@@ -253,6 +254,7 @@
     .toggle-item[data-platform="playstation"] .toggle-icon { color: var(--playstation); }
     .toggle-item[data-platform="xbox"] .toggle-icon { color: var(--xbox); }
     .toggle-item[data-platform="hltb"] .toggle-icon { color: var(--hltb); }
+    .toggle-item[data-platform="review-scores"] .toggle-icon { color: var(--review-scores); }
 
     /* Active icon tint for all platforms EXCEPT Steam Deck */
     .toggle-item.active:not([data-platform="steamdeck"]) .toggle-icon {
@@ -267,6 +269,12 @@
     .toggle-item[data-platform="steamdeck"]:not(.active) .toggle-icon {
       opacity: 0.6;
       filter: saturate(0.7) brightness(0.9);
+    }
+
+    /* Dim all non-Steam Deck toggle icons when inactive */
+    .toggle-item:not(.active):not([data-platform="steamdeck"]) .toggle-icon {
+      opacity: 0.5;
+      filter: saturate(0.5);
     }
 
     /* Steam Deck icon tile: dark premium grey with subtle gradient */
@@ -643,7 +651,7 @@
       </div>
       <div class="header-text">
         <h1>Steam Cross-Platform Wishlist</h1>
-        <div class="version">Version 0.6.1</div>
+        <div class="version">Version 0.7.1</div>
       </div>
     </header>
 
@@ -749,6 +757,25 @@
               <span class="slider"></span>
             </label>
           </div>
+
+          <div class="toggle-item has-inline-option" data-platform="review-scores">
+            <label class="toggle-icon review-scores-icon" for="show-review-scores">
+              <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            </label>
+            <label class="toggle-content" for="show-review-scores">
+              <div class="toggle-label">Review Scores</div>
+              <div class="toggle-desc">Show game ratings from critics</div>
+            </label>
+            <select class="inline-select" id="review-score-source" hidden>
+              <option value="opencritic">OpenCritic</option>
+              <option value="ign">IGN</option>
+              <option value="gamespot">GameSpot</option>
+            </select>
+            <label class="toggle-switch">
+              <input type="checkbox" id="show-review-scores">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <div id="settings-status" class="status"></div>
       </div>
@@ -800,7 +827,7 @@
         <div class="info-box">
           <strong>Your data stays local</strong>
           <ul>
-            <li>Only connects to Steam, Wikidata, and HLTB</li>
+            <li>Only connects to Steam, Wikidata, HLTB, and OpenCritic</li>
             <li>Wishlist data never leaves your browser</li>
             <li>All cache stored locally in Chrome</li>
             <li>Zero analytics or telemetry</li>
@@ -823,6 +850,7 @@
             Platform data from <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> (community-maintained).
             Steam Deck status from Steam's official data.
             Playtime from <a href="https://howlongtobeat.com" target="_blank" rel="noopener">HowLongToBeat</a>.
+            Review scores from <a href="https://opencritic.com" target="_blank" rel="noopener">OpenCritic</a>.
           </p>
         </div>
       </div>

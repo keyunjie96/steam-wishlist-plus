@@ -68,7 +68,7 @@ describe('background.js', () => {
 
     it('should call importScripts for dependencies', () => {
       expect(globalThis.importScripts).toHaveBeenCalledWith(
-        'types.js', 'cache.js', 'wikidataClient.js', 'hltbClient.js', 'resolver.js'
+        'types.js', 'cache.js', 'wikidataClient.js', 'hltbClient.js', 'reviewScoresClient.js', 'resolver.js'
       );
     });
   });
@@ -1219,6 +1219,538 @@ describe('background.js', () => {
           hltbData: expect.objectContaining({
             mainStory: 15,
             hltbId: 9999
+          })
+        })
+      );
+    });
+  });
+
+  describe('GET_REVIEW_SCORES', () => {
+    let mockReviewScoresClient;
+
+    beforeEach(() => {
+      mockReviewScoresClient = {
+        queryByGameName: jest.fn().mockResolvedValue({
+          openCriticId: 7015,
+          gameName: 'Test Game',
+          similarity: 1,
+          data: {
+            openCriticId: 7015,
+            score: 90,
+            tier: 'Mighty',
+            numReviews: 75,
+            percentRecommended: 95
+          }
+        }),
+        batchQueryByGameNames: jest.fn()
+      };
+      globalThis.SCPW_ReviewScoresClient = mockReviewScoresClient;
+
+      // Reset cache mock to return null by default
+      mockCache.getFromCache = jest.fn().mockResolvedValue(null);
+      mockCache.saveToCache = jest.fn().mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      delete globalThis.SCPW_ReviewScoresClient;
+    });
+
+    it('should return true for async response', () => {
+      const sendResponse = jest.fn();
+      const result = messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      expect(result).toBe(true);
+    });
+
+    it('should fail when appid is missing', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'Missing appid or gameName'
+      });
+    });
+
+    it('should fail when gameName is missing', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'Missing appid or gameName'
+      });
+    });
+
+    it('should fail when review scores client is not available', async () => {
+      delete globalThis.SCPW_ReviewScoresClient;
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'Review scores client not loaded'
+      });
+    });
+
+    it('should return cached review score data if available', async () => {
+      const cachedReviewScoreData = {
+        openCriticId: 7015,
+        score: 90,
+        tier: 'Mighty',
+        numReviews: 75,
+        percentRecommended: 95
+      };
+      mockCache.getFromCache.mockResolvedValueOnce({
+        appid: '12345',
+        reviewScoreData: cachedReviewScoreData
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: cachedReviewScoreData
+      });
+      expect(mockReviewScoresClient.queryByGameName).not.toHaveBeenCalled();
+    });
+
+    it('should query review scores when not cached', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockReviewScoresClient.queryByGameName).toHaveBeenCalledWith('Test Game');
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: expect.objectContaining({
+          score: 90,
+          tier: 'Mighty'
+        })
+      });
+    });
+
+    it('should return null when no review score match found', async () => {
+      mockReviewScoresClient.queryByGameName.mockResolvedValueOnce(null);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Unknown Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: null
+      });
+    });
+
+    it('should handle review scores client errors', async () => {
+      mockReviewScoresClient.queryByGameName.mockRejectedValueOnce(new Error('OpenCritic API error'));
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'OpenCritic API error'
+      });
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      mockReviewScoresClient.queryByGameName.mockRejectedValueOnce('String error');
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        data: null,
+        error: 'String error'
+      });
+    });
+
+    it('should update cache with review score data', async () => {
+      const cachedEntry = { appid: '12345', gameName: 'Test Game', reviewScoreData: null };
+      mockCache.getFromCache.mockResolvedValueOnce(cachedEntry);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Test Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reviewScoreData: expect.objectContaining({
+            score: 90
+          })
+        })
+      );
+    });
+
+    it('should cache "not found" marker when review scores returns no match', async () => {
+      const cachedEntry = { appid: '12345', gameName: 'Unknown Game', reviewScoreData: null };
+      mockCache.getFromCache.mockResolvedValueOnce(cachedEntry);
+      mockReviewScoresClient.queryByGameName.mockResolvedValueOnce(null);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Unknown Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should save "not found" marker with openCriticId: -1
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reviewScoreData: expect.objectContaining({
+            openCriticId: -1,
+            score: 0,
+            tier: 'Unknown'
+          })
+        })
+      );
+    });
+
+    it('should return null without re-querying when cache has "not found" marker', async () => {
+      const notFoundMarker = {
+        openCriticId: -1,
+        score: 0,
+        tier: 'Unknown',
+        numReviews: 0,
+        percentRecommended: 0
+      };
+      mockCache.getFromCache.mockResolvedValueOnce({
+        appid: '12345',
+        gameName: 'Unknown Game',
+        reviewScoreData: notFoundMarker
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES',
+        appid: '12345',
+        gameName: 'Unknown Game'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: null
+      });
+      expect(mockReviewScoresClient.queryByGameName).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET_REVIEW_SCORES_BATCH', () => {
+    let mockReviewScoresClient;
+
+    beforeEach(() => {
+      mockReviewScoresClient = {
+        queryByGameName: jest.fn(),
+        batchQueryByGameNames: jest.fn().mockResolvedValue({
+          results: new Map([
+            ['12345', {
+              openCriticId: 7015,
+              gameName: 'Game 1',
+              similarity: 1,
+              data: { openCriticId: 7015, score: 90, tier: 'Mighty', numReviews: 75, percentRecommended: 95 }
+            }],
+            ['67890', {
+              openCriticId: 7016,
+              gameName: 'Game 2',
+              similarity: 1,
+              data: { openCriticId: 7016, score: 75, tier: 'Strong', numReviews: 50, percentRecommended: 80 }
+            }]
+          ]),
+          failureReasons: {}
+        })
+      };
+      globalThis.SCPW_ReviewScoresClient = mockReviewScoresClient;
+
+      mockCache.getFromCache = jest.fn().mockResolvedValue(null);
+      mockCache.saveToCache = jest.fn().mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      delete globalThis.SCPW_ReviewScoresClient;
+    });
+
+    it('should return true for async response', () => {
+      const sendResponse = jest.fn();
+      const result = messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Game 1' },
+          { appid: '67890', gameName: 'Game 2' }
+        ]
+      }, {}, sendResponse);
+
+      expect(result).toBe(true);
+    });
+
+    it('should fail when games is missing', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        reviewScoresResults: {}
+      });
+    });
+
+    it('should fail when games is empty', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: []
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        reviewScoresResults: {}
+      });
+    });
+
+    it('should fail when review scores client is not available', async () => {
+      delete globalThis.SCPW_ReviewScoresClient;
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [{ appid: '12345', gameName: 'Test' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        reviewScoresResults: {},
+        error: 'Review scores client not loaded'
+      });
+    });
+
+    it('should use cached review score data when available', async () => {
+      const cachedReviewScoreData = { openCriticId: 7015, score: 90, tier: 'Mighty', numReviews: 75, percentRecommended: 95 };
+      mockCache.getFromCache.mockImplementation(async (appid) => {
+        if (appid === '12345') {
+          return { appid: '12345', reviewScoreData: cachedReviewScoreData };
+        }
+        return null;
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Game 1' },
+          { appid: '67890', gameName: 'Game 2' }
+        ]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should only query for uncached game (includes openCriticId from Wikidata cache lookup)
+      expect(mockReviewScoresClient.batchQueryByGameNames).toHaveBeenCalledWith([
+        { appid: '67890', gameName: 'Game 2', openCriticId: null }
+      ]);
+    });
+
+    it('should return results for all games', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Game 1' },
+          { appid: '67890', gameName: 'Game 2' }
+        ]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          reviewScoresResults: {
+            '12345': expect.objectContaining({ score: 90 }),
+            '67890': expect.objectContaining({ score: 75 })
+          }
+        })
+      );
+    });
+
+    it('should handle batch query errors', async () => {
+      mockReviewScoresClient.batchQueryByGameNames.mockRejectedValueOnce(new Error('Batch error'));
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [{ appid: '12345', gameName: 'Test' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          reviewScoresResults: { '12345': null }
+        })
+      );
+    });
+
+    it('should handle null results from review scores', async () => {
+      mockReviewScoresClient.batchQueryByGameNames.mockResolvedValueOnce({
+        results: new Map([['12345', null]]),
+        failureReasons: { '12345': 'no_search_results' }
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [{ appid: '12345', gameName: 'Unknown Game' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          reviewScoresResults: { '12345': null }
+        })
+      );
+    });
+
+    it('should cache "not found" marker for games with no review score match', async () => {
+      const cachedEntry = { appid: '12345', gameName: 'Unknown Game', reviewScoreData: null };
+      mockCache.getFromCache.mockResolvedValue(cachedEntry);
+      mockReviewScoresClient.batchQueryByGameNames.mockResolvedValueOnce({
+        results: new Map([['12345', null]]),
+        failureReasons: { '12345': 'no_search_results' }
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [{ appid: '12345', gameName: 'Unknown Game' }]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should save "not found" marker with openCriticId: -1
+      expect(mockCache.saveToCache).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reviewScoreData: expect.objectContaining({
+            openCriticId: -1,
+            score: 0
+          })
+        })
+      );
+    });
+
+    it('should return null without re-querying when cache has "not found" marker', async () => {
+      // "Not found" markers should block re-querying - prevents unnecessary API calls
+      // (matches HLTB behavior)
+      const notFoundMarker = {
+        openCriticId: -1,
+        score: 0,
+        tier: 'Unknown',
+        numReviews: 0,
+        percentRecommended: 0
+      };
+      mockCache.getFromCache.mockImplementation(async (appid) => {
+        if (appid === '12345') {
+          return { appid: '12345', reviewScoreData: notFoundMarker };
+        }
+        return null;
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Unknown Game' },
+          { appid: '67890', gameName: 'Game 2' }
+        ]
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Should only query Game 2 - "not found" marker for Unknown Game should return null
+      expect(mockReviewScoresClient.batchQueryByGameNames).toHaveBeenCalledWith([
+        { appid: '67890', gameName: 'Game 2', openCriticId: null }
+      ]);
+
+      // Verify the response includes null for the "not found" game
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          reviewScoresResults: expect.objectContaining({
+            '12345': null
           })
         })
       );

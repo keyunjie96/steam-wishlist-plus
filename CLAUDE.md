@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-**Steam Cross-Platform Wishlist** is a Chrome extension (Manifest V3) that displays platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck) on Steam wishlist pages using Wikidata and Steam's SSR data.
+**Steam Cross-Platform Wishlist** is a Chrome extension (Manifest V3) that displays platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck) and review scores on Steam wishlist pages using Wikidata, Steam's SSR data, and OpenCritic.
 
-**Version:** 0.6.3
+**Version:** 0.7.1
 **Status:** Production-ready
 **Tech Stack:** TypeScript, Chrome Extensions API (MV3), Jest
 
@@ -26,13 +26,13 @@
    │  Client.ts)       │                                   │                      │
    │                   │                                   └──────────┬───────────┘
    │ - Inject Page     │                                              │
-   │   Script          │                    ┌─────────────────────────┼─────────────────────────┐
-   │ - Read DOM        │                    │                         │                         │
-   └───────┬───────────┘             ┌──────▼──────┐           ┌──────▼──────────┐       ┌──────▼──────┐
-           │                         │ Cache       │           │ WikidataClient  │       │ HltbClient  │
-   ┌───────▼────────────┐            │ (cache.ts)  │           │ (wikidata       │       │ (hltb       │
-   │ SteamDeckPageScript│            │             │           │  Client.ts)     │       │  Client.ts) │
-   │ (Injected Script)  │            └─────────────┘           └─────────────────┘       └─────────────┘
+   │   Script          │                    ┌─────────────────────────┼──────────────────────────┬──────────────────────┐
+   │ - Read DOM        │                    │                         │                          │                      │
+   └───────┬───────────┘             ┌──────▼──────┐           ┌──────▼──────────┐       ┌──────▼──────┐       ┌────────▼──────────┐
+           │                         │ Cache       │           │ WikidataClient  │       │ HltbClient  │       │ReviewScoresClient │
+   ┌───────▼────────────┐            │ (cache.ts)  │           │ (wikidata       │       │ (hltb       │       │(reviewScores      │
+   │ SteamDeckPageScript│            │             │           │  Client.ts)     │       │  Client.ts) │       │ Client.ts)        │
+   │ (Injected Script)  │            └─────────────┘           └─────────────────┘       └─────────────┘       └───────────────────┘
    └────────────────────┘
 ```
 
@@ -50,6 +50,7 @@
 │   ├── hltbClient.ts       # HLTB completion time client
 │   ├── hltbContent.ts      # HLTB content script (howlongtobeat.com)
 │   ├── hltbPageScript.ts   # HLTB page script (MAIN world)
+│   ├── reviewScoresClient.ts # OpenCritic review scores client
 │   ├── steamDeckClient.ts  # Steam Deck data from page SSR
 │   ├── steamDeckPageScript.ts # Injected script for SSR access
 │   ├── icons.ts            # Icon definitions
@@ -75,6 +76,7 @@
 | `src/hltbClient.ts` | HLTB completion time queries | `queryByGameName()`, `batchQueryByGameNames()` |
 | `src/hltbContent.ts` | HLTB content script bridge | `injectPageScript()`, message relay |
 | `src/hltbPageScript.ts` | HLTB page script (MAIN world) | `searchHltb()`, `calculateSimilarity()` |
+| `src/reviewScoresClient.ts` | OpenCritic review scores queries | `queryByGameName()`, `batchQueryByGameNames()`, `buildOpenCriticUrl()` |
 | `src/steamDeckClient.ts` | Steam Deck data extraction | `waitForDeckData()`, `getDeckStatus()` |
 | `src/steamDeckPageScript.ts` | Page script for SSR access | `extractDeckData()` (runs in MAIN world) |
 | `src/icons.ts` | SVG icons and platform info | `PLATFORM_ICONS`, `PLATFORM_INFO`, `STATUS_INFO` |
@@ -227,6 +229,7 @@ const CACHE_DEBUG = false;        // src/cache.ts (enables manual test overrides
 const STEAM_DECK_DEBUG = false;   // src/steamDeckClient.ts
 const DEBUG = false;              // src/hltbContent.ts
 const DEBUG = false;              // src/hltbPageScript.ts
+const DEBUG = false;              // src/reviewScoresClient.ts
 ```
 
 Set to `true` for verbose logging during development.
@@ -297,14 +300,23 @@ When an external API (like HLTB) stops working:
 - Uses an undocumented API that changes periodically
 - Requires auth token from `/api/search/init?t=<timestamp>`
 - Search endpoint: POST `/api/search` (not `/api/s/`)
+- **Important:** Search API blocks non-browser requests (bot detection). Only works from real browser context (extension, Playwright). Node.js/undici requests get 404.
 - Request body must include nested objects: `rangeTime`, `gameplay`, `rangeYear`, `users`, `lists`
 - `searchTerms` must be `["Full Game Name"]` (single element), NOT split by spaces
 - Response times are in **seconds**, divide by 3600 for hours
+- Search alternatives: HLTB uses colons in series names (e.g., "Assassin's Creed: Unity"). The extension auto-tries colon variations at word boundaries.
+
+**OpenCritic:**
+- Search endpoint (`/api/game/search`) now requires an API key
+- Game details endpoint (`/api/game/<id>`) still works without authentication
+- The extension uses direct ID lookup via OpenCritic IDs from Wikidata, bypassing the search endpoint
+- Review endpoint (`/api/review/game/<id>`) works without authentication
 
 **Wikidata:**
 - SPARQL queries are stable and well-documented
 - Rate limit: 500ms between requests
 - Can be tested directly via browser fetch
+- Provides OpenCritic IDs (P2864) for direct game lookup
 
 ### Manual Extension Testing
 

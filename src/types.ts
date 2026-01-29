@@ -12,6 +12,9 @@ export type PlatformStatus = 'available' | 'unavailable' | 'unknown';
 // HLTB display stat options
 export type HltbDisplayStat = 'mainStory' | 'mainExtra' | 'completionist';
 
+// Review score source options
+export type ReviewScoreSource = 'opencritic' | 'ign' | 'gamespot';
+
 // ============================================================================
 // Cache Constants - SINGLE SOURCE OF TRUTH
 // ============================================================================
@@ -23,7 +26,7 @@ export type HltbDisplayStat = 'mainStory' | 'mainExtra' | 'completionist';
  * IMPORTANT: This constant is shared across content script and service worker.
  * Both cache.ts (service worker) and content.ts (content script) import this value.
  */
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 4;  // Bumped to add openCriticUrl to review scores
 
 // ============================================================================
 // User Settings - SINGLE SOURCE OF TRUTH
@@ -45,6 +48,8 @@ export interface UserSettings {
   showSteamDeck: boolean;
   showHltb: boolean;
   hltbDisplayStat: HltbDisplayStat;
+  showReviewScores: boolean;
+  reviewScoreSource: ReviewScoreSource;
 }
 
 /**
@@ -57,7 +62,9 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   showXbox: true,
   showSteamDeck: true,
   showHltb: true,
-  hltbDisplayStat: 'mainStory'
+  hltbDisplayStat: 'mainStory',
+  showReviewScores: true,
+  reviewScoreSource: 'opencritic'
 };
 
 /**
@@ -70,8 +77,30 @@ export const SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>> =
   showPlaystation: 'show-playstation',
   showXbox: 'show-xbox',
   showSteamDeck: 'show-steamdeck',
-  showHltb: 'show-hltb'
-} as Partial<Record<keyof UserSettings, string>>;
+  showHltb: 'show-hltb',
+  showReviewScores: 'show-review-scores'
+};
+
+/**
+ * Mapping from select setting keys to their element IDs and associated checkbox keys.
+ * This enables generic handling of dropdown selects in options pages.
+ * The visibilityKey indicates which checkbox controls this select's visibility.
+ */
+export interface SelectElementConfig {
+  elementId: string;
+  visibilityKey: keyof UserSettings;
+}
+
+export const SETTING_SELECT_IDS: Partial<Record<keyof UserSettings, SelectElementConfig>> = {
+  hltbDisplayStat: {
+    elementId: 'hltb-display-stat',
+    visibilityKey: 'showHltb'
+  },
+  reviewScoreSource: {
+    elementId: 'review-score-source',
+    visibilityKey: 'showReviewScores'
+  }
+};
 
 /**
  * Array of all setting keys for iteration.
@@ -94,7 +123,9 @@ export interface CacheEntry {
   platforms: Record<Platform, PlatformData>;
   source?: DataSource;
   wikidataId?: string | null;
+  openCriticId?: string | null;  // OpenCritic game ID from Wikidata for direct API access
   hltbData?: HltbData | null;  // Optional HLTB completion time data
+  reviewScoreData?: ReviewScoreData | null;  // Optional review score data
   resolvedAt: number;
   ttlDays: number;
   cacheVersion?: number;  // Cache schema version for invalidation on updates
@@ -164,6 +195,29 @@ export interface GetHltbDataBatchResponse {
   error?: string;
 }
 
+export interface GetReviewScoresRequest {
+  type: 'GET_REVIEW_SCORES';
+  appid: string;
+  gameName: string;
+}
+
+export interface GetReviewScoresBatchRequest {
+  type: 'GET_REVIEW_SCORES_BATCH';
+  games: Array<{ appid: string; gameName: string }>;
+}
+
+export interface GetReviewScoresResponse {
+  success: boolean;
+  data: ReviewScoreData | null;
+  error?: string;
+}
+
+export interface GetReviewScoresBatchResponse {
+  success: boolean;
+  results: Record<string, ReviewScoreData | null>;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | GetPlatformDataRequest
   | GetPlatformDataBatchRequest
@@ -171,7 +225,9 @@ export type ExtensionMessage =
   | GetCacheStatsRequest
   | ClearCacheRequest
   | GetHltbDataRequest
-  | GetHltbDataBatchRequest;
+  | GetHltbDataBatchRequest
+  | GetReviewScoresRequest
+  | GetReviewScoresBatchRequest;
 
 // Store URL builders
 export const StoreUrls = {
@@ -238,6 +294,14 @@ declare global {
       cleanGameNameForSearch: (name: string) => string;
       registerHeaderRules: () => Promise<void>;
     };
+    SCPW_ReviewScoresClient: {
+      queryByGameName: (gameName: string) => Promise<ReviewScoreSearchResult | null>;
+      batchQueryByGameNames: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, ReviewScoreSearchResult | null>>;
+      normalizeGameName: (name: string) => string;
+      calculateSimilarity: (a: string, b: string) => number;
+      formatScore: (score: number) => string;
+      getTierColor: (tier: ReviewScoreTier) => string;
+    };
     SCPW_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
       processPendingBatch: () => Promise<void>;
@@ -262,6 +326,7 @@ declare global {
       lightCleanup: () => void;
       injectedAppIds: Set<string>;
       processedAppIds: Set<string>;
+      processingAppIds: Set<string>;
       getBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
       getUrlChangeDebounceTimer: () => ReturnType<typeof setTimeout> | null;
       setBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
@@ -301,6 +366,22 @@ declare global {
       setHltbBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
       HLTB_BATCH_DEBOUNCE_MS: number;
       HLTB_MAX_BATCH_SIZE: number;
+      restoreHltbDataFromEntry: (appid: string, entry: CacheEntry) => void;
+      getRenderedIconSummary: (container: HTMLElement) => string;
+      // Review scores exports for coverage testing
+      getTierColor: (tier: ReviewScoreTier) => string;
+      getDisplayScoreInfo: (reviewScoreData: ReviewScoreData) => { score: number; sourceName: string; sourceKey: string };
+      createReviewScoreBadge: (reviewScoreData: ReviewScoreData) => HTMLElement;
+      createReviewScoreLoader: () => HTMLElement;
+      queueForReviewScoreResolution: (appid: string, gameName: string, container: HTMLElement) => void;
+      processPendingReviewScoreBatch: () => Promise<void>;
+      getReviewScoreDataByAppId: () => Map<string, ReviewScoreData | null>;
+      getPendingReviewScoreItems: () => Map<string, { gameName: string; container: HTMLElement }>;
+      getReviewScoreBatchDebounceTimer: () => ReturnType<typeof setTimeout> | null;
+      setReviewScoreBatchDebounceTimer: (val: ReturnType<typeof setTimeout> | null) => void;
+      REVIEW_SCORE_BATCH_DEBOUNCE_MS: number;
+      REVIEW_SCORE_MAX_BATCH_SIZE: number;
+      restoreReviewScoreDataFromEntry: (appid: string, entry: CacheEntry) => void;
     };
     SSR?: {
       renderContext?: {
@@ -330,11 +411,14 @@ declare global {
   // eslint-disable-next-line no-var
   var SCPW_HltbClient: Window['SCPW_HltbClient'];
   // eslint-disable-next-line no-var
+  var SCPW_ReviewScoresClient: Window['SCPW_ReviewScoresClient'];
+  // eslint-disable-next-line no-var
   var SCPW_ContentTestExports: Window['SCPW_ContentTestExports'];
   // eslint-disable-next-line no-var
   var SCPW_UserSettings: {
     DEFAULT_USER_SETTINGS: UserSettings;
     SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>>;
+    SETTING_SELECT_IDS: Partial<Record<keyof UserSettings, SelectElementConfig>>;
     USER_SETTING_KEYS: Array<keyof UserSettings>;
   };
 }
@@ -348,6 +432,7 @@ export interface WikidataStoreIds {
   epic: string | null;
   appStore: string | null;
   playStore: string | null;
+  openCriticId: string | null;  // OpenCritic game ID (P2864) for direct API access
 }
 
 export interface WikidataResult {
@@ -384,6 +469,38 @@ export interface HltbSearchResult {
   data: HltbData;
 }
 
+// Individual outlet score (IGN, GameSpot, etc.)
+export interface OutletScore {
+  outletName: string;       // Display name of the outlet
+  score: number;            // Outlet's score (normalized 0-100)
+  scaleBase?: number;       // Original scale base (e.g., 10 for 0-10 scale)
+  reviewUrl?: string;       // Direct URL to the outlet's review
+}
+
+// Review Scores types (OpenCritic)
+export interface ReviewScoreData {
+  openCriticId: number;     // OpenCritic game ID for linking
+  openCriticUrl?: string;   // Full URL to OpenCritic game page (e.g., /game/14607/elden-ring)
+  score: number;            // Top Critic Average score (0-100)
+  tier: ReviewScoreTier;    // Mighty, Strong, Fair, Weak
+  numReviews: number;       // Number of critic reviews
+  percentRecommended: number; // Percentage of critics recommending (0-100)
+  // Individual outlet scores (from OpenCritic's review endpoint)
+  outletScores?: {
+    ign?: OutletScore;
+    gamespot?: OutletScore;
+  };
+}
+
+export type ReviewScoreTier = 'Mighty' | 'Strong' | 'Fair' | 'Weak' | 'Unknown';
+
+export interface ReviewScoreSearchResult {
+  openCriticId: number;
+  gameName: string;
+  similarity: number;  // 0-1 match confidence
+  data: ReviewScoreData;
+}
+
 // Export globally for content scripts (ES modules not fully supported in Chrome extensions)
 // Only set if not already defined (allows mocking in tests)
 if (!globalThis.SCPW_StoreUrls) {
@@ -393,6 +510,7 @@ if (!globalThis.SCPW_UserSettings) {
   globalThis.SCPW_UserSettings = {
     DEFAULT_USER_SETTINGS,
     SETTING_CHECKBOX_IDS,
+    SETTING_SELECT_IDS,
     USER_SETTING_KEYS
   };
 }
