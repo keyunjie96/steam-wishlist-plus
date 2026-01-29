@@ -214,7 +214,7 @@ function compareResults(expected, actual) {
  * Main test runner
  */
 async function runTests() {
-  console.log('🎮 Steam Cross-Platform Wishlist - Integration Test');
+  console.log('🎮 Steam Wishlist Plus - Integration Test');
   console.log('═══════════════════════════════════════════════════\n');
   console.log(`Testing ${ALL_GAMES.length} games against Wikidata...\n`);
 

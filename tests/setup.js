@@ -33,13 +33,13 @@ beforeEach(() => {
   jest.clearAllTimers();
 
   // Reset globalThis properties that modules may have set
-  delete global.SCPW_StoreUrls;
-  delete global.SCPW_Icons;
-  delete global.SCPW_PlatformInfo;
-  delete global.SCPW_StatusInfo;
-  delete global.SCPW_Cache;
-  delete global.SCPW_WikidataClient;
-  delete global.SCPW_Resolver;
+  delete global.SWP_StoreUrls;
+  delete global.SWP_Icons;
+  delete global.SWP_PlatformInfo;
+  delete global.SWP_StatusInfo;
+  delete global.SWP_Cache;
+  delete global.SWP_WikidataClient;
+  delete global.SWP_Resolver;
 });
 
 // Restore real timers after each test if needed
@@ -55,14 +55,14 @@ const originalError = console.error;
 beforeAll(() => {
   // Suppress expected console warnings in tests
   console.warn = (...args) => {
-    if (args[0]?.includes?.('[SCPW')) {
+    if (args[0]?.includes?.('[SWP')) {
       return; // Suppress extension logs during tests
     }
     originalWarn(...args);
   };
 
   console.error = (...args) => {
-    if (args[0]?.includes?.('[SCPW')) {
+    if (args[0]?.includes?.('[SWP')) {
       return; // Suppress extension logs during tests
     }
     originalError(...args);

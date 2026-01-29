@@ -1,12 +1,12 @@
 /**
- * Steam Cross-Platform Wishlist - HLTB Content Script
+ * Steam Wishlist Plus - HLTB Content Script
  *
  * This content script runs on howlongtobeat.com pages.
  * It injects the page script and relays messages between the service worker
  * and the page script to enable same-origin API calls.
  */
 
-const LOG_PREFIX = '[SCPW HLTB Content]';
+const LOG_PREFIX = '[SWP HLTB Content]';
 const DEBUG = false;
 const debugLog = (...args: unknown[]): void => {
   /* istanbul ignore next */
@@ -64,7 +64,7 @@ window.addEventListener('message', (event) => {
   if (event.source !== window) return;
 
   const data = event.data;
-  if (data?.type === 'SCPW_HLTB_RESPONSE') {
+  if (data?.type === 'SWP_HLTB_RESPONSE') {
     debugLog(`${LOG_PREFIX} Received response:`, data);
     const resolver = pendingRequests.get(data.requestId);
     if (resolver) {
@@ -77,7 +77,7 @@ window.addEventListener('message', (event) => {
         error: data.error
       });
     }
-  } else if (data?.type === 'SCPW_HLTB_READY') {
+  } else if (data?.type === 'SWP_HLTB_READY') {
     debugLog(`${LOG_PREFIX} Page script ready`);
   }
 });
@@ -95,7 +95,7 @@ chrome.runtime.onMessage.addListener((message: HltbQueryRequest, _sender, sendRe
 
     // Forward to page script
     window.postMessage({
-      type: 'SCPW_HLTB_REQUEST',
+      type: 'SWP_HLTB_REQUEST',
       requestId: message.requestId,
       gameName: message.gameName,
       steamAppId: message.steamAppId

@@ -8,32 +8,31 @@ Copy-paste ready content for Chrome Web Store submission.
 
 **Name:**
 ```
-Steam Cross-Platform Wishlist
+Steam Wishlist Plus
 ```
 
 **Summary (132 char max):**
 ```
-See which Steam wishlist games are on Switch, PlayStation, Xbox & Steam Deck. Plus HowLongToBeat completion times.
+Adds platform availability, review scores, completion times & Steam Deck status to your Steam wishlist.
 ```
 
 **Description:**
 ```
-Your Steam wishlist doesn't tell you if games are on other platforms. So you end up clicking through Nintendo, PlayStation, and Xbox stores one by one. Tedious.
+Your Steam wishlist is missing context. Which games are on Switch? How long do they take to beat? Are the reviews any good?
 
-This extension fixes that. It adds platform icons right on your wishlist page—Switch, PlayStation, Xbox, and Steam Deck verification status. Click any icon to go straight to that store.
-
-Also shows HowLongToBeat completion times because why not.
+Steam Wishlist Plus adds the missing signals right on your wishlist page—platform availability (Switch, PlayStation, Xbox), Steam Deck verification status, review scores, and HowLongToBeat completion times. Click any platform icon to go straight to that store.
 
 How it works:
 - Platform data from Wikidata (free, crowd-sourced)
 - Steam Deck status from Steam's own data
+- Review scores from OpenCritic
 - Completion times from HowLongToBeat
 
 No account needed. No tracking. Everything runs locally with a 7-day cache. About 70KB total.
 
 Fair warning: Wikidata coverage isn't perfect—it's volunteer-maintained. If a game is missing, you can actually fix it yourself at wikidata.org.
 
-Source code: https://github.com/keyunjie96/steam-cross-platform-wishlist
+Source code: https://github.com/keyunjie96/steam-wishlist-plus
 ```
 
 **Category:** `Games`
@@ -59,7 +58,7 @@ Source code: https://github.com/keyunjie96/steam-cross-platform-wishlist
 
 **Single purpose description:**
 ```
-Display cross-platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck) and game completion times on Steam wishlist pages.
+Display platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck), review scores, and game completion times on Steam wishlist pages.
 ```
 
 ### Permission Justifications
@@ -79,6 +78,7 @@ Used to modify request headers when validating store URLs. When checking if a ga
 - store.steampowered.com: Read wishlist page to extract game IDs and inject platform icons into the DOM
 - query.wikidata.org: Query the public Wikidata SPARQL API to fetch game platform availability data
 - howlongtobeat.com: Fetch game completion time estimates from their API
+- api.opencritic.com, opencritic.com: Fetch review scores for games
 - store.playstation.com, www.nintendo.com, www.xbox.com: Validate that store links are active before displaying them to users (HEAD requests only)
 
 All requests are read-only. No user data is sent to any of these services—only game names and IDs.
@@ -102,7 +102,7 @@ All requests are read-only. No user data is sent to any of these services—only
 
 **Privacy policy URL:**
 ```
-https://github.com/keyunjie96/steam-cross-platform-wishlist/blob/main/PRIVACY.md
+https://github.com/keyunjie96/steam-wishlist-plus/blob/main/PRIVACY.md
 ```
 
 ---
@@ -111,10 +111,10 @@ https://github.com/keyunjie96/steam-cross-platform-wishlist/blob/main/PRIVACY.md
 
 **Homepage URL:**
 ```
-https://github.com/keyunjie96/steam-cross-platform-wishlist
+https://github.com/keyunjie96/steam-wishlist-plus
 ```
 
 **Support URL:**
 ```
-https://github.com/keyunjie96/steam-cross-platform-wishlist/issues
+https://github.com/keyunjie96/steam-wishlist-plus/issues
 ```

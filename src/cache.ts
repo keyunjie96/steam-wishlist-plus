@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Cache Module
+ * Steam Wishlist Plus - Cache Module
  *
  * Handles all chrome.storage.local operations for caching platform availability data.
  * This module runs in the background service worker context.
@@ -8,8 +8,8 @@
 import type { Platform, PlatformStatus, CacheEntry, PlatformData } from './types';
 
 // Use globalThis for shared values (set by types.ts at runtime)
-const StoreUrls = globalThis.SCPW_StoreUrls;
-const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+const StoreUrls = globalThis.SWP_StoreUrls;
+const CACHE_VERSION = globalThis.SWP_CacheVersion;
 
 const CACHE_DEBUG = false; // Set to true to enable manual test overrides
 const CACHE_KEY_PREFIX = 'xcpw_cache_';
@@ -221,7 +221,7 @@ async function getAllCacheEntries(): Promise<CacheEntry[]> {
 }
 
 // Export for service worker
-globalThis.SCPW_Cache = {
+globalThis.SWP_Cache = {
   getFromCache,
   getFromCacheWithStale,
   saveToCache,

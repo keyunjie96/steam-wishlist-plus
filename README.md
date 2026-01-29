@@ -1,22 +1,20 @@
-# Steam Cross-Platform Wishlist
+# Steam Wishlist Plus
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.2-blue.svg)](https://github.com/keyunjie96/steam-cross-platform-wishlist/releases)
+[![Version](https://img.shields.io/badge/version-0.7.2-blue.svg)](https://github.com/keyunjie96/steam-wishlist-plus/releases)
 [![Chrome MV3](https://img.shields.io/badge/manifest-v3-green.svg)]()
 
-Shows which Steam wishlist games are also on Switch, PlayStation, Xbox, or Steam Deck. Plus HowLongToBeat times.
+Adds the missing signals to your Steam wishlist — platform availability, review scores, completion times, and Steam Deck status.
 
 ![Screenshot](assets/marketing/promo-tile-1280x800.png)
 
 ## Why?
 
-Steam's wishlist doesn't show platform availability. Checking manually means clicking through 4 storefronts per game. This extension does that lookup automatically using Wikidata (free, crowd-sourced) and shows icons inline.
+Steam's wishlist lacks context for buying decisions. Platform availability, review scores, and completion times are all scattered across different sites. This extension brings them together, right on your wishlist page.
 
-No price history, no tracking, no telemetry. ~50KB, runs entirely client-side.
+No price history, no tracking, no telemetry. ~70KB, runs entirely client-side.
 
-Built because I got tired of checking 4 storefronts manually. Open source because cross-platform info shouldn't require a subscription.
-
-**Philosophy:** One tool, one job. No feature creep, no cloud sync, no accounts. Your wishlist data stays in your browser.
+**Philosophy:** Every signal that helps you decide what to buy next, right on your wishlist page. No accounts, no cloud sync, no telemetry.
 
 ## Install
 
@@ -32,7 +30,8 @@ No backend. Everything runs client-side with a 7-day cache.
 
 ## Features
 
-- **Cross-platform icons** — Nintendo Switch, PlayStation, Xbox, Steam Deck status at a glance
+- **Review scores** — OpenCritic ratings displayed inline
+- **Platform availability** — Nintendo Switch, PlayStation, Xbox, Steam Deck status at a glance
 - **Completion times** — HowLongToBeat data inline (when their API cooperates)
 - **Direct store links** — Click any icon to jump to that platform's store page
 - **No backend** — Runs entirely client-side with 7-day cache
@@ -43,6 +42,7 @@ No backend. Everything runs client-side with a 7-day cache.
 | Source | What | Catch |
 |--------|------|-------|
 | Wikidata SPARQL | Platform availability | Incomplete coverage (volunteer-maintained) |
+| OpenCritic | Review scores | Requires Wikidata ID mapping |
 | HLTB API | Completion times | Undocumented, breaks monthly |
 | Steam SSR | Deck verified status | Requires page script injection¹ |
 
@@ -80,7 +80,7 @@ See [CLAUDE.md](CLAUDE.md) for full architecture details and dev workflow.
 
 ## Troubleshooting
 
-- **Icons not showing?** Check DevTools console for `[SCPW` messages
+- **Icons not showing?** Check DevTools console for `[SWP` messages
 - **Times missing?** HLTB API probably changed again. Check network tab on howlongtobeat.com
 - **Wrong platform data?** Wikidata issue — anyone can fix it at [wikidata.org](https://www.wikidata.org/)
 
@@ -100,6 +100,7 @@ PRs welcome. See [CLAUDE.md](CLAUDE.md) for architecture and dev workflow.
 
 - [Wikidata community](https://www.wikidata.org/wiki/Wikidata:WikiProject_Video_games) for maintaining game platform data
 - [HowLongToBeat](https://howlongtobeat.com/) for completion times (undocumented API, but it works)
+- [OpenCritic](https://opencritic.com/) for review score aggregation
 - Valve for SSR data we read via page script injection
 
 ## License

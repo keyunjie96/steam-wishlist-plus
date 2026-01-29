@@ -98,7 +98,7 @@ describe('popup.js', () => {
     global.confirm = jest.fn(() => true);
 
     // Mock UserSettings (centralized settings from types.js)
-    globalThis.SCPW_UserSettings = {
+    globalThis.SWP_UserSettings = {
       DEFAULT_USER_SETTINGS: {
         showNintendo: true,
         showPlaystation: true,

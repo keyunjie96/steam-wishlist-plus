@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - HLTB Client
+ * Steam Wishlist Plus - HLTB Client
  *
  * Queries HowLongToBeat for game completion time estimates.
  * Uses declarativeNetRequest to modify Origin header for direct API access.
@@ -11,7 +11,7 @@
 import type { HltbSearchResult } from './types';
 
 const HLTB_BASE_URL = 'https://howlongtobeat.com';
-const HLTB_LOG_PREFIX = '[SCPW HLTB]';
+const HLTB_LOG_PREFIX = '[SWP HLTB]';
 const HLTB_DEBUG = false;
 
 const REQUEST_DELAY_MS = 500;
@@ -461,7 +461,7 @@ async function batchQueryByGameNames(
 }
 
 // Export for service worker
-globalThis.SCPW_HltbClient = {
+globalThis.SWP_HltbClient = {
   queryByGameName,
   batchQueryByGameNames,
   formatHours,

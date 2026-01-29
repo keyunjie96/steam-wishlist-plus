@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Steam Cross-Platform Wishlist** is committed to protecting your privacy. This document explains what data the extension accesses, how it's used, and what we don't do.
+**Steam Wishlist Plus** is committed to protecting your privacy. This document explains what data the extension accesses, how it's used, and what we don't do.
 
 ## Summary
 
@@ -95,7 +95,7 @@ Since we don't collect personal data, there's nothing to delete or export. You c
 
 This extension is open source. You can review the code to verify our privacy practices:
 
-[GitHub Repository](https://github.com/keyunjie96/steam-cross-platform-wishlist)
+[GitHub Repository](https://github.com/keyunjie96/steam-wishlist-plus)
 
 ## Changes to This Policy
 

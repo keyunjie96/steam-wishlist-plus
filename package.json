@@ -1,14 +1,14 @@
 {
-  "name": "steam-cross-platform-wishlist",
+  "name": "steam-wishlist-plus",
   "version": "0.7.2",
-  "description": "Chrome extension that adds platform availability icons to Steam wishlist",
+  "description": "Chrome extension that adds platform availability, review scores, and completion times to your Steam wishlist",
   "repository": {
     "type": "git",
-    "url": "https://github.com/keyunjie96/steam-cross-platform-wishlist"
+    "url": "https://github.com/keyunjie96/steam-wishlist-plus"
   },
-  "homepage": "https://github.com/keyunjie96/steam-cross-platform-wishlist",
+  "homepage": "https://github.com/keyunjie96/steam-wishlist-plus",
   "bugs": {
-    "url": "https://github.com/keyunjie96/steam-cross-platform-wishlist/issues"
+    "url": "https://github.com/keyunjie96/steam-wishlist-plus/issues"
   },
   "scripts": {
     "build": "node scripts/build.js",

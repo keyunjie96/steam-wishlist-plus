@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Review Scores Client
+ * Steam Wishlist Plus - Review Scores Client
  *
  * Queries OpenCritic for game review scores.
  * OpenCritic aggregates reviews from multiple sources and provides a unified score.
@@ -12,7 +12,7 @@
 import type { ReviewScoreData, ReviewScoreTier, ReviewScoreSearchResult, OutletScore } from './types';
 
 const OPENCRITIC_API_BASE = 'https://api.opencritic.com/api';
-const LOG_PREFIX = '[SCPW ReviewScores]';
+const LOG_PREFIX = '[SWP ReviewScores]';
 const DEBUG = false;
 
 const REQUEST_DELAY_MS = 300;
@@ -526,7 +526,7 @@ async function batchQueryByGameNames(
 }
 
 // Export for service worker
-globalThis.SCPW_ReviewScoresClient = {
+globalThis.SWP_ReviewScoresClient = {
   queryByGameName,
   batchQueryByGameNames,
   normalizeGameName,

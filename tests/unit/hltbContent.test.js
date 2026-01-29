@@ -85,7 +85,7 @@ describe('hltbContent.js', () => {
     await flushPromises();
 
     expect(window.postMessage).toHaveBeenCalledWith({
-      type: 'SCPW_HLTB_REQUEST',
+      type: 'SWP_HLTB_REQUEST',
       requestId: 'req-1',
       gameName: 'Test Game',
       steamAppId: '123'
@@ -94,7 +94,7 @@ describe('hltbContent.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_RESPONSE',
+        type: 'SWP_HLTB_RESPONSE',
         requestId: 'req-1',
         success: true,
         data: {
@@ -189,7 +189,7 @@ describe('hltbContent.js', () => {
 
     handler({
       data: {
-        type: 'SCPW_HLTB_RESPONSE',
+        type: 'SWP_HLTB_RESPONSE',
         requestId: 'req-ignore',
         success: true,
         data: null
@@ -204,7 +204,7 @@ describe('hltbContent.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
 
     handler({
-      data: { type: 'SCPW_HLTB_READY' },
+      data: { type: 'SWP_HLTB_READY' },
       source: window
     });
 
@@ -215,7 +215,7 @@ describe('hltbContent.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
 
     handler({
-      data: { type: 'SCPW_OTHER_EVENT' },
+      data: { type: 'SWP_OTHER_EVENT' },
       source: window
     });
 
@@ -227,7 +227,7 @@ describe('hltbContent.js', () => {
 
     handler({
       data: {
-        type: 'SCPW_HLTB_RESPONSE',
+        type: 'SWP_HLTB_RESPONSE',
         requestId: 'req-missing',
         success: true,
         data: null

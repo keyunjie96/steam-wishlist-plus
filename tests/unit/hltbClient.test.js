@@ -48,12 +48,12 @@ describe('hltbClient.js', () => {
   let HltbClient;
 
   beforeAll(() => {
-    HltbClient = globalThis.SCPW_HltbClient;
+    HltbClient = globalThis.SWP_HltbClient;
   });
 
   describe('exports', () => {
-    it('should export SCPW_HltbClient to globalThis', () => {
-      expect(globalThis.SCPW_HltbClient).toBeDefined();
+    it('should export SWP_HltbClient to globalThis', () => {
+      expect(globalThis.SWP_HltbClient).toBeDefined();
     });
 
     it('should export all required functions', () => {
@@ -76,7 +76,7 @@ describe('hltbClient.js', () => {
       // Reset rulesRegistered flag by reloading module
       jest.resetModules();
       require('../../dist/hltbClient.js');
-      const freshClient = globalThis.SCPW_HltbClient;
+      const freshClient = globalThis.SWP_HltbClient;
 
       await freshClient.registerHeaderRules();
 
@@ -95,13 +95,13 @@ describe('hltbClient.js', () => {
       // Reset rulesRegistered flag by reloading module
       jest.resetModules();
       require('../../dist/hltbClient.js');
-      const freshClient = globalThis.SCPW_HltbClient;
+      const freshClient = globalThis.SWP_HltbClient;
 
       // Should not throw, just log error
       await freshClient.registerHeaderRules();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[SCPW HLTB]'),
+        expect.stringContaining('[SWP HLTB]'),
         expect.stringContaining('API error')
       );
 
@@ -773,7 +773,7 @@ describe('hltbClient.js', () => {
       });
 
       require('../../dist/hltbClient.js');
-      const freshClient = globalThis.SCPW_HltbClient;
+      const freshClient = globalThis.SWP_HltbClient;
 
       // Mock fetch to succeed
       global.fetch = createHltbFetchMock({ data: [] });
@@ -817,7 +817,7 @@ describe('hltbClient.js', () => {
       global.Promise.race = OriginalPromise.race.bind(OriginalPromise);
 
       require('../../dist/hltbClient.js');
-      const freshClient = globalThis.SCPW_HltbClient;
+      const freshClient = globalThis.SWP_HltbClient;
 
       // Restore Promise
       global.Promise = originalPromise;

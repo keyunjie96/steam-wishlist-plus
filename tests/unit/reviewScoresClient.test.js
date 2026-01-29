@@ -122,7 +122,7 @@ describe('reviewScoresClient.js', () => {
   let originalFetch;
 
   beforeAll(() => {
-    ReviewScoresClient = globalThis.SCPW_ReviewScoresClient;
+    ReviewScoresClient = globalThis.SWP_ReviewScoresClient;
   });
 
   beforeEach(() => {
@@ -134,8 +134,8 @@ describe('reviewScoresClient.js', () => {
   });
 
   describe('exports', () => {
-    it('should export SCPW_ReviewScoresClient to globalThis', () => {
-      expect(globalThis.SCPW_ReviewScoresClient).toBeDefined();
+    it('should export SWP_ReviewScoresClient to globalThis', () => {
+      expect(globalThis.SWP_ReviewScoresClient).toBeDefined();
     });
 
     it('should export all required functions', () => {

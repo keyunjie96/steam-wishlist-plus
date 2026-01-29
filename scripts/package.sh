@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 # Extract version from manifest.json
 VERSION=$(grep '"version"' manifest.json | sed 's/.*: "\([^"]*\)".*/\1/')
-FILENAME="steam-cross-platform-wishlist-v${VERSION}.zip"
+FILENAME="steam-wishlist-plus-v${VERSION}.zip"
 
 echo "Building extension..."
 npm run build

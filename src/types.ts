@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Type Definitions
+ * Steam Wishlist Plus - Type Definitions
  *
  * TypeScript type definitions for the extension.
  */
@@ -249,16 +249,16 @@ export const StoreUrls = {
     `https://store.steampowered.com/search/?term=${encodeURIComponent(gameName)}`
 };
 
-// Global type declarations for SCPW modules
+// Global type declarations for SWP modules
 declare global {
   interface Window {
-    SCPW_StoreUrls: typeof StoreUrls;
-    SCPW_Icons: Record<Platform, string>;
-    SCPW_PlatformInfo: Record<Platform, { name: string; abbr: string; searchLabel: string }>;
-    SCPW_StatusInfo: Record<PlatformStatus, { tooltip: (platform: Platform) => string; className: string }>;
-    SCPW_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
-    SCPW_CacheVersion: number;
-    SCPW_Cache: {
+    SWP_StoreUrls: typeof StoreUrls;
+    SWP_Icons: Record<Platform, string>;
+    SWP_PlatformInfo: Record<Platform, { name: string; abbr: string; searchLabel: string }>;
+    SWP_StatusInfo: Record<PlatformStatus, { tooltip: (platform: Platform) => string; className: string }>;
+    SWP_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
+    SWP_CacheVersion: number;
+    SWP_Cache: {
       getFromCache: (appid: string) => Promise<CacheEntry | null>;
       getFromCacheWithStale: (appid: string) => Promise<{ entry: CacheEntry | null; isStale: boolean }>;
       saveToCache: (entry: CacheEntry) => Promise<void>;
@@ -270,7 +270,7 @@ declare global {
       MANUAL_OVERRIDES: Record<string, Record<Platform, PlatformStatus>>;
       PLATFORMS: Platform[];
     };
-    SCPW_WikidataClient: {
+    SWP_WikidataClient: {
       queryBySteamAppId: (steamAppId: string) => Promise<WikidataResult>;
       batchQueryBySteamAppIds: (steamAppIds: string[]) => Promise<Map<string, WikidataResult>>;
       getStoreUrl: (platform: string, storeIds: WikidataStoreIds) => string | null;
@@ -278,20 +278,20 @@ declare global {
       STORE_URL_BUILDERS: Record<string, (id: string) => string | null>;
       PLATFORM_QIDS: Record<string, string>;
     };
-    SCPW_Resolver: {
+    SWP_Resolver: {
       resolvePlatformData: (appid: string, gameName: string) => Promise<{ entry: CacheEntry; fromCache: boolean }>;
       batchResolvePlatformData: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, { entry: CacheEntry; fromCache: boolean }>>;
       forceRefresh: (appid: string, gameName: string) => Promise<{ entry: CacheEntry; fromCache: boolean }>;
       createFallbackEntry: (appid: string, gameName: string) => CacheEntry;
     };
-    SCPW_SteamDeck: {
+    SWP_SteamDeck: {
       extractDeckDataFromPage: () => Map<string, DeckCategory>;
       waitForDeckData: (maxWaitMs?: number) => Promise<Map<string, DeckCategory>>;
       getDeckStatus: (deckData: Map<string, DeckCategory>, appId: string) => { found: boolean; status: DeckStatus; category: DeckCategory };
       statusToDisplayStatus: (status: DeckStatus) => 'available' | 'unavailable' | 'unknown';
       CATEGORY_MAP: Record<DeckCategory, DeckStatus>;
     };
-    SCPW_HltbClient: {
+    SWP_HltbClient: {
       queryByGameName: (gameName: string, steamAppId?: string) => Promise<HltbSearchResult | null>;
       batchQueryByGameNames: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, HltbSearchResult | null>>;
       formatHours: (hours: number) => string;
@@ -300,7 +300,7 @@ declare global {
       cleanGameNameForSearch: (name: string) => string;
       registerHeaderRules: () => Promise<void>;
     };
-    SCPW_ReviewScoresClient: {
+    SWP_ReviewScoresClient: {
       queryByGameName: (gameName: string) => Promise<ReviewScoreSearchResult | null>;
       batchQueryByGameNames: (games: Array<{ appid: string; gameName: string }>) => Promise<Map<string, ReviewScoreSearchResult | null>>;
       normalizeGameName: (name: string) => string;
@@ -308,7 +308,7 @@ declare global {
       formatScore: (score: number) => string;
       getTierColor: (tier: ReviewScoreTier) => string;
     };
-    SCPW_ContentTestExports?: {
+    SWP_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;
       processPendingBatch: () => Promise<void>;
       pendingItems: Map<string, { gameName: string; container: HTMLElement }>;
@@ -397,31 +397,31 @@ declare global {
     };
   }
   // eslint-disable-next-line no-var
-  var SCPW_StoreUrls: typeof StoreUrls;
+  var SWP_StoreUrls: typeof StoreUrls;
   // eslint-disable-next-line no-var
-  var SCPW_Icons: Record<Platform, string>;
+  var SWP_Icons: Record<Platform, string>;
   // eslint-disable-next-line no-var
-  var SCPW_PlatformInfo: Record<Platform, { name: string; abbr: string; searchLabel: string }>;
+  var SWP_PlatformInfo: Record<Platform, { name: string; abbr: string; searchLabel: string }>;
   // eslint-disable-next-line no-var
-  var SCPW_StatusInfo: Record<PlatformStatus, { tooltip: (platform: Platform) => string; className: string }>;
+  var SWP_StatusInfo: Record<PlatformStatus, { tooltip: (platform: Platform) => string; className: string }>;
   // eslint-disable-next-line no-var
-  var SCPW_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
+  var SWP_SteamDeckTiers: Record<string, { label: string; tooltip: string }>;
   // eslint-disable-next-line no-var
-  var SCPW_Cache: Window['SCPW_Cache'];
+  var SWP_Cache: Window['SWP_Cache'];
   // eslint-disable-next-line no-var
-  var SCPW_WikidataClient: Window['SCPW_WikidataClient'];
+  var SWP_WikidataClient: Window['SWP_WikidataClient'];
   // eslint-disable-next-line no-var
-  var SCPW_Resolver: Window['SCPW_Resolver'];
+  var SWP_Resolver: Window['SWP_Resolver'];
   // eslint-disable-next-line no-var
-  var SCPW_SteamDeck: Window['SCPW_SteamDeck'];
+  var SWP_SteamDeck: Window['SWP_SteamDeck'];
   // eslint-disable-next-line no-var
-  var SCPW_HltbClient: Window['SCPW_HltbClient'];
+  var SWP_HltbClient: Window['SWP_HltbClient'];
   // eslint-disable-next-line no-var
-  var SCPW_ReviewScoresClient: Window['SCPW_ReviewScoresClient'];
+  var SWP_ReviewScoresClient: Window['SWP_ReviewScoresClient'];
   // eslint-disable-next-line no-var
-  var SCPW_ContentTestExports: Window['SCPW_ContentTestExports'];
+  var SWP_ContentTestExports: Window['SWP_ContentTestExports'];
   // eslint-disable-next-line no-var
-  var SCPW_UserSettings: {
+  var SWP_UserSettings: {
     DEFAULT_USER_SETTINGS: UserSettings;
     SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>>;
     SETTING_SELECT_IDS: Partial<Record<keyof UserSettings, SelectElementConfig>>;
@@ -509,17 +509,17 @@ export interface ReviewScoreSearchResult {
 
 // Export globally for content scripts (ES modules not fully supported in Chrome extensions)
 // Only set if not already defined (allows mocking in tests)
-if (!globalThis.SCPW_StoreUrls) {
-  globalThis.SCPW_StoreUrls = StoreUrls;
+if (!globalThis.SWP_StoreUrls) {
+  globalThis.SWP_StoreUrls = StoreUrls;
 }
-if (!globalThis.SCPW_UserSettings) {
-  globalThis.SCPW_UserSettings = {
+if (!globalThis.SWP_UserSettings) {
+  globalThis.SWP_UserSettings = {
     DEFAULT_USER_SETTINGS,
     SETTING_CHECKBOX_IDS,
     SETTING_SELECT_IDS,
     USER_SETTING_KEYS
   };
 }
-if (globalThis.SCPW_CacheVersion === undefined) {
-  globalThis.SCPW_CacheVersion = CACHE_VERSION;
+if (globalThis.SWP_CacheVersion === undefined) {
+  globalThis.SWP_CacheVersion = CACHE_VERSION;
 }

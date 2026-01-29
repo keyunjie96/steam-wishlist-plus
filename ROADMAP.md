@@ -79,7 +79,7 @@
 2. Add message handler in background.ts for GET_CACHE_EXPORT
 3. Format cache entries as JSON with metadata (timestamp, version)
 4. Include all fields: appid, gameName, platforms, HLTB data, review scores
-5. Trigger browser download with timestamp filename (e.g., `scpw-cache-2024-01-26.json`)
+5. Trigger browser download with timestamp filename (e.g., `swp-cache-2024-01-26.json`)
 **Risk:** Low - simple file generation and download. Consider adding import functionality for completeness.
 
 ### FEAT-8: Firefox/Edge browser support
@@ -97,7 +97,7 @@
 
 ## Declined Features
 
-Features below were evaluated and declined because established extensions (Augmented Steam, SteamDB, ProtonDB for Steam) already implement them well, or the technical risk was too high. This extension focuses on **console platform availability** which remains underserved.
+Features below were evaluated and declined because established extensions (Augmented Steam, SteamDB, ProtonDB for Steam) already implement them well, or the technical risk was too high. This extension focuses on **useful wishlist signals** (platform availability, review scores, completion times) that Steam doesn't provide natively.
 
 | Feature | Reason | Incumbent |
 |---------|--------|-----------|

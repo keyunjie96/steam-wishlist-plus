@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Steam Cross-Platform Wishlist** is a Chrome extension (Manifest V3) that displays platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck) and review scores on Steam wishlist pages using Wikidata, Steam's SSR data, and OpenCritic.
+**Steam Wishlist Plus** is a Chrome extension (Manifest V3) that adds platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck), review scores, and completion times to Steam wishlist pages using Wikidata, Steam's SSR data, OpenCritic, and HowLongToBeat.
 
 **Version:** 0.7.2
 **Status:** Production-ready
@@ -204,7 +204,7 @@ Eight games have manual overrides in `cache.ts` for development testing.
 
 ## Code Conventions
 
-- **Logging**: Use `[SCPW ...]` prefix for all console logs
+- **Logging**: Use `[SWP ...]` prefix for all console logs
 - **Types**: TypeScript with strict mode enabled
 - **Error Handling**: Graceful fallbacks, never crash the page
 - **Privacy**: Wikidata queries for platform data, cache in local storage, no telemetry
@@ -324,7 +324,7 @@ For full end-to-end testing, use Chrome DevTools:
 1. Load extension unpacked at `chrome://extensions/`
 2. Navigate to Steam wishlist
 3. Open DevTools → Console
-4. Filter by `[SCPW` to see extension logs
+4. Filter by `[SWP` to see extension logs
 5. Check Network tab for API requests from service worker
 
 ## Roadmap Maintenance
@@ -340,7 +340,7 @@ This ensures the roadmap stays current and future agents know what's been done.
 ## Future Roadmap Ideas
 
 See `ROADMAP.md` for detailed specifications. Focus areas:
-- **Console platform availability** (Nintendo/PS/Xbox) - core differentiator
+- **Multi-signal wishlist enrichment** — platform availability, review scores, completion times
 - User preferences for platform visibility
 - Steam Deck Verified status (implemented via SSR data)
 - ChromeOS/Linux support via ProtonDB (potential future)

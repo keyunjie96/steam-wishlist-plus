@@ -16,12 +16,12 @@ describe('cache.js', () => {
   });
 
   describe('exports', () => {
-    it('should export SCPW_Cache to globalThis', () => {
-      expect(globalThis.SCPW_Cache).toBeDefined();
+    it('should export SWP_Cache to globalThis', () => {
+      expect(globalThis.SWP_Cache).toBeDefined();
     });
 
     it('should export all required functions', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(typeof Cache.getFromCache).toBe('function');
       expect(typeof Cache.getFromCacheWithStale).toBe('function');
       expect(typeof Cache.saveToCache).toBe('function');
@@ -32,7 +32,7 @@ describe('cache.js', () => {
     });
 
     it('should export MANUAL_OVERRIDES', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Cache.MANUAL_OVERRIDES).toBeDefined();
       expect(typeof Cache.MANUAL_OVERRIDES).toBe('object');
     });
@@ -40,57 +40,57 @@ describe('cache.js', () => {
 
   describe('isCacheValid', () => {
     it('should return false for null entry', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Cache.isCacheValid(null)).toBe(false);
     });
 
     it('should return false for undefined entry', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Cache.isCacheValid(undefined)).toBe(false);
     });
 
     it('should return false for entry without resolvedAt', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Cache.isCacheValid({ ttlDays: 7 })).toBe(false);
     });
 
     it('should return false for entry without ttlDays', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Cache.isCacheValid({ resolvedAt: Date.now() })).toBe(false);
     });
 
     it('should return true for valid non-expired entry', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion  // Must match CACHE_VERSION
+        cacheVersion: globalThis.SWP_CacheVersion  // Must match CACHE_VERSION
       };
       expect(Cache.isCacheValid(entry)).toBe(true);
     });
 
     it('should return false for expired entry', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         resolvedAt: Date.now() - (8 * 24 * 60 * 60 * 1000), // 8 days ago
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion
+        cacheVersion: globalThis.SWP_CacheVersion
       };
       expect(Cache.isCacheValid(entry)).toBe(false);
     });
 
     it('should return true for entry about to expire', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         resolvedAt: Date.now() - (6 * 24 * 60 * 60 * 1000), // 6 days ago
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion
+        cacheVersion: globalThis.SWP_CacheVersion
       };
       expect(Cache.isCacheValid(entry)).toBe(true);
     });
 
     it('should return false for entry with missing cacheVersion', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         resolvedAt: Date.now(),
         ttlDays: 7
@@ -100,7 +100,7 @@ describe('cache.js', () => {
     });
 
     it('should return false for entry with mismatched cacheVersion', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         resolvedAt: Date.now(),
         ttlDays: 7,
@@ -112,19 +112,19 @@ describe('cache.js', () => {
 
   describe('getFromCache', () => {
     it('should return null for non-existent entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const result = await Cache.getFromCache('999999');
       expect(result).toBeNull();
     });
 
     it('should return valid cached entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         appid: '12345',
         gameName: 'Test Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'https://example.com' },
           playstation: { status: 'unavailable', storeUrl: 'https://example.com' },
@@ -139,7 +139,7 @@ describe('cache.js', () => {
     });
 
     it('should return null for expired entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const expiredEntry = {
         appid: '12345',
         gameName: 'Test Game',
@@ -155,7 +155,7 @@ describe('cache.js', () => {
     });
 
     it('should use correct cache key prefix', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       await Cache.getFromCache('67890');
 
       expect(chrome.storage.local.get).toHaveBeenCalledWith('xcpw_cache_67890');
@@ -164,13 +164,13 @@ describe('cache.js', () => {
 
   describe('getFromCacheWithStale', () => {
     it('should return entry with isStale false for valid entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         appid: '12345',
         gameName: 'Test Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {}
       };
 
@@ -182,13 +182,13 @@ describe('cache.js', () => {
     });
 
     it('should return entry with isStale true for expired entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const expiredEntry = {
         appid: '12345',
         gameName: 'Test Game',
         resolvedAt: Date.now() - (10 * 24 * 60 * 60 * 1000), // 10 days ago
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {}
       };
 
@@ -200,7 +200,7 @@ describe('cache.js', () => {
     });
 
     it('should return entry with isStale true for version mismatch', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         appid: '12345',
         gameName: 'Test Game',
@@ -218,7 +218,7 @@ describe('cache.js', () => {
     });
 
     it('should return null entry with isStale false for non-existent entry', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       const result = await Cache.getFromCacheWithStale('999999');
       expect(result.entry).toBeNull();
@@ -228,7 +228,7 @@ describe('cache.js', () => {
 
   describe('saveToCache', () => {
     it('should save entry with correct key', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         appid: '12345',
         gameName: 'Test Game',
@@ -245,13 +245,13 @@ describe('cache.js', () => {
     });
 
     it('should store entry retrievable by getFromCache', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const entry = {
         appid: '54321',
         gameName: 'Another Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'url' },
           playstation: { status: 'available', storeUrl: 'url' },
@@ -268,13 +268,13 @@ describe('cache.js', () => {
 
   describe('getOrCreatePlatformData', () => {
     it('should return cached data when available', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const cachedEntry = {
         appid: '12345',
         gameName: 'Cached Game',
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'url' },
           playstation: { status: 'available', storeUrl: 'url' },
@@ -291,7 +291,7 @@ describe('cache.js', () => {
     });
 
     it('should create new entry when cache miss', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       const result = await Cache.getOrCreatePlatformData('99999', 'New Game');
 
@@ -301,7 +301,7 @@ describe('cache.js', () => {
     });
 
     it('should use manual override when available', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       // MANUAL_OVERRIDES is empty when CACHE_DEBUG=false (production mode)
       // This test verifies production behavior where overrides are disabled
       const result = await Cache.getOrCreatePlatformData('367520', 'Hollow Knight');
@@ -314,7 +314,7 @@ describe('cache.js', () => {
     });
 
     it('should use unknown status when no override', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       const result = await Cache.getOrCreatePlatformData('123', 'Unknown Game');
 
@@ -325,13 +325,13 @@ describe('cache.js', () => {
     });
 
     it('should update game name when changed', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const oldEntry = {
         appid: '12345',
         gameName: 'Old Name',
         resolvedAt: Date.now(),
         ttlDays: 7,
-        cacheVersion: globalThis.SCPW_CacheVersion,
+        cacheVersion: globalThis.SWP_CacheVersion,
         platforms: {
           nintendo: { status: 'available', storeUrl: 'old-url' },
           playstation: { status: 'available', storeUrl: 'old-url' },
@@ -349,7 +349,7 @@ describe('cache.js', () => {
     });
 
     it('should save new entry to cache', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       await Cache.getOrCreatePlatformData('77777', 'Brand New Game');
 
@@ -361,7 +361,7 @@ describe('cache.js', () => {
 
   describe('clearCache', () => {
     it('should remove all cache entries', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       setMockStorageData({
         'xcpw_cache_111': { appid: '111' },
@@ -378,7 +378,7 @@ describe('cache.js', () => {
     });
 
     it('should handle empty cache gracefully', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       await expect(Cache.clearCache()).resolves.not.toThrow();
     });
@@ -386,7 +386,7 @@ describe('cache.js', () => {
 
   describe('getCacheStats', () => {
     it('should return count of cached entries', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       setMockStorageData({
         'xcpw_cache_111': { appid: '111', resolvedAt: Date.now() },
@@ -401,7 +401,7 @@ describe('cache.js', () => {
     });
 
     it('should return oldest entry timestamp', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const oldestTime = Date.now() - 1000000;
 
       setMockStorageData({
@@ -416,7 +416,7 @@ describe('cache.js', () => {
     });
 
     it('should return null for oldest when no entries', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       const stats = await Cache.getCacheStats();
 
@@ -425,7 +425,7 @@ describe('cache.js', () => {
     });
 
     it('should ignore non-cache keys', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
 
       setMockStorageData({
         'some_other_key': { resolvedAt: Date.now() },
@@ -438,7 +438,7 @@ describe('cache.js', () => {
     });
 
     it('should filter out entries with falsy resolvedAt', async () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       const validTime = Date.now() - 100000;
 
       setMockStorageData({
@@ -462,12 +462,12 @@ describe('cache.js', () => {
     // Test overrides are only active during development
 
     it('should be empty in production mode (CACHE_DEBUG=false)', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(Object.keys(Cache.MANUAL_OVERRIDES).length).toBe(0);
     });
 
     it('should be an object', () => {
-      const Cache = globalThis.SCPW_Cache;
+      const Cache = globalThis.SWP_Cache;
       expect(typeof Cache.MANUAL_OVERRIDES).toBe('object');
     });
   });
