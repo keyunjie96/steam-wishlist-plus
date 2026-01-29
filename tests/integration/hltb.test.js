@@ -57,22 +57,31 @@ async function getAuthToken() {
 }
 
 /**
- * Verifies a game page exists on HLTB by checking the game URL
+ * Verifies a game page exists on HLTB by checking the game URL.
+ * Retries on 5xx errors since HLTB occasionally returns transient 502s.
  */
-async function verifyGamePage(hltbId) {
+async function verifyGamePage(hltbId, retries = 3) {
   const url = `${HLTB_BASE}/game/${hltbId}`;
-  const response = await fetch(url, {
-    method: 'HEAD',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-    redirect: 'follow',
-  });
 
-  return {
-    exists: response.ok,
-    status: response.status,
-  };
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      redirect: 'follow',
+    });
+
+    if (response.status < 500 || attempt === retries) {
+      return {
+        exists: response.ok,
+        status: response.status,
+      };
+    }
+
+    console.log(`  HLTB returned ${response.status} for game/${hltbId}, retrying (${attempt}/${retries})...`);
+    await delay(REQUEST_DELAY_MS * 2);
+  }
 }
 
 describe('HLTB Integration (Sanity Check)', () => {

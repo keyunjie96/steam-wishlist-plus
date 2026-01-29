@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Steam Deck Page Script
+ * Steam Wishlist Plus - Steam Deck Page Script
  *
  * Runs in the MAIN world (page context) to extract Steam Deck compatibility
  * data from window.SSR, storing it in a hidden DOM element for the content
@@ -12,7 +12,7 @@
   'use strict';
 
   const DEBUG = false;
-  const LOG_PREFIX = '[SCPW SteamDeck PageScript]';
+  const LOG_PREFIX = '[SWP SteamDeck PageScript]';
   const DATA_ELEMENT_ID = 'scpw-steamdeck-data';
 
   interface TanStackQuery {

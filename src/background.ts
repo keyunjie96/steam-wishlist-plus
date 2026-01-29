@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Background Service Worker
+ * Steam Wishlist Plus - Background Service Worker
  *
  * Handles messaging between content scripts and manages the platform data resolution.
  * Runs as a service worker in MV3 - can be terminated at any time by Chrome.
@@ -31,7 +31,7 @@ import type {
   GetReviewScoresBatchRequest
 } from './types';
 
-const LOG_PREFIX = '[SCPW Background]';
+const LOG_PREFIX = '[SWP Background]';
 
 // Sentinel value for "searched but no match found" - prevents repeated searches
 const NOT_FOUND_ID = -1;
@@ -164,11 +164,11 @@ async function getPlatformData(message: GetPlatformDataRequest): Promise<GetPlat
     return { success: false, data: null, fromCache: false };
   }
 
-  if (!globalThis.SCPW_Resolver) {
+  if (!globalThis.SWP_Resolver) {
     return { success: false, data: null, fromCache: false, error: 'Resolver not loaded' };
   }
 
-  const { entry, fromCache } = await globalThis.SCPW_Resolver.resolvePlatformData(appid, gameName);
+  const { entry, fromCache } = await globalThis.SWP_Resolver.resolvePlatformData(appid, gameName);
   console.log(`${LOG_PREFIX} ${fromCache ? 'Cache hit' : 'Resolved'} for appid ${appid} (source: ${entry.source || 'unknown'})`);
 
   return { success: true, data: entry, fromCache };
@@ -184,13 +184,13 @@ async function getBatchPlatformData(message: GetPlatformDataBatchRequest): Promi
     return { success: false, results: {} };
   }
 
-  if (!globalThis.SCPW_Resolver) {
+  if (!globalThis.SWP_Resolver) {
     return { success: false, results: {}, error: 'Resolver not loaded' };
   }
 
   console.log(`${LOG_PREFIX} Batch request for ${games.length} games`);
 
-  const resultsMap = await globalThis.SCPW_Resolver.batchResolvePlatformData(games);
+  const resultsMap = await globalThis.SWP_Resolver.batchResolvePlatformData(games);
 
   // Convert Map to plain object for message passing
   const results: Record<string, { data: CacheEntry; fromCache: boolean }> = {};
@@ -221,7 +221,7 @@ async function updateCache(message: UpdateCacheRequest): Promise<{ success: bool
     return { success: false };
   }
 
-  await globalThis.SCPW_Resolver.forceRefresh(appid, gameName);
+  await globalThis.SWP_Resolver.forceRefresh(appid, gameName);
   console.log(`${LOG_PREFIX} Cache updated for appid ${appid}`);
 
   return { success: true };
@@ -231,7 +231,7 @@ async function updateCache(message: UpdateCacheRequest): Promise<{ success: bool
  * Gets cache statistics (handler wrapper to avoid name collision with cache.js)
  */
 async function handleGetCacheStats(): Promise<{ success: boolean; count: number; oldestEntry: number | null }> {
-  const stats = await globalThis.SCPW_Cache.getCacheStats();
+  const stats = await globalThis.SWP_Cache.getCacheStats();
   return { success: true, count: stats.count, oldestEntry: stats.oldestEntry };
 }
 
@@ -239,7 +239,7 @@ async function handleGetCacheStats(): Promise<{ success: boolean; count: number;
  * Clears all cached data (handler wrapper to avoid name collision with cache.js)
  */
 async function handleClearCache(): Promise<{ success: boolean }> {
-  await globalThis.SCPW_Cache.clearCache();
+  await globalThis.SWP_Cache.clearCache();
   console.log(`${LOG_PREFIX} Cache cleared`);
   return { success: true };
 }
@@ -248,7 +248,7 @@ async function handleClearCache(): Promise<{ success: boolean }> {
  * Gets all cache entries for export
  */
 async function handleGetCacheExport(): Promise<AsyncResponse> {
-  const entries = await globalThis.SCPW_Cache.getAllCacheEntries();
+  const entries = await globalThis.SWP_Cache.getAllCacheEntries();
   return { success: true, data: entries as unknown as CacheEntry };
 }
 
@@ -262,12 +262,12 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
     return { success: false, data: null, error: 'Missing appid or gameName' };
   }
 
-  if (!globalThis.SCPW_HltbClient) {
+  if (!globalThis.SWP_HltbClient) {
     return { success: false, data: null, error: 'HLTB client not loaded' };
   }
 
   // Check if we have cached HLTB data first
-  const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+  const cached = await globalThis.SWP_Cache.getFromCache(appid);
   const hltb = cached?.hltbData;
 
   // Check for "not found" marker - don't re-search
@@ -285,14 +285,14 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
   // Query HLTB
   try {
     console.log(`${LOG_PREFIX} HLTB querying for "${gameName}" (appid: ${appid})`);
-    const result = await globalThis.SCPW_HltbClient.queryByGameName(gameName, appid);
+    const result = await globalThis.SWP_HltbClient.queryByGameName(gameName, appid);
     console.log(`${LOG_PREFIX} HLTB query result for ${appid}:`, JSON.stringify(result));
 
     if (result) {
       // Update cache with HLTB data
       if (cached) {
         cached.hltbData = result.data;
-        await globalThis.SCPW_Cache.saveToCache(cached);
+        await globalThis.SWP_Cache.saveToCache(cached);
       }
       console.log(`${LOG_PREFIX} HLTB resolved for appid ${appid}: ${result.data.mainStory}h`);
       return { success: true, data: result.data };
@@ -301,7 +301,7 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
     // Save "not found" marker to cache to prevent repeated searches
     if (cached) {
       cached.hltbData = createHltbNotFoundMarker();
-      await globalThis.SCPW_Cache.saveToCache(cached);
+      await globalThis.SWP_Cache.saveToCache(cached);
     }
     console.log(`${LOG_PREFIX} HLTB no match for appid ${appid} (cached as not found)`);
     return { success: true, data: null };
@@ -322,7 +322,7 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
     return { success: false, hltbResults: {} };
   }
 
-  if (!globalThis.SCPW_HltbClient) {
+  if (!globalThis.SWP_HltbClient) {
     return { success: false, hltbResults: {}, error: 'HLTB client not loaded' };
   }
 
@@ -334,7 +334,7 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
   // Check cache first
   // Note: Treat HLTB data with all zeros or missing hltbId as uncached (likely from old broken API)
   for (const { appid, gameName } of games) {
-    const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+    const cached = await globalThis.SWP_Cache.getFromCache(appid);
     const hltb = cached?.hltbData;
 
     // Check for "not found" marker - don't re-search, return null
@@ -357,26 +357,26 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
   if (uncached.length > 0) {
     console.log(`${LOG_PREFIX} HLTB querying games:`, uncached.map(g => `${g.appid}:${g.gameName}`).join(', '));
     try {
-      const batchResults = await globalThis.SCPW_HltbClient.batchQueryByGameNames(uncached);
+      const batchResults = await globalThis.SWP_HltbClient.batchQueryByGameNames(uncached);
       console.log(`${LOG_PREFIX} HLTB batch returned ${batchResults.size} results`);
 
       for (const { appid } of uncached) {
         const hltbResult = batchResults.get(appid);
 
         // Update cache
-        const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+        const cached = await globalThis.SWP_Cache.getFromCache(appid);
         if (hltbResult) {
           hltbResults[appid] = hltbResult.data;
           if (cached) {
             cached.hltbData = hltbResult.data;
-            await globalThis.SCPW_Cache.saveToCache(cached);
+            await globalThis.SWP_Cache.saveToCache(cached);
           }
         } else {
           // Save "not found" marker to prevent repeated searches
           hltbResults[appid] = null;
           if (cached) {
             cached.hltbData = createHltbNotFoundMarker();
-            await globalThis.SCPW_Cache.saveToCache(cached);
+            await globalThis.SWP_Cache.saveToCache(cached);
             console.log(`${LOG_PREFIX} HLTB cached as not found: ${appid}`);
           }
         }
@@ -407,12 +407,12 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
     return { success: false, data: null, error: 'Missing appid or gameName' };
   }
 
-  if (!globalThis.SCPW_ReviewScoresClient) {
+  if (!globalThis.SWP_ReviewScoresClient) {
     return { success: false, data: null, error: 'Review scores client not loaded' };
   }
 
   // Check if we have cached review score data first
-  const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+  const cached = await globalThis.SWP_Cache.getFromCache(appid);
   const reviewScore = cached?.reviewScoreData;
 
   // Check for "not found" marker - don't re-search
@@ -430,13 +430,13 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
   // Query OpenCritic
   try {
     console.log(`${LOG_PREFIX} Review scores querying for "${gameName}" (appid: ${appid})`);
-    const result = await globalThis.SCPW_ReviewScoresClient.queryByGameName(gameName);
+    const result = await globalThis.SWP_ReviewScoresClient.queryByGameName(gameName);
 
     if (result) {
       // Update cache with review score data
       if (cached) {
         cached.reviewScoreData = result.data;
-        await globalThis.SCPW_Cache.saveToCache(cached);
+        await globalThis.SWP_Cache.saveToCache(cached);
       }
       console.log(`${LOG_PREFIX} Review scores resolved for appid ${appid}: ${result.data.score}`);
       return { success: true, data: result.data };
@@ -445,7 +445,7 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
     // Save "not found" marker to cache to prevent repeated searches
     if (cached) {
       cached.reviewScoreData = createReviewScoresNotFoundMarker();
-      await globalThis.SCPW_Cache.saveToCache(cached);
+      await globalThis.SWP_Cache.saveToCache(cached);
     }
     console.log(`${LOG_PREFIX} Review scores no match for appid ${appid} (cached as not found)`);
     return { success: true, data: null };
@@ -466,7 +466,7 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
     return { success: false, reviewScoresResults: {} };
   }
 
-  if (!globalThis.SCPW_ReviewScoresClient) {
+  if (!globalThis.SWP_ReviewScoresClient) {
     return { success: false, reviewScoresResults: {}, error: 'Review scores client not loaded' };
   }
 
@@ -477,7 +477,7 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
 
   // Check cache first
   for (const { appid, gameName } of games) {
-    const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+    const cached = await globalThis.SWP_Cache.getFromCache(appid);
     const reviewScore = cached?.reviewScoreData;
 
     // Check for "not found" marker - don't re-search, return null
@@ -499,7 +499,7 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
   // First, enrich uncached with openCriticId from Wikidata cache (if available)
   const uncachedWithIds: Array<{ appid: string; gameName: string; openCriticId?: string | null }> = [];
   for (const { appid, gameName } of uncached) {
-    const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+    const cached = await globalThis.SWP_Cache.getFromCache(appid);
     uncachedWithIds.push({
       appid,
       gameName,
@@ -511,7 +511,7 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
   console.log(`${LOG_PREFIX} Review scores: ${games.length} total, ${games.length - uncached.length} cached, ${uncached.length} to query (${withOpenCriticIdCount} with OpenCritic ID from Wikidata)`);
   if (uncachedWithIds.length > 0) {
     try {
-      const batchResponse = await globalThis.SCPW_ReviewScoresClient.batchQueryByGameNames(uncachedWithIds);
+      const batchResponse = await globalThis.SWP_ReviewScoresClient.batchQueryByGameNames(uncachedWithIds);
       // Handle both old Map return (for cached code) and new { results, failureReasons } return
       const batchResults: Map<string, { data: ReviewScoreData } | null> =
         batchResponse instanceof Map ? batchResponse : batchResponse.results;
@@ -537,19 +537,19 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
         const result = batchResults.get(appid);
 
         // Update cache
-        const cached = await globalThis.SCPW_Cache.getFromCache(appid);
+        const cached = await globalThis.SWP_Cache.getFromCache(appid);
         if (result) {
           reviewScoresResults[appid] = result.data;
           if (cached) {
             cached.reviewScoreData = result.data;
-            await globalThis.SCPW_Cache.saveToCache(cached);
+            await globalThis.SWP_Cache.saveToCache(cached);
           }
         } else {
           // Save "not found" marker to prevent repeated searches
           reviewScoresResults[appid] = null;
           if (cached) {
             cached.reviewScoreData = createReviewScoresNotFoundMarker();
-            await globalThis.SCPW_Cache.saveToCache(cached);
+            await globalThis.SWP_Cache.saveToCache(cached);
           }
         }
       }

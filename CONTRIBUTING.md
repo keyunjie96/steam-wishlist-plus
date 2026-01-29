@@ -1,4 +1,4 @@
-# Contributing to Steam Cross-Platform Wishlist
+# Contributing to Steam Wishlist Plus
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 ```bash
 # Clone the repository
-git clone https://github.com/keyunjie96/steam-cross-platform-wishlist
-cd steam-cross-platform-wishlist
+git clone https://github.com/keyunjie96/steam-wishlist-plus
+cd steam-wishlist-plus
 
 # Install dependencies
 npm install
@@ -94,7 +94,7 @@ Note: We focus on platform availability and game metadata. Features covered by e
 
 Use the logging prefix convention:
 ```typescript
-const LOG_PREFIX = '[SCPW ModuleName]';
+const LOG_PREFIX = '[SWP ModuleName]';
 console.log(`${LOG_PREFIX} message`);
 ```
 

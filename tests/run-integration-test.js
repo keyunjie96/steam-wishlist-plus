@@ -106,7 +106,7 @@ async function queryWikidata(steamAppId) {
   const response = await fetch(url.toString(), {
     headers: {
       'Accept': 'application/sparql-results+json',
-      'User-Agent': 'SteamCrossPlatformWishlist-IntegrationTest/1.0',
+      'User-Agent': 'SteamWishlistPlus-IntegrationTest/1.0',
     },
   });
 
@@ -214,7 +214,7 @@ function compareResults(expected, actual) {
  * Main test runner
  */
 async function runTests() {
-  console.log('🎮 Steam Cross-Platform Wishlist - Integration Test');
+  console.log('🎮 Steam Wishlist Plus - Integration Test');
   console.log('═══════════════════════════════════════════════════\n');
   console.log(`Testing ${ALL_GAMES.length} games against Wikidata...\n`);
 

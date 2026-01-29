@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Resolver
+ * Steam Wishlist Plus - Resolver
  *
  * Coordinates between Wikidata and the cache system for console platforms.
  * Resolution priority:
@@ -15,7 +15,7 @@
 import type { Platform, PlatformStatus, CacheEntry, PlatformData, WikidataResult, WikidataStoreIds } from './types';
 
 // Use globalThis for shared values (set by types.ts at runtime)
-const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+const CACHE_VERSION = globalThis.SWP_CacheVersion;
 
 // Type for StoreUrls (used for type checking the globalThis value)
 type StoreUrlsType = {
@@ -25,7 +25,7 @@ type StoreUrlsType = {
   steamdeck: (gameName: string) => string;
 };
 
-const RESOLVER_LOG_PREFIX = '[SCPW Resolver]';
+const RESOLVER_LOG_PREFIX = '[SWP Resolver]';
 const RESOLVER_DEBUG = false;
 
 // US-specific fallback URLs when direct store links fail validation
@@ -37,12 +37,12 @@ const US_FALLBACK_URLS: Record<string, (gameName: string) => string> = {
 
 // Helper to get PLATFORMS - uses cache module in service worker, fallback for tests
 function getPlatforms(): Platform[] {
-  return globalThis.SCPW_Cache?.PLATFORMS || ['nintendo', 'playstation', 'xbox'];
+  return globalThis.SWP_Cache?.PLATFORMS || ['nintendo', 'playstation', 'xbox'];
 }
 
-// Use globalThis.SCPW_StoreUrls (set by types.ts at runtime, can be mocked in tests)
+// Use globalThis.SWP_StoreUrls (set by types.ts at runtime, can be mocked in tests)
 function getStoreUrls(): StoreUrlsType {
-  return globalThis.SCPW_StoreUrls;
+  return globalThis.SWP_StoreUrls;
 }
 
 /**
@@ -149,7 +149,7 @@ function createManualOverrideEntry(appid: string, gameName: string, override: Re
  * Validates direct store URLs and falls back to US search if they fail.
  */
 async function wikidataResultToCacheEntry(appid: string, gameName: string, wikidataResult: WikidataResult): Promise<CacheEntry> {
-  const WikidataClient = globalThis.SCPW_WikidataClient;
+  const WikidataClient = globalThis.SWP_WikidataClient;
   const StoreUrls = getStoreUrls();
 
   // Use Wikidata game name only if it's not a QID (fallback for missing labels)
@@ -213,7 +213,7 @@ async function updateCachedEntryIfNeeded(cached: CacheEntry, gameName: string): 
     return cached;
   }
 
-  const Cache = globalThis.SCPW_Cache;
+  const Cache = globalThis.SWP_Cache;
   const StoreUrls = getStoreUrls();
 
   cached.gameName = gameName;
@@ -239,8 +239,8 @@ interface ResolveResult {
  * Preserves existing hltbData since it's still valid (HLTB data rarely changes).
  */
 async function refreshStaleEntries(games: Array<{ appid: string; gameName: string }>): Promise<void> {
-  const Cache = globalThis.SCPW_Cache;
-  const WikidataClient = globalThis.SCPW_WikidataClient;
+  const Cache = globalThis.SWP_Cache;
+  const WikidataClient = globalThis.SWP_WikidataClient;
 
   console.log(`${RESOLVER_LOG_PREFIX} Background refresh starting for ${games.length} stale entries`);
 
@@ -291,15 +291,15 @@ async function refreshStaleEntries(games: Array<{ appid: string; gameName: strin
 async function resolvePlatformData(appid: string, gameName: string): Promise<ResolveResult> {
   if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} resolvePlatformData called: appid=${appid}, gameName=${gameName}`); /* istanbul ignore if */
 
-  const Cache = globalThis.SCPW_Cache;
-  const WikidataClient = globalThis.SCPW_WikidataClient;
+  const Cache = globalThis.SWP_Cache;
+  const WikidataClient = globalThis.SWP_WikidataClient;
 
   if (!Cache) {
-    console.error(`${RESOLVER_LOG_PREFIX} CRITICAL: SCPW_Cache not available!`);
+    console.error(`${RESOLVER_LOG_PREFIX} CRITICAL: SWP_Cache not available!`);
     throw new Error('Cache module not loaded');
   }
   if (!WikidataClient) {
-    console.error(`${RESOLVER_LOG_PREFIX} CRITICAL: SCPW_WikidataClient not available!`);
+    console.error(`${RESOLVER_LOG_PREFIX} CRITICAL: SWP_WikidataClient not available!`);
     throw new Error('WikidataClient module not loaded');
   }
 
@@ -362,8 +362,8 @@ async function resolvePlatformData(appid: string, gameName: string): Promise<Res
  * triggers background refresh (fire-and-forget) for expired entries.
  */
 async function batchResolvePlatformData(games: Array<{ appid: string; gameName: string }>): Promise<Map<string, ResolveResult>> {
-  const Cache = globalThis.SCPW_Cache;
-  const WikidataClient = globalThis.SCPW_WikidataClient;
+  const Cache = globalThis.SWP_Cache;
+  const WikidataClient = globalThis.SWP_WikidataClient;
   const results = new Map<string, ResolveResult>();
 
   // 1. Check cache for all games (including stale entries)
@@ -464,7 +464,7 @@ async function forceRefresh(appid: string, gameName: string): Promise<ResolveRes
 }
 
 // Export for service worker
-globalThis.SCPW_Resolver = {
+globalThis.SWP_Resolver = {
   resolvePlatformData,
   batchResolvePlatformData,
   forceRefresh,

@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Steam Deck Client
+ * Steam Wishlist Plus - Steam Deck Client
  *
  * Injects steamDeckPageScript.js into the MAIN world via script src
  * (using web_accessible_resources) to access window.SSR and extract
@@ -11,7 +11,7 @@
 import type { DeckCategory, DeckStatus } from './types';
 
 const STEAM_DECK_DEBUG = false;
-const STEAM_DECK_LOG_PREFIX = '[SCPW SteamDeck]';
+const STEAM_DECK_LOG_PREFIX = '[SWP SteamDeck]';
 const DATA_ELEMENT_ID = 'scpw-steamdeck-data';
 
 const CATEGORY_MAP: Record<DeckCategory, DeckStatus> = {
@@ -143,7 +143,7 @@ function statusToDisplayStatus(status: DeckStatus): 'available' | 'unavailable' 
 }
 
 // Export for content script
-globalThis.SCPW_SteamDeck = {
+globalThis.SWP_SteamDeck = {
   extractDeckDataFromPage,
   waitForDeckData,
   getDeckStatus,

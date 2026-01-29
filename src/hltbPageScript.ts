@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - HLTB Page Script
+ * Steam Wishlist Plus - HLTB Page Script
  *
  * This script runs in the MAIN world on howlongtobeat.com pages.
  * It makes API requests with the correct origin header to bypass CORS restrictions.
@@ -7,7 +7,7 @@
  */
 
 (function() {
-  const LOG_PREFIX = '[SCPW HLTB PageScript]';
+  const LOG_PREFIX = '[SWP HLTB PageScript]';
   const DEBUG = false;
   const debugLog = (...args: unknown[]): void => {
     /* istanbul ignore next */
@@ -15,14 +15,14 @@
   };
 
   interface HltbRequest {
-    type: 'SCPW_HLTB_REQUEST';
+    type: 'SWP_HLTB_REQUEST';
     requestId: string;
     gameName: string;
     steamAppId?: string;
   }
 
   interface HltbResponse {
-    type: 'SCPW_HLTB_RESPONSE';
+    type: 'SWP_HLTB_RESPONSE';
     requestId: string;
     success: boolean;
     data?: {
@@ -220,14 +220,14 @@
   async function handleRequest(event: MessageEvent) {
     if (event.source !== window) return;
     const message = event.data as HltbRequest;
-    if (message?.type !== 'SCPW_HLTB_REQUEST') return;
+    if (message?.type !== 'SWP_HLTB_REQUEST') return;
 
     debugLog(`${LOG_PREFIX} Received request:`, message);
 
     try {
       const data = await searchHltb(message.gameName, message.steamAppId);
       const response: HltbResponse = {
-        type: 'SCPW_HLTB_RESPONSE',
+        type: 'SWP_HLTB_RESPONSE',
         requestId: message.requestId,
         success: true,
         data
@@ -236,7 +236,7 @@
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const response: HltbResponse = {
-        type: 'SCPW_HLTB_RESPONSE',
+        type: 'SWP_HLTB_RESPONSE',
         requestId: message.requestId,
         success: false,
         error: errorMessage
@@ -249,5 +249,5 @@
   debugLog(`${LOG_PREFIX} Page script loaded, listening for requests`);
 
   // Signal that the script is ready
-  window.postMessage({ type: 'SCPW_HLTB_READY' }, '*');
+  window.postMessage({ type: 'SWP_HLTB_READY' }, '*');
 })();

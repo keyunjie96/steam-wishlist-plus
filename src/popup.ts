@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Popup UI
+ * Steam Wishlist Plus - Popup UI
  *
  * Provides quick access to cache statistics, platform toggles, and a clear cache button.
  */
@@ -9,10 +9,10 @@ import type { UserSettings } from './types';
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const MS_PER_DAY = MS_PER_HOUR * 24;
-const LOG_PREFIX = '[SCPW Popup]';
+const LOG_PREFIX = '[SWP Popup]';
 
 // Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.SCPW_UserSettings;
+const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, USER_SETTING_KEYS } = globalThis.SWP_UserSettings;
 
 // DOM Elements
 const statusEl = document.getElementById('status') as HTMLElement;

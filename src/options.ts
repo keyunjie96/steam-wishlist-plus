@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Options Page
+ * Steam Wishlist Plus - Options Page
  *
  * Handles the options UI for managing the cache.
  */
@@ -9,10 +9,10 @@ import type { UserSettings } from './types';
 // Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const MS_PER_DAY = MS_PER_HOUR * 24;
-const LOG_PREFIX = '[SCPW Options]';
+const LOG_PREFIX = '[SWP Options]';
 
 // Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, SETTING_SELECT_IDS, USER_SETTING_KEYS } = globalThis.SCPW_UserSettings;
+const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, SETTING_SELECT_IDS, USER_SETTING_KEYS } = globalThis.SWP_UserSettings;
 
 // DOM Elements (initialized in DOMContentLoaded)
 let cacheStatusEl: HTMLElement;

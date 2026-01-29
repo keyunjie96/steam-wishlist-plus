@@ -35,7 +35,7 @@ describe('hltbPageScript.js', () => {
   it('should post ready message on load', () => {
     require('../../dist/hltbPageScript.js');
 
-    expect(window.postMessage).toHaveBeenCalledWith({ type: 'SCPW_HLTB_READY' }, '*');
+    expect(window.postMessage).toHaveBeenCalledWith({ type: 'SWP_HLTB_READY' }, '*');
   });
 
   it('should ignore messages from non-window sources', () => {
@@ -45,7 +45,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-non-window',
         gameName: 'Test Game'
       },
@@ -95,7 +95,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-1',
         gameName: 'Test Game',
         steamAppId: '123'
@@ -107,7 +107,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-1');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-1');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0]).toMatchObject({
@@ -149,7 +149,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-zero-steam',
         gameName: 'Zero Steam ID',
         steamAppId: '0'
@@ -161,7 +161,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-zero-steam');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-zero-steam');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toMatchObject({
@@ -195,7 +195,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-2',
         gameName: 'Halo'
       },
@@ -206,7 +206,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-2');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-2');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -220,7 +220,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-auth-fail',
         gameName: 'Test Game'
       },
@@ -231,7 +231,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-auth-fail');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-auth-fail');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -245,7 +245,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-no-token',
         gameName: 'Test Game'
       },
@@ -256,7 +256,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-no-token');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-no-token');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -273,7 +273,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-search-fail',
         gameName: 'Test Game'
       },
@@ -284,7 +284,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-search-fail');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-search-fail');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -300,7 +300,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-empty',
         gameName: 'Test Game'
       },
@@ -311,7 +311,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-empty');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-empty');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -342,7 +342,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-empty-name',
         gameName: ''
       },
@@ -353,7 +353,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-empty-name');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-empty-name');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -393,7 +393,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-substring',
         gameName: 'Halo 2'
       },
@@ -404,7 +404,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-substring');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-substring');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toMatchObject({
@@ -438,7 +438,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-ngram',
         gameName: 'ABCD'
       },
@@ -449,7 +449,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-ngram');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-ngram');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toMatchObject({
@@ -484,7 +484,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-fuzzy',
         gameName: 'Halo',
         steamAppId: '123'
@@ -496,7 +496,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-fuzzy');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-fuzzy');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toMatchObject({
@@ -533,7 +533,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-short-names',
         gameName: 'A'
       },
@@ -544,7 +544,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-short-names');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-short-names');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].data).toBeNull();
@@ -560,7 +560,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-error',
         gameName: 'Test Game'
       },
@@ -571,7 +571,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-error');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-error');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].success).toBe(false);
@@ -588,7 +588,7 @@ describe('hltbPageScript.js', () => {
     const handler = messageHandlers[messageHandlers.length - 1];
     handler({
       data: {
-        type: 'SCPW_HLTB_REQUEST',
+        type: 'SWP_HLTB_REQUEST',
         requestId: 'req-string-error',
         gameName: 'Test Game'
       },
@@ -599,7 +599,7 @@ describe('hltbPageScript.js', () => {
 
     const responseCalls = window.postMessage.mock.calls
       .map(call => call[0])
-      .filter(message => message?.type === 'SCPW_HLTB_RESPONSE' && message.requestId === 'req-string-error');
+      .filter(message => message?.type === 'SWP_HLTB_RESPONSE' && message.requestId === 'req-string-error');
 
     expect(responseCalls).toHaveLength(1);
     expect(responseCalls[0].success).toBe(false);

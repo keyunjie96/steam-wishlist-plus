@@ -77,7 +77,7 @@ async function queryWikidata(steamAppId) {
   const response = await fetch(url.toString(), {
     headers: {
       'Accept': 'application/sparql-results+json',
-      'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0',
+      'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0',
     },
   });
 
@@ -128,7 +128,7 @@ describe('Wikidata Integration', () => {
     it('should be reachable', async () => {
       const response = await fetch(WIKIDATA_SPARQL_URL, {
         method: 'HEAD',
-        headers: { 'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0' }
+        headers: { 'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0' }
       });
 
       // 405 is expected for HEAD on SPARQL endpoint

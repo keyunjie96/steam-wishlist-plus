@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Icon Definitions
+ * Steam Wishlist Plus - Icon Definitions
  *
  * SVG icons generated from assets/icons via scripts/normalize_icons.py
  * Normalized to 16x16 and currentColor for consistent styling.
@@ -114,7 +114,7 @@ const STEAM_DECK_TIERS: Record<string, SteamDeckTierInfo> = {
 };
 
 // Export for content script (use globalThis for Chrome extension compatibility)
-globalThis.SCPW_Icons = PLATFORM_ICONS;
-globalThis.SCPW_PlatformInfo = PLATFORM_INFO;
-globalThis.SCPW_StatusInfo = STATUS_INFO;
-globalThis.SCPW_SteamDeckTiers = STEAM_DECK_TIERS;
+globalThis.SWP_Icons = PLATFORM_ICONS;
+globalThis.SWP_PlatformInfo = PLATFORM_INFO;
+globalThis.SWP_StatusInfo = STATUS_INFO;
+globalThis.SWP_SteamDeckTiers = STEAM_DECK_TIERS;

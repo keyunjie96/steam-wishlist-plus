@@ -1,5 +1,5 @@
 /**
- * Steam Cross-Platform Wishlist - Content Script
+ * Steam Wishlist Plus - Content Script
  *
  * Injects platform availability icons into Steam wishlist rows.
  * - Extracts Steam appids from wishlist items
@@ -11,11 +11,11 @@
 import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse, ReviewScoreData, ReviewScoreTier } from './types';
 
 // Use globalThis for shared values (set by types.ts at runtime)
-const CACHE_VERSION = globalThis.SCPW_CacheVersion;
+const CACHE_VERSION = globalThis.SWP_CacheVersion;
 
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
-const LOG_PREFIX = '[Steam Cross-Platform Wishlist]';
+const LOG_PREFIX = '[SWP Content]';
 const DEBUG = false; // Set to true for verbose debugging
 
 /** Set of appids that have been processed to avoid duplicate logging */
@@ -134,7 +134,7 @@ function checkDeckFilterActive(): boolean {
 const ALL_PLATFORMS: Platform[] = ['nintendo', 'playstation', 'xbox', 'steamdeck'];
 
 // Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS } = globalThis.SCPW_UserSettings;
+const { DEFAULT_USER_SETTINGS } = globalThis.SWP_UserSettings;
 
 /** User settings (loaded from storage) - initialized from centralized defaults */
 let userSettings: typeof DEFAULT_USER_SETTINGS = { ...DEFAULT_USER_SETTINGS };
@@ -356,7 +356,7 @@ function setupSettingsChangeListener(): void {
 
       // If Steam Deck was just enabled, fetch Steam Deck data
       if (platformsJustEnabled.includes('steamdeck') && !steamDeckData) {
-        const SteamDeck = globalThis.SCPW_SteamDeck;
+        const SteamDeck = globalThis.SWP_SteamDeck;
         if (SteamDeck) {
           SteamDeck.waitForDeckData().then((data: Map<string, DeckCategory>) => {
             if (data.size > 0) {
@@ -423,7 +423,7 @@ function refreshIconsFromCache(reason: string): void {
  */
 async function refreshSteamDeckData(reason: string): Promise<void> {
   if (steamDeckRefreshInFlight) return;
-  const SteamDeck = globalThis.SCPW_SteamDeck;
+  const SteamDeck = globalThis.SWP_SteamDeck;
   if (!SteamDeck || !userSettings.showSteamDeck) return;
 
   steamDeckRefreshInFlight = true;
@@ -457,7 +457,7 @@ async function refreshSteamDeckData(reason: string): Promise<void> {
  * Schedules a Steam Deck refresh after a short delay.
  */
 function scheduleSteamDeckRefresh(reason: string): void {
-  if (!userSettings.showSteamDeck || !globalThis.SCPW_SteamDeck) return;
+  if (!userSettings.showSteamDeck || !globalThis.SWP_SteamDeck) return;
   if (steamDeckRefreshAttempts >= STEAM_DECK_REFRESH_DELAYS_MS.length) return;
   if (steamDeckRefreshTimer) return;
 
@@ -473,7 +473,7 @@ function scheduleSteamDeckRefresh(reason: string): void {
  * Tracks appids missing Steam Deck data and schedules a refresh.
  */
 function markMissingSteamDeckData(appid: string): void {
-  if (!appid || !userSettings.showSteamDeck || !globalThis.SCPW_SteamDeck) return;
+  if (!appid || !userSettings.showSteamDeck || !globalThis.SWP_SteamDeck) return;
 
   const wasEmpty = missingSteamDeckAppIds.size === 0;
   missingSteamDeckAppIds.add(appid);
@@ -487,10 +487,10 @@ function markMissingSteamDeckData(appid: string): void {
 
 // Definitions loaded from types.js and icons.js
 // Note: StoreUrls is declared in types.js, access via globalThis to avoid redeclaration
-const PLATFORM_ICONS = globalThis.SCPW_Icons;
-const PLATFORM_INFO = globalThis.SCPW_PlatformInfo;
-const STATUS_INFO = globalThis.SCPW_StatusInfo;
-const STEAM_DECK_TIERS = globalThis.SCPW_SteamDeckTiers;
+const PLATFORM_ICONS = globalThis.SWP_Icons;
+const PLATFORM_INFO = globalThis.SWP_PlatformInfo;
+const STATUS_INFO = globalThis.SWP_StatusInfo;
+const STEAM_DECK_TIERS = globalThis.SWP_SteamDeckTiers;
 
 // ============================================================================
 // Appid Extraction
@@ -677,7 +677,7 @@ function createPlatformIcon(
   storeUrl?: string,
   tier?: string
 ): HTMLElement {
-  const url = storeUrl || globalThis.SCPW_StoreUrls[platform](gameName);
+  const url = storeUrl || globalThis.SWP_StoreUrls[platform](gameName);
   // Steam Deck icons are not clickable (just informational)
   // Console platforms: clickable when available or unknown (to search)
   const isClickable = platform !== 'steamdeck' && status !== 'unavailable';
@@ -979,7 +979,7 @@ function updateIconsWithData(container: HTMLElement, data: CacheEntry, showLoade
   container.querySelectorAll('.scpw-platform-icon, .scpw-separator, .scpw-hltb-badge, .scpw-hltb-loader, .scpw-review-score-badge, .scpw-review-score-loader').forEach(el => el.remove());
 
   // Get Steam Deck client if available
-  const SteamDeck = globalThis.SCPW_SteamDeck;
+  const SteamDeck = globalThis.SWP_SteamDeck;
 
   for (const platform of enabledPlatforms) {
     // Special handling for Steam Deck - use pre-extracted SSR data
@@ -1918,7 +1918,7 @@ async function init(): Promise<void> {
   setupSettingsChangeListener();
 
   // Load Steam Deck data from page script (runs in MAIN world)
-  const SteamDeck = globalThis.SCPW_SteamDeck;
+  const SteamDeck = globalThis.SWP_SteamDeck;
   if (SteamDeck && userSettings.showSteamDeck) {
     const latestDeckData = await SteamDeck.waitForDeckData();
     if (latestDeckData.size > 0) {
@@ -1959,7 +1959,7 @@ async function init(): Promise<void> {
 
         // Refresh Steam Deck data (SSR may have updated with new filter results)
         if (userSettings.showSteamDeck) {
-          const SteamDeck = globalThis.SCPW_SteamDeck;
+          const SteamDeck = globalThis.SWP_SteamDeck;
           if (SteamDeck) {
             const latestDeckData = await SteamDeck.waitForDeckData();
             if (latestDeckData.size > 0) {
@@ -1988,7 +1988,7 @@ if (document.readyState === 'loading') {
 
 // Export internal functions for testing (not used in production)
 if (typeof globalThis !== 'undefined') {
-  globalThis.SCPW_ContentTestExports = {
+  globalThis.SWP_ContentTestExports = {
     queueForBatchResolution,
     processPendingBatch,
     pendingItems,

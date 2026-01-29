@@ -25,7 +25,7 @@ describe('content.js', () => {
       xbox: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle/></svg>',
       steamdeck: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><rect/></svg>'
     };
-    globalThis.SCPW_Icons = mockIcons;
+    globalThis.SWP_Icons = mockIcons;
 
     mockPlatformInfo = {
       nintendo: { name: 'Nintendo Switch', abbr: 'NS', searchLabel: 'Search Nintendo' },
@@ -33,17 +33,17 @@ describe('content.js', () => {
       xbox: { name: 'Xbox', abbr: 'XB', searchLabel: 'Search Xbox' },
       steamdeck: { name: 'Steam Deck', abbr: 'SD', searchLabel: 'View on ProtonDB' }
     };
-    globalThis.SCPW_PlatformInfo = mockPlatformInfo;
+    globalThis.SWP_PlatformInfo = mockPlatformInfo;
 
     mockStatusInfo = {
       available: { tooltip: (p) => `${mockPlatformInfo[p].name}: Available`, className: 'scpw-available' },
       unavailable: { tooltip: (p) => `${mockPlatformInfo[p].name}: Not available`, className: 'scpw-unavailable' },
       unknown: { tooltip: (p) => `${mockPlatformInfo[p].name}: Unknown`, className: 'scpw-unknown' }
     };
-    globalThis.SCPW_StatusInfo = mockStatusInfo;
+    globalThis.SWP_StatusInfo = mockStatusInfo;
 
     // Mock Steam Deck tiers (loaded from icons.js)
-    globalThis.SCPW_SteamDeckTiers = {
+    globalThis.SWP_SteamDeckTiers = {
       verified: { tooltip: 'Steam Deck: Verified - Works great on Deck', className: 'scpw-deck-verified' },
       playable: { tooltip: 'Steam Deck: Playable - Works with minor issues', className: 'scpw-deck-playable' },
       unsupported: { tooltip: 'Steam Deck: Unsupported - May not work', className: 'scpw-deck-unsupported' },
@@ -51,7 +51,7 @@ describe('content.js', () => {
     };
 
     // Mock StoreUrls (loaded from types.js)
-    globalThis.SCPW_StoreUrls = {
+    globalThis.SWP_StoreUrls = {
       nintendo: (gameName) => `https://www.nintendo.com/search/#q=${encodeURIComponent(gameName)}`,
       playstation: (gameName) => `https://store.playstation.com/search/${encodeURIComponent(gameName)}`,
       xbox: (gameName) => `https://www.xbox.com/search?q=${encodeURIComponent(gameName)}`,
@@ -59,7 +59,7 @@ describe('content.js', () => {
     };
 
     // Mock UserSettings (centralized settings from types.js)
-    globalThis.SCPW_UserSettings = {
+    globalThis.SWP_UserSettings = {
       DEFAULT_USER_SETTINGS: {
         showNintendo: true,
         showPlaystation: true,
@@ -103,10 +103,10 @@ describe('content.js', () => {
   });
 
   afterEach(() => {
-    delete globalThis.SCPW_Icons;
-    delete globalThis.SCPW_PlatformInfo;
-    delete globalThis.SCPW_StatusInfo;
-    delete globalThis.SCPW_StoreUrls;
+    delete globalThis.SWP_Icons;
+    delete globalThis.SWP_PlatformInfo;
+    delete globalThis.SWP_StatusInfo;
+    delete globalThis.SWP_StoreUrls;
   });
 
   describe('styles', () => {
@@ -444,11 +444,11 @@ describe('content.js', () => {
 
   describe('StoreUrls', () => {
     it('should use StoreUrls from globalThis', () => {
-      // content.js uses SCPW_StoreUrls from globalThis (loaded via types.js)
-      expect(globalThis.SCPW_StoreUrls).toBeDefined();
-      expect(typeof globalThis.SCPW_StoreUrls.nintendo).toBe('function');
-      expect(typeof globalThis.SCPW_StoreUrls.playstation).toBe('function');
-      expect(typeof globalThis.SCPW_StoreUrls.xbox).toBe('function');
+      // content.js uses SWP_StoreUrls from globalThis (loaded via types.js)
+      expect(globalThis.SWP_StoreUrls).toBeDefined();
+      expect(typeof globalThis.SWP_StoreUrls.nintendo).toBe('function');
+      expect(typeof globalThis.SWP_StoreUrls.playstation).toBe('function');
+      expect(typeof globalThis.SWP_StoreUrls.xbox).toBe('function');
     });
   });
 
@@ -456,10 +456,10 @@ describe('content.js', () => {
     it('should log error when PLATFORM_ICONS is missing', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      delete globalThis.SCPW_Icons;
+      delete globalThis.SWP_Icons;
       jest.resetModules();
-      globalThis.SCPW_PlatformInfo = mockPlatformInfo;
-      globalThis.SCPW_StatusInfo = mockStatusInfo;
+      globalThis.SWP_PlatformInfo = mockPlatformInfo;
+      globalThis.SWP_StatusInfo = mockStatusInfo;
       require('../../dist/content.js');
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -472,10 +472,10 @@ describe('content.js', () => {
     it('should log error when PLATFORM_INFO is missing', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      delete globalThis.SCPW_PlatformInfo;
+      delete globalThis.SWP_PlatformInfo;
       jest.resetModules();
-      globalThis.SCPW_Icons = mockIcons;
-      globalThis.SCPW_StatusInfo = mockStatusInfo;
+      globalThis.SWP_Icons = mockIcons;
+      globalThis.SWP_StatusInfo = mockStatusInfo;
       require('../../dist/content.js');
 
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -635,9 +635,9 @@ describe('content.js', () => {
       // content.js should have already run init() since DOM was ready
       // (No inline CSS injection anymore - CSS is loaded via manifest)
       // Verify globals are available (as init would have checked)
-      expect(globalThis.SCPW_Icons).toBeDefined();
-      expect(globalThis.SCPW_PlatformInfo).toBeDefined();
-      expect(globalThis.SCPW_StatusInfo).toBeDefined();
+      expect(globalThis.SWP_Icons).toBeDefined();
+      expect(globalThis.SWP_PlatformInfo).toBeDefined();
+      expect(globalThis.SWP_StatusInfo).toBeDefined();
     });
   });
 
@@ -649,8 +649,8 @@ describe('content.js', () => {
     afterEach(() => {
       jest.useRealTimers();
       // Clear pending items between tests
-      if (globalThis.SCPW_ContentTestExports?.pendingItems) {
-        globalThis.SCPW_ContentTestExports.pendingItems.clear();
+      if (globalThis.SWP_ContentTestExports?.pendingItems) {
+        globalThis.SWP_ContentTestExports.pendingItems.clear();
       }
     });
 
@@ -763,7 +763,7 @@ describe('content.js', () => {
     });
 
     it('should queue items for batch resolution', () => {
-      const { queueForBatchResolution, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems } = globalThis.SWP_ContentTestExports;
       const container = document.createElement('span');
       container.className = 'scpw-platforms';
 
@@ -774,7 +774,7 @@ describe('content.js', () => {
     });
 
     it('should process pending batch after debounce', async () => {
-      const { queueForBatchResolution, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems } = globalThis.SWP_ContentTestExports;
       const container = document.createElement('span');
       container.className = 'scpw-platforms';
 
@@ -809,7 +809,7 @@ describe('content.js', () => {
     });
 
     it('should batch multiple items together', () => {
-      const { queueForBatchResolution, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems } = globalThis.SWP_ContentTestExports;
 
       const container1 = document.createElement('span');
       const container2 = document.createElement('span');
@@ -826,7 +826,7 @@ describe('content.js', () => {
     });
 
     it('should call processPendingBatch with empty pending items', async () => {
-      const { processPendingBatch, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { processPendingBatch, pendingItems } = globalThis.SWP_ContentTestExports;
 
       // Ensure pending items is empty
       pendingItems.clear();
@@ -842,7 +842,7 @@ describe('content.js', () => {
     });
 
     it('should handle batch failure and clear containers', async () => {
-      const { queueForBatchResolution, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems } = globalThis.SWP_ContentTestExports;
       const container = document.createElement('span');
       container.className = 'scpw-platforms';
       container.innerHTML = '<span class="loading">Loading...</span>';
@@ -866,7 +866,7 @@ describe('content.js', () => {
     });
 
     it('should handle batch network error and clear containers', async () => {
-      const { queueForBatchResolution, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems } = globalThis.SWP_ContentTestExports;
       const container = document.createElement('span');
       container.className = 'scpw-platforms';
 
@@ -888,7 +888,7 @@ describe('content.js', () => {
 
   describe('extractAppId (exported function)', () => {
     it('should extract appid from data-rfd-draggable-id (primary)', () => {
-      const { extractAppId } = globalThis.SCPW_ContentTestExports;
+      const { extractAppId } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-12345-0');
 
@@ -896,7 +896,7 @@ describe('content.js', () => {
     });
 
     it('should extract appid from app link when draggable-id is missing (fallback)', () => {
-      const { extractAppId } = globalThis.SCPW_ContentTestExports;
+      const { extractAppId } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = 'https://store.steampowered.com/app/570/Dota_2';
@@ -906,7 +906,7 @@ describe('content.js', () => {
     });
 
     it('should extract appid from app link when draggable-id does not match pattern', () => {
-      const { extractAppId } = globalThis.SCPW_ContentTestExports;
+      const { extractAppId } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'SomethingElse-123');
       const link = document.createElement('a');
@@ -917,7 +917,7 @@ describe('content.js', () => {
     });
 
     it('should return null when no appid can be extracted', () => {
-      const { extractAppId } = globalThis.SCPW_ContentTestExports;
+      const { extractAppId } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       item.textContent = 'No links or draggable id';
 
@@ -925,7 +925,7 @@ describe('content.js', () => {
     });
 
     it('should return null when app link exists but href has no appid', () => {
-      const { extractAppId } = globalThis.SCPW_ContentTestExports;
+      const { extractAppId } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = 'https://store.steampowered.com/about/';
@@ -937,7 +937,7 @@ describe('content.js', () => {
 
   describe('extractGameName (exported function)', () => {
     it('should extract game name from link text (primary)', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345/Test_Game';
@@ -948,7 +948,7 @@ describe('content.js', () => {
     });
 
     it('should extract game name from URL slug when link text is empty', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345/Hollow_Knight';
@@ -959,7 +959,7 @@ describe('content.js', () => {
     });
 
     it('should use title selector fallback when link has no slug', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -975,7 +975,7 @@ describe('content.js', () => {
     });
 
     it('should skip invalid title text (too short)', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -991,7 +991,7 @@ describe('content.js', () => {
     });
 
     it('should skip title text that looks like a price', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -1007,7 +1007,7 @@ describe('content.js', () => {
     });
 
     it('should return Unknown Game when no valid title found', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       item.textContent = 'No valid title elements';
 
@@ -1017,7 +1017,7 @@ describe('content.js', () => {
 
   describe('parseSvg (exported function)', () => {
     it('should parse valid SVG string', () => {
-      const { parseSvg } = globalThis.SCPW_ContentTestExports;
+      const { parseSvg } = globalThis.SWP_ContentTestExports;
       const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect/></svg>';
 
       const svg = parseSvg(svgString);
@@ -1027,7 +1027,7 @@ describe('content.js', () => {
     });
 
     it('should return null and log error for invalid SVG', () => {
-      const { parseSvg } = globalThis.SCPW_ContentTestExports;
+      const { parseSvg } = globalThis.SWP_ContentTestExports;
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       // This malformed XML should trigger parsererror
@@ -1046,7 +1046,7 @@ describe('content.js', () => {
 
   describe('removeLoadingState (exported function)', () => {
     it('should remove loader element from container (UX-1 refactor)', () => {
-      const { removeLoadingState, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { removeLoadingState, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       // Manually add loader (simulating cold start)
@@ -1064,7 +1064,7 @@ describe('content.js', () => {
     });
 
     it('should handle container with no loader gracefully', () => {
-      const { removeLoadingState } = globalThis.SCPW_ContentTestExports;
+      const { removeLoadingState } = globalThis.SWP_ContentTestExports;
       const container = document.createElement('span');
       container.className = 'scpw-platforms';
 
@@ -1082,7 +1082,7 @@ describe('content.js', () => {
 
   describe('updateIconsWithData (exported function)', () => {
     it('should dynamically add available icons (UX-1 refactor)', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
       // Manually add loader (simulating cold start)
       const loader = document.createElement('span');
@@ -1111,7 +1111,7 @@ describe('content.js', () => {
     });
 
     it('should only add available icons, skip unavailable', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1131,7 +1131,7 @@ describe('content.js', () => {
     });
 
     it('should skip unknown icons (not add them)', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1151,7 +1151,7 @@ describe('content.js', () => {
     });
 
     it('should handle missing platform data (defaults to unknown, not added)', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1171,7 +1171,7 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons are available', () => {
-      const { updateIconsWithData, createIconsContainer, setUserSettings, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer, setUserSettings, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
       // Disable HLTB and review scores to test pure platform icon behavior
       setUserSettings({ showHltb: false, showReviewScores: false });
       const container = createIconsContainer('12345', 'Test Game');
@@ -1195,7 +1195,7 @@ describe('content.js', () => {
     });
 
     it('should add separator when at least one icon is available', () => {
-      const { updateIconsWithData, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { updateIconsWithData, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       const data = {
@@ -1216,7 +1216,7 @@ describe('content.js', () => {
 
   describe('requestPlatformData (exported function)', () => {
     it('should return response when successful', async () => {
-      const { requestPlatformData } = globalThis.SCPW_ContentTestExports;
+      const { requestPlatformData } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockResolvedValueOnce({
         success: true,
@@ -1234,7 +1234,7 @@ describe('content.js', () => {
     });
 
     it('should return null when response.success is false', async () => {
-      const { requestPlatformData } = globalThis.SCPW_ContentTestExports;
+      const { requestPlatformData } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockResolvedValueOnce({
         success: false,
@@ -1247,7 +1247,7 @@ describe('content.js', () => {
     });
 
     it('should return null when response.data is null', async () => {
-      const { requestPlatformData } = globalThis.SCPW_ContentTestExports;
+      const { requestPlatformData } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockResolvedValueOnce({
         success: true,
@@ -1260,7 +1260,7 @@ describe('content.js', () => {
     });
 
     it('should return null when response is undefined', async () => {
-      const { requestPlatformData } = globalThis.SCPW_ContentTestExports;
+      const { requestPlatformData } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockResolvedValueOnce(undefined);
 
@@ -1270,7 +1270,7 @@ describe('content.js', () => {
     });
 
     it('should return null and not throw when service worker errors', async () => {
-      const { requestPlatformData, MESSAGE_MAX_RETRIES } = globalThis.SCPW_ContentTestExports;
+      const { requestPlatformData, MESSAGE_MAX_RETRIES } = globalThis.SWP_ContentTestExports;
 
       // Mock all retry attempts (initial + MAX_RETRIES) to fail
       const error = new Error('Extension context invalidated');
@@ -1286,7 +1286,7 @@ describe('content.js', () => {
 
   describe('sendMessageWithRetry (exported function)', () => {
     it('should return response on first successful attempt', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       const mockResponse = { success: true, data: 'test' };
       chrome.runtime.sendMessage.mockResolvedValueOnce(mockResponse);
@@ -1298,7 +1298,7 @@ describe('content.js', () => {
     });
 
     it('should retry on "Could not establish connection" error and succeed', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       const mockResponse = { success: true, data: 'test' };
       chrome.runtime.sendMessage
@@ -1312,7 +1312,7 @@ describe('content.js', () => {
     });
 
     it('should retry on "Receiving end does not exist" error and succeed', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       const mockResponse = { success: true, data: 'test' };
       chrome.runtime.sendMessage
@@ -1326,7 +1326,7 @@ describe('content.js', () => {
     });
 
     it('should throw immediately on non-connection errors', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Some other error'));
 
@@ -1335,7 +1335,7 @@ describe('content.js', () => {
     });
 
     it('should respect maxRetries parameter', async () => {
-      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SWP_ContentTestExports;
 
       const error = new Error('Could not establish connection');
       for (let i = 0; i <= MESSAGE_MAX_RETRIES; i++) {
@@ -1347,7 +1347,7 @@ describe('content.js', () => {
     });
 
     it('should use exponential backoff delay between retries', async () => {
-      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SWP_ContentTestExports;
 
       jest.useFakeTimers();
 
@@ -1368,7 +1368,7 @@ describe('content.js', () => {
     });
 
     it('should handle string errors by converting to Error', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       // Mock rejection with a string instead of Error object
       chrome.runtime.sendMessage.mockRejectedValueOnce('String error message');
@@ -1378,7 +1378,7 @@ describe('content.js', () => {
     });
 
     it('should retry on "Extension context invalidated" error', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       const mockResponse = { success: true, data: 'test' };
       chrome.runtime.sendMessage
@@ -1394,7 +1394,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint (exported function)', () => {
     it('should find Steam platform icon by title', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       const group = document.createElement('div');
@@ -1413,7 +1413,7 @@ describe('content.js', () => {
     });
 
     it('should find Steam Deck icon', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       const group = document.createElement('div');
@@ -1431,7 +1431,7 @@ describe('content.js', () => {
     });
 
     it('should find VR icon', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       const group = document.createElement('div');
@@ -1449,7 +1449,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to SVG group when no title match', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       // Create span with title that doesn't match Steam platforms
@@ -1472,7 +1472,7 @@ describe('content.js', () => {
     });
 
     it('should return item itself as fallback when no valid container', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       item.textContent = 'No icons here';
 
@@ -1483,7 +1483,7 @@ describe('content.js', () => {
     });
 
     it('should skip span with title when parent is item itself', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       // Span directly in item (no valid parent group)
@@ -1499,7 +1499,7 @@ describe('content.js', () => {
     });
 
     it('should find largest SVG group when multiple groups exist', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
 
       // Small group with 1 SVG
@@ -1526,7 +1526,7 @@ describe('content.js', () => {
 
   describe('createPlatformIcon (exported function)', () => {
     it('should create anchor for available status', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('nintendo', 'available', 'Test Game', 'https://ns.example.com');
 
@@ -1537,7 +1537,7 @@ describe('content.js', () => {
     });
 
     it('should create anchor for unknown status (links to search)', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('playstation', 'unknown', 'Test Game');
 
@@ -1547,7 +1547,7 @@ describe('content.js', () => {
     });
 
     it('should create span for unavailable status (not clickable)', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('xbox', 'unavailable', 'Test Game');
 
@@ -1557,7 +1557,7 @@ describe('content.js', () => {
     });
 
     it('should use store URL builder when no storeUrl provided', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('nintendo', 'available', 'Hollow Knight');
 
@@ -1565,7 +1565,7 @@ describe('content.js', () => {
     });
 
     it('should include SVG in icon', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('nintendo', 'available', 'Test');
 
@@ -1575,7 +1575,7 @@ describe('content.js', () => {
 
   describe('createIconsContainer (exported function)', () => {
     it('should create empty container without loader (loader added only on cold start)', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
 
@@ -1591,7 +1591,7 @@ describe('content.js', () => {
     });
 
     it('should allow loader to be added manually for cold start', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
 
@@ -1608,7 +1608,7 @@ describe('content.js', () => {
 
   describe('findWishlistRow (exported function)', () => {
     it('should find row by role=button', () => {
-      const { findWishlistRow } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistRow } = globalThis.SWP_ContentTestExports;
 
       const row = document.createElement('div');
       row.setAttribute('role', 'button');
@@ -1624,7 +1624,7 @@ describe('content.js', () => {
     });
 
     it('should find row by SVG presence', () => {
-      const { findWishlistRow } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistRow } = globalThis.SWP_ContentTestExports;
 
       const row = document.createElement('div');
       const svg = document.createElement('svg');
@@ -1641,7 +1641,7 @@ describe('content.js', () => {
     });
 
     it('should return null when no valid row found within depth limit', () => {
-      const { findWishlistRow } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistRow } = globalThis.SWP_ContentTestExports;
 
       // Create deeply nested structure without row markers
       let current = document.body;
@@ -1663,7 +1663,7 @@ describe('content.js', () => {
 
   describe('getRenderedIconSummary function edge cases', () => {
     it('should return unavailable status for icons with scpw-unavailable class', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test');
 
       // Add an unavailable icon
@@ -1690,7 +1690,7 @@ describe('content.js', () => {
     });
 
     it('should return unknown status for icons without status class', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test');
 
       // Add an icon without a status class
@@ -1716,7 +1716,7 @@ describe('content.js', () => {
     });
 
     it('should return tier-based summary for Steam Deck icons', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test');
 
       // Add a Steam Deck icon with tier
@@ -1751,7 +1751,7 @@ describe('content.js', () => {
         createIconsContainer,
         getCachedEntriesByAppId,
         updateIconsWithData
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Create a container with loader
       const container = createIconsContainer('44444', 'Settings Change Test');
@@ -1791,7 +1791,7 @@ describe('content.js', () => {
         removeLoadingState,
         isAnyConsolePlatformEnabled,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Disable all platforms
       setUserSettings({
@@ -1834,7 +1834,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems (exported function)', () => {
     it('should find items by data-rfd-draggable-id (unfiltered view)', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-12345-0');
@@ -1850,7 +1850,7 @@ describe('content.js', () => {
     });
 
     it('should find items by app link walk-up (filtered view)', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create item without data-rfd-draggable-id (simulates filtered view)
       const row = document.createElement('div');
@@ -1868,7 +1868,7 @@ describe('content.js', () => {
     });
 
     it('should deduplicate items found by both strategies', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Item has both draggable-id AND app link
       const item = document.createElement('div');
@@ -1887,7 +1887,7 @@ describe('content.js', () => {
     });
 
     it('should skip already-processed items', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-11111-0');
@@ -1918,21 +1918,21 @@ describe('content.js', () => {
     });
 
     it('should return true when deck_filters param is present', () => {
-      const { checkDeckFilterActive } = globalThis.SCPW_ContentTestExports;
+      const { checkDeckFilterActive } = globalThis.SWP_ContentTestExports;
       window.location = new URL('https://store.steampowered.com/wishlist?deck_filters=verified');
 
       expect(checkDeckFilterActive()).toBe(true);
     });
 
     it('should return false when deck_filters param is absent', () => {
-      const { checkDeckFilterActive } = globalThis.SCPW_ContentTestExports;
+      const { checkDeckFilterActive } = globalThis.SWP_ContentTestExports;
       window.location = new URL('https://store.steampowered.com/wishlist');
 
       expect(checkDeckFilterActive()).toBe(false);
     });
 
     it('should return true for any deck_filters value', () => {
-      const { checkDeckFilterActive } = globalThis.SCPW_ContentTestExports;
+      const { checkDeckFilterActive } = globalThis.SWP_ContentTestExports;
       window.location = new URL('https://store.steampowered.com/wishlist?deck_filters=playable');
 
       expect(checkDeckFilterActive()).toBe(true);
@@ -1941,7 +1941,7 @@ describe('content.js', () => {
 
   describe('updateIconsWithData with loader (UX-1)', () => {
     it('should remove loader and add icons dynamically', () => {
-      const { createIconsContainer, updateIconsWithData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       // Manually add loader (simulating cold start)
@@ -1975,7 +1975,7 @@ describe('content.js', () => {
     });
 
     it('should not add separator when no icons available', () => {
-      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SWP_ContentTestExports;
       // Disable HLTB to test pure platform icon behavior
       setUserSettings({ showHltb: false, showReviewScores: false });
       const container = createIconsContainer('12345', 'Test Game');
@@ -2000,7 +2000,7 @@ describe('content.js', () => {
     });
 
     it('should use data-game-name attribute as fallback', () => {
-      const { createIconsContainer, updateIconsWithData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Fallback Name');
 
       // Data without gameName property
@@ -2022,14 +2022,14 @@ describe('content.js', () => {
   describe('cleanupAllIcons (icon lifecycle management)', () => {
     beforeEach(() => {
       // Clear any existing state
-      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
     });
 
     it('should remove all icon containers from DOM', () => {
-      const { cleanupAllIcons, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       // Create and attach some icon containers
       const c1 = createIconsContainer('111', 'Game 1');
@@ -2047,7 +2047,7 @@ describe('content.js', () => {
     });
 
     it('should clear injectedAppIds tracking set', () => {
-      const { cleanupAllIcons, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate some tracked appids
       injectedAppIds.add('111');
@@ -2061,7 +2061,7 @@ describe('content.js', () => {
     });
 
     it('should clear processedAppIds tracking set', () => {
-      const { cleanupAllIcons, processedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, processedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate some tracked appids
       processedAppIds.add('111');
@@ -2074,7 +2074,7 @@ describe('content.js', () => {
     });
 
     it('should clear pendingItems map', () => {
-      const { cleanupAllIcons, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, pendingItems } = globalThis.SWP_ContentTestExports;
 
       // Simulate some pending items
       pendingItems.set('111', { gameName: 'Game 1', container: document.createElement('span') });
@@ -2087,7 +2087,7 @@ describe('content.js', () => {
     });
 
     it('should remove data-scpw-processed attributes from all elements', () => {
-      const { cleanupAllIcons } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons } = globalThis.SWP_ContentTestExports;
 
       // Create elements with processed attribute
       const el1 = document.createElement('div');
@@ -2106,7 +2106,7 @@ describe('content.js', () => {
     });
 
     it('should remove data-scpw-icons attributes from all elements', () => {
-      const { cleanupAllIcons } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons } = globalThis.SWP_ContentTestExports;
 
       // Create elements with icons attribute
       const el1 = document.createElement('div');
@@ -2130,7 +2130,7 @@ describe('content.js', () => {
         pendingItems,
         getPendingHltbItems,
         getPendingReviewScoreItems
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -2139,7 +2139,7 @@ describe('content.js', () => {
     });
 
     it('should preserve resolved icon containers in DOM (not pending)', () => {
-      const { lightCleanup, createIconsContainer, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, createIconsContainer, pendingItems, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Create and attach some icon containers (simulating resolved state - not in pendingItems)
       const c1 = createIconsContainer('111', 'Game 1');
@@ -2163,7 +2163,7 @@ describe('content.js', () => {
     });
 
     it('should preserve injectedAppIds tracking set', () => {
-      const { lightCleanup, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate some tracked appids
       injectedAppIds.add('111');
@@ -2179,7 +2179,7 @@ describe('content.js', () => {
     });
 
     it('should preserve processedAppIds tracking set', () => {
-      const { lightCleanup, processedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, processedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate some tracked appids
       processedAppIds.add('111');
@@ -2193,7 +2193,7 @@ describe('content.js', () => {
     });
 
     it('should remove containers for pending items and clear from injectedAppIds', () => {
-      const { lightCleanup, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, pendingItems, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Create containers and add to DOM
       const c1 = document.createElement('span');
@@ -2227,7 +2227,7 @@ describe('content.js', () => {
     });
 
     it('should clear pendingHltbItems map and remove HLTB loaders', () => {
-      const { lightCleanup, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, getPendingHltbItems } = globalThis.SWP_ContentTestExports;
 
       // Create containers with HLTB loaders
       const c1 = document.createElement('span');
@@ -2261,7 +2261,7 @@ describe('content.js', () => {
     });
 
     it('should clear pendingReviewScoreItems map and remove review score loaders', () => {
-      const { lightCleanup, getPendingReviewScoreItems } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, getPendingReviewScoreItems } = globalThis.SWP_ContentTestExports;
 
       // Create containers with review score loaders
       const c1 = document.createElement('span');
@@ -2295,7 +2295,7 @@ describe('content.js', () => {
     });
 
     it('should clear batch debounce timer when set', () => {
-      const { lightCleanup, setBatchDebounceTimer, getBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, setBatchDebounceTimer, getBatchDebounceTimer } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2310,7 +2310,7 @@ describe('content.js', () => {
     });
 
     it('should clear HLTB batch debounce timer when set', () => {
-      const { lightCleanup, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2325,7 +2325,7 @@ describe('content.js', () => {
     });
 
     it('should clear steamDeckRefreshTimer when set', () => {
-      const { lightCleanup, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2340,7 +2340,7 @@ describe('content.js', () => {
     });
 
     it('should reset steamDeckRefreshAttempts to zero', () => {
-      const { lightCleanup, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts } = globalThis.SWP_ContentTestExports;
 
       setSteamDeckRefreshAttempts(3);
       expect(getSteamDeckRefreshAttempts()).toBe(3);
@@ -2351,7 +2351,7 @@ describe('content.js', () => {
     });
 
     it('should handle null timers gracefully (false branches)', () => {
-      const { lightCleanup, getBatchDebounceTimer, getHltbBatchDebounceTimer, getSteamDeckRefreshTimer, setBatchDebounceTimer, setHltbBatchDebounceTimer, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup, getBatchDebounceTimer, getHltbBatchDebounceTimer, getSteamDeckRefreshTimer, setBatchDebounceTimer, setHltbBatchDebounceTimer, setSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
 
       // Ensure all timers are null
       setBatchDebounceTimer(null);
@@ -2372,7 +2372,7 @@ describe('content.js', () => {
     });
 
     it('should preserve data-scpw-processed attributes', () => {
-      const { lightCleanup } = globalThis.SCPW_ContentTestExports;
+      const { lightCleanup } = globalThis.SWP_ContentTestExports;
 
       // Create elements with processed attribute
       const el1 = document.createElement('div');
@@ -2405,13 +2405,13 @@ describe('content.js', () => {
 
   describe('duplicate prevention via injectedAppIds', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
     });
 
     it('should track appid in injectedAppIds when icon container created', () => {
-      const { injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate what processItem does
       const appId = '12345';
@@ -2422,7 +2422,7 @@ describe('content.js', () => {
     });
 
     it('should allow checking if appid was already injected', () => {
-      const { injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       injectedAppIds.add('111');
       injectedAppIds.add('222');
@@ -2436,14 +2436,14 @@ describe('content.js', () => {
 
   describe('state desync detection (React hydration fix)', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
     });
 
     it('should detect state desync: tracked but icons not in DOM', () => {
-      const { injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate: injectedAppIds thinks icons exist
       injectedAppIds.add('12345');
@@ -2467,7 +2467,7 @@ describe('content.js', () => {
     });
 
     it('should sync tracking when icons exist but not tracked', () => {
-      const { injectedAppIds, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       // Simulate: icons exist in DOM but not in tracking
       const item = document.createElement('div');
@@ -2489,7 +2489,7 @@ describe('content.js', () => {
     });
 
     it('should skip processing when tracked and icons verified in DOM', () => {
-      const { injectedAppIds, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       // Both tracking and DOM state agree
       injectedAppIds.add('99999');
@@ -2511,7 +2511,7 @@ describe('content.js', () => {
     });
 
     it('should continue to inject when neither tracked nor in DOM', () => {
-      const { injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Fresh item: not tracked, no icons in DOM
       const item = document.createElement('div');
@@ -2541,7 +2541,7 @@ describe('content.js', () => {
     });
 
     it('should clear pending batch debounce timer on cleanup', () => {
-      const { cleanupAllIcons, setBatchDebounceTimer, getBatchDebounceTimer, queueForBatchResolution } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, setBatchDebounceTimer, getBatchDebounceTimer, queueForBatchResolution } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2555,7 +2555,7 @@ describe('content.js', () => {
     });
 
     it('should clear HLTB batch debounce timer on cleanup', () => {
-      const { cleanupAllIcons, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, setHltbBatchDebounceTimer, getHltbBatchDebounceTimer } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2569,7 +2569,7 @@ describe('content.js', () => {
     });
 
     it('should clear steamDeckRefreshTimer on cleanup', () => {
-      const { cleanupAllIcons, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
 
       // Set up a fake timer
       const fakeTimerId = setTimeout(() => {}, 1000);
@@ -2593,7 +2593,7 @@ describe('content.js', () => {
 
       // Re-require to test loadUserSettings
       require('../../dist/content.js');
-      const { loadUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { loadUserSettings } = globalThis.SWP_ContentTestExports;
 
       await loadUserSettings();
 
@@ -2608,7 +2608,7 @@ describe('content.js', () => {
 
   describe('createPlatformIcon with Steam Deck tier', () => {
     it('should set tier-based tooltip for Steam Deck icon', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       // Create Steam Deck icon with tier
       const icon = createPlatformIcon('steamdeck', 'available', 'Test Game', null, 'verified');
@@ -2619,7 +2619,7 @@ describe('content.js', () => {
     });
 
     it('should handle playable tier for Steam Deck', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('steamdeck', 'unavailable', 'Test Game', null, 'playable');
 
@@ -2631,18 +2631,18 @@ describe('content.js', () => {
   describe('updateIconsWithData with Steam Deck data', () => {
     beforeEach(() => {
       // Mock SteamDeck client
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         getDeckStatus: jest.fn().mockReturnValue({ found: true, status: 'verified', category: 3 }),
         statusToDisplayStatus: jest.fn().mockReturnValue('available')
       };
     });
 
     afterEach(() => {
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should use Steam Deck SSR data when available', () => {
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
 
       // Set module-level Steam Deck data
@@ -2667,10 +2667,10 @@ describe('content.js', () => {
     });
 
     it('should skip unknown Steam Deck status', () => {
-      globalThis.SCPW_SteamDeck.getDeckStatus.mockReturnValue({ found: false, status: 'unknown', category: 0 });
-      globalThis.SCPW_SteamDeck.statusToDisplayStatus.mockReturnValue('unknown');
+      globalThis.SWP_SteamDeck.getDeckStatus.mockReturnValue({ found: false, status: 'unknown', category: 0 });
+      globalThis.SWP_SteamDeck.statusToDisplayStatus.mockReturnValue('unknown');
 
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('99999', 'Unknown Game');
 
       // Set module-level Steam Deck data
@@ -2695,7 +2695,7 @@ describe('content.js', () => {
     });
 
     it('should skip Steam Deck when steamDeckData is null', () => {
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       // Ensure Steam Deck is enabled but data is null
       setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
@@ -2717,7 +2717,7 @@ describe('content.js', () => {
     });
 
     it('should skip Steam Deck when appid is missing', () => {
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
       const deckData = new Map([['12345', 3]]);
@@ -2747,12 +2747,12 @@ describe('content.js', () => {
   describe('createHltbBadge', () => {
     beforeEach(() => {
       // Reset userSettings to default for each test
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
     });
 
     it('should create badge with all time fields populated', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2775,7 +2775,7 @@ describe('content.js', () => {
     });
 
     it('should create badge with only mainStory', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2795,7 +2795,7 @@ describe('content.js', () => {
     });
 
     it('should show Unknown tooltip when all times are zero', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2813,7 +2813,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to mainExtra when mainStory is zero', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2834,7 +2834,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to completionist when only it is available', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2853,7 +2853,7 @@ describe('content.js', () => {
     });
 
     it('should create clickable link when hltbId is provided', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 12345,
@@ -2873,7 +2873,7 @@ describe('content.js', () => {
     });
 
     it('should create span (not link) when hltbId is zero', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -2892,7 +2892,7 @@ describe('content.js', () => {
     });
 
     it('should respect mainExtra display preference when available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainExtra' });
 
       const hltbData = {
@@ -2911,7 +2911,7 @@ describe('content.js', () => {
     });
 
     it('should respect completionist display preference when available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'completionist' });
 
       const hltbData = {
@@ -2930,7 +2930,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to available stat when preferred stat is zero', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'completionist' });
 
       const hltbData = {
@@ -2951,7 +2951,7 @@ describe('content.js', () => {
 
   describe('createHltbLoader', () => {
     it('should create a span element with scpw-hltb-loader class', () => {
-      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+      const { createHltbLoader } = globalThis.SWP_ContentTestExports;
 
       const loader = createHltbLoader();
 
@@ -2960,7 +2960,7 @@ describe('content.js', () => {
     });
 
     it('should have loading text content', () => {
-      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+      const { createHltbLoader } = globalThis.SWP_ContentTestExports;
 
       const loader = createHltbLoader();
 
@@ -2968,7 +2968,7 @@ describe('content.js', () => {
     });
 
     it('should have appropriate title and aria-label', () => {
-      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+      const { createHltbLoader } = globalThis.SWP_ContentTestExports;
 
       const loader = createHltbLoader();
 
@@ -2979,7 +2979,7 @@ describe('content.js', () => {
 
   describe('processItem processingAppIds guard (line 827)', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings, processingAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings, processingAppIds } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -2988,13 +2988,13 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings, processingAppIds } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, processingAppIds } = globalThis.SWP_ContentTestExports;
       processingAppIds.clear();
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should early-return when appid is in processingAppIds', async () => {
-      const { processItem, processingAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, processingAppIds } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-99999-0');
@@ -3021,7 +3021,7 @@ describe('content.js', () => {
 
   describe('processItem insertAfter branch (line 861)', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -3029,12 +3029,12 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should insert icons after insertAfter element when provided', async () => {
-      const { processItem, findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { processItem, findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-88888-0');
@@ -3080,14 +3080,14 @@ describe('content.js', () => {
 
   describe('processItem function', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
     });
 
     it('should skip already processed items', async () => {
-      const { processItem } = globalThis.SCPW_ContentTestExports;
+      const { processItem } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-12345-0');
@@ -3103,7 +3103,7 @@ describe('content.js', () => {
     });
 
     it('should skip items without appId', async () => {
-      const { processItem } = globalThis.SCPW_ContentTestExports;
+      const { processItem } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       // No data-rfd-draggable-id or app link
@@ -3114,7 +3114,7 @@ describe('content.js', () => {
     });
 
     it('should detect state desync and re-inject icons', async () => {
-      const { processItem, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Simulate: injectedAppIds thinks icons exist but DOM doesn't have them
       injectedAppIds.add('12345');
@@ -3146,7 +3146,7 @@ describe('content.js', () => {
     });
 
     it('should sync tracking when icons exist but not tracked', async () => {
-      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-67890-0');
@@ -3165,7 +3165,7 @@ describe('content.js', () => {
 
   describe('waitForInjectionPoint function', () => {
     it('should return null when item is removed from DOM during wait', async () => {
-      const { waitForInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { waitForInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       // Item is NOT in document.body - simulates removal
@@ -3176,7 +3176,7 @@ describe('content.js', () => {
     });
 
     it('should find injection point when SVG exists', async () => {
-      const { waitForInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { waitForInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       document.body.appendChild(item);
@@ -3199,7 +3199,7 @@ describe('content.js', () => {
   describe('processPendingBatch with null data', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      const { pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { pendingItems } = globalThis.SWP_ContentTestExports;
       pendingItems.clear();
     });
 
@@ -3208,7 +3208,7 @@ describe('content.js', () => {
     });
 
     it('should handle result with null data', async () => {
-      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const container = createIconsContainer('12345', 'Test Game');
       document.body.appendChild(container);
 
@@ -3239,7 +3239,7 @@ describe('content.js', () => {
 
   describe('timer getter functions', () => {
     it('should return batch debounce timer value', () => {
-      const { getBatchDebounceTimer, setBatchDebounceTimer } = globalThis.SCPW_ContentTestExports;
+      const { getBatchDebounceTimer, setBatchDebounceTimer } = globalThis.SWP_ContentTestExports;
 
       setBatchDebounceTimer(null);
       expect(getBatchDebounceTimer()).toBeNull();
@@ -3252,7 +3252,7 @@ describe('content.js', () => {
     });
 
     it('should return URL change debounce timer value', () => {
-      const { getUrlChangeDebounceTimer } = globalThis.SCPW_ContentTestExports;
+      const { getUrlChangeDebounceTimer } = globalThis.SWP_ContentTestExports;
 
       // Just verify the getter works (timer is managed internally)
       const timer = getUrlChangeDebounceTimer();
@@ -3271,7 +3271,7 @@ describe('content.js', () => {
       [new Map([['12345', 3], ['67890', 2]]), new Map([['12345', 3], ['67890', 2]]), true, 'maps are equal'],
       [new Map(), new Map(), true, 'empty maps']
     ])('should return %s when %s', (left, right, expected, _description) => {
-      const { isSameDeckData } = globalThis.SCPW_ContentTestExports;
+      const { isSameDeckData } = globalThis.SWP_ContentTestExports;
       expect(isSameDeckData(left, right)).toBe(expected);
     });
   });
@@ -3280,7 +3280,7 @@ describe('content.js', () => {
     const originalLocation = window.location;
 
     beforeEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       delete window.location;
     });
@@ -3290,7 +3290,7 @@ describe('content.js', () => {
     });
 
     it('should return all platforms when showSteamDeck is true and no deck_filters', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3302,7 +3302,7 @@ describe('content.js', () => {
     });
 
     it('should exclude steamdeck when showSteamDeck is false', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3314,7 +3314,7 @@ describe('content.js', () => {
     });
 
     it('should exclude steamdeck when deck_filters URL param is present', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345?deck_filters=verified');
 
@@ -3326,7 +3326,7 @@ describe('content.js', () => {
     });
 
     it('should exclude nintendo when showNintendo is false', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3338,7 +3338,7 @@ describe('content.js', () => {
     });
 
     it('should exclude playstation when showPlaystation is false', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: true, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3350,7 +3350,7 @@ describe('content.js', () => {
     });
 
     it('should exclude xbox when showXbox is false', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: false, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3362,7 +3362,7 @@ describe('content.js', () => {
     });
 
     it('should exclude all console platforms when all are disabled', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: true });
       window.location = new URL('https://store.steampowered.com/wishlist/profiles/12345');
 
@@ -3377,13 +3377,13 @@ describe('content.js', () => {
 
   describe('markMissingSteamDeckData function', () => {
     beforeEach(() => {
-      const { getMissingSteamDeckAppIds, setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { getMissingSteamDeckAppIds, setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       getMissingSteamDeckAppIds().clear();
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       setSteamDeckRefreshAttempts(0);
       setSteamDeckRefreshTimer(null);
 
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(new Map()),
         getDeckStatus: jest.fn(),
         statusToDisplayStatus: jest.fn()
@@ -3391,31 +3391,31 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should not mark when appid is empty', () => {
-      const { markMissingSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       markMissingSteamDeckData('');
       expect(getMissingSteamDeckAppIds().size).toBe(0);
     });
 
     it('should not mark when showSteamDeck is false', () => {
-      const { markMissingSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
       markMissingSteamDeckData('12345');
       expect(getMissingSteamDeckAppIds().size).toBe(0);
     });
 
-    it('should not mark when SCPW_SteamDeck is not available', () => {
-      const { markMissingSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
-      delete globalThis.SCPW_SteamDeck;
+    it('should not mark when SWP_SteamDeck is not available', () => {
+      const { markMissingSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
+      delete globalThis.SWP_SteamDeck;
       markMissingSteamDeckData('12345');
       expect(getMissingSteamDeckAppIds().size).toBe(0);
     });
 
     it('should mark appid and reset attempts when first missing', () => {
-      const { markMissingSteamDeckData, getMissingSteamDeckAppIds, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, getMissingSteamDeckAppIds, setSteamDeckRefreshAttempts, getSteamDeckRefreshAttempts, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SWP_ContentTestExports;
 
       // Set attempts to max (to test reset logic)
       setSteamDeckRefreshAttempts(STEAM_DECK_REFRESH_DELAYS_MS.length);
@@ -3430,12 +3430,12 @@ describe('content.js', () => {
   describe('scheduleSteamDeckRefresh function', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      const { setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       setSteamDeckRefreshAttempts(0);
       setSteamDeckRefreshTimer(null);
 
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(new Map()),
         getDeckStatus: jest.fn(),
         statusToDisplayStatus: jest.fn()
@@ -3444,32 +3444,32 @@ describe('content.js', () => {
 
     afterEach(() => {
       jest.useRealTimers();
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should not schedule when showSteamDeck is false', () => {
-      const { scheduleSteamDeckRefresh, setUserSettings, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setUserSettings, getSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
       scheduleSteamDeckRefresh('test');
       expect(getSteamDeckRefreshTimer()).toBeNull();
     });
 
-    it('should not schedule when SCPW_SteamDeck is not available', () => {
-      const { scheduleSteamDeckRefresh, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
-      delete globalThis.SCPW_SteamDeck;
+    it('should not schedule when SWP_SteamDeck is not available', () => {
+      const { scheduleSteamDeckRefresh, getSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
+      delete globalThis.SWP_SteamDeck;
       scheduleSteamDeckRefresh('test');
       expect(getSteamDeckRefreshTimer()).toBeNull();
     });
 
     it('should not schedule when max attempts reached', () => {
-      const { scheduleSteamDeckRefresh, setSteamDeckRefreshAttempts, getSteamDeckRefreshTimer, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setSteamDeckRefreshAttempts, getSteamDeckRefreshTimer, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SWP_ContentTestExports;
       setSteamDeckRefreshAttempts(STEAM_DECK_REFRESH_DELAYS_MS.length);
       scheduleSteamDeckRefresh('test');
       expect(getSteamDeckRefreshTimer()).toBeNull();
     });
 
     it('should not schedule when timer already exists', () => {
-      const { scheduleSteamDeckRefresh, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setSteamDeckRefreshTimer, getSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       const existingTimer = setTimeout(() => {}, 1000);
       setSteamDeckRefreshTimer(existingTimer);
       scheduleSteamDeckRefresh('test');
@@ -3478,7 +3478,7 @@ describe('content.js', () => {
     });
 
     it('should schedule refresh with correct delay', () => {
-      const { scheduleSteamDeckRefresh, getSteamDeckRefreshTimer, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, getSteamDeckRefreshTimer, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SWP_ContentTestExports;
       scheduleSteamDeckRefresh('test');
       expect(getSteamDeckRefreshTimer()).not.toBeNull();
       expect(STEAM_DECK_REFRESH_DELAYS_MS[0]).toBe(800);
@@ -3490,10 +3490,10 @@ describe('content.js', () => {
         getSteamDeckRefreshTimer,
         getSteamDeckRefreshAttempts,
         STEAM_DECK_REFRESH_DELAYS_MS
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Set up mock to return some data
-      globalThis.SCPW_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
 
       scheduleSteamDeckRefresh('test');
       expect(getSteamDeckRefreshTimer()).not.toBeNull();
@@ -3521,7 +3521,7 @@ describe('content.js', () => {
         setSteamDeckRefreshTimer,
         getMissingSteamDeckAppIds,
         setSteamDeckRefreshInFlight
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       setSteamDeckRefreshAttempts(0);
@@ -3529,7 +3529,7 @@ describe('content.js', () => {
       setSteamDeckRefreshInFlight(false);
       getMissingSteamDeckAppIds().clear();
 
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(new Map()),
         getDeckStatus: jest.fn(),
         statusToDisplayStatus: jest.fn()
@@ -3538,8 +3538,8 @@ describe('content.js', () => {
 
     afterEach(() => {
       jest.useRealTimers();
-      delete globalThis.SCPW_SteamDeck;
-      const { setSteamDeckRefreshInFlight } = globalThis.SCPW_ContentTestExports;
+      delete globalThis.SWP_SteamDeck;
+      const { setSteamDeckRefreshInFlight } = globalThis.SWP_ContentTestExports;
       setSteamDeckRefreshInFlight(false);
     });
 
@@ -3550,14 +3550,14 @@ describe('content.js', () => {
         getSteamDeckRefreshTimer,
         setSteamDeckRefreshAttempts,
         STEAM_DECK_REFRESH_DELAYS_MS
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Set up: some missing appids, but refresh returns empty (still missing)
       getMissingSteamDeckAppIds().add('99999');
       setSteamDeckRefreshAttempts(0);
 
       // Mock returns empty - so 99999 is still missing
-      globalThis.SCPW_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
 
       await refreshSteamDeckData('test');
 
@@ -3573,13 +3573,13 @@ describe('content.js', () => {
         getSteamDeckRefreshTimer,
         setSteamDeckRefreshAttempts,
         STEAM_DECK_REFRESH_DELAYS_MS
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Set up: some missing appids, at max attempts
       getMissingSteamDeckAppIds().add('99999');
       setSteamDeckRefreshAttempts(STEAM_DECK_REFRESH_DELAYS_MS.length);
 
-      globalThis.SCPW_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
 
       await refreshSteamDeckData('test');
 
@@ -3593,14 +3593,14 @@ describe('content.js', () => {
         getMissingSteamDeckAppIds,
         getSteamDeckRefreshTimer,
         setSteamDeckRefreshAttempts
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Set up: missing appids that will be found
       getMissingSteamDeckAppIds().add('12345');
       setSteamDeckRefreshAttempts(0);
 
       // Mock returns the missing appid - so it's no longer missing
-      globalThis.SCPW_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
 
       await refreshSteamDeckData('test');
 
@@ -3615,12 +3615,12 @@ describe('content.js', () => {
 
   describe('refreshIconsFromCache function', () => {
     beforeEach(() => {
-      const { getCachedEntriesByAppId, setSteamDeckData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getCachedEntriesByAppId, setSteamDeckData, setUserSettings } = globalThis.SWP_ContentTestExports;
       getCachedEntriesByAppId().clear();
       setSteamDeckData(null);
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
 
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(new Map()),
         getDeckStatus: jest.fn().mockReturnValue({ found: true, status: 'verified', category: 3 }),
         statusToDisplayStatus: jest.fn().mockReturnValue('available')
@@ -3628,11 +3628,11 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should refresh icons for containers in cache', () => {
-      const { refreshIconsFromCache, getCachedEntriesByAppId, createIconsContainer, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { refreshIconsFromCache, getCachedEntriesByAppId, createIconsContainer, setSteamDeckData } = globalThis.SWP_ContentTestExports;
 
       // Create a container and add to DOM
       const container = createIconsContainer('12345', 'Test Game');
@@ -3664,7 +3664,7 @@ describe('content.js', () => {
     });
 
     it('should skip containers not in DOM', () => {
-      const { refreshIconsFromCache, getCachedEntriesByAppId, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { refreshIconsFromCache, getCachedEntriesByAppId, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       // Create a container but don't add to DOM
       const container = createIconsContainer('12345', 'Test Game');
@@ -3697,14 +3697,14 @@ describe('content.js', () => {
 
   describe('refreshSteamDeckData function', () => {
     beforeEach(() => {
-      const { setSteamDeckData, setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { setSteamDeckData, setUserSettings, setSteamDeckRefreshAttempts, setSteamDeckRefreshTimer, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       setSteamDeckData(null);
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       setSteamDeckRefreshAttempts(0);
       setSteamDeckRefreshTimer(null);
       getMissingSteamDeckAppIds().clear();
 
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(new Map([['12345', 3]])),
         getDeckStatus: jest.fn().mockReturnValue({ found: true, status: 'verified', category: 3 }),
         statusToDisplayStatus: jest.fn().mockReturnValue('available')
@@ -3712,25 +3712,25 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should not refresh when showSteamDeck is false', async () => {
-      const { refreshSteamDeckData, setUserSettings, getSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { refreshSteamDeckData, setUserSettings, getSteamDeckData } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
       await refreshSteamDeckData('test');
       expect(getSteamDeckData()).toBeNull();
     });
 
-    it('should not refresh when SCPW_SteamDeck is not available', async () => {
-      const { refreshSteamDeckData, getSteamDeckData } = globalThis.SCPW_ContentTestExports;
-      delete globalThis.SCPW_SteamDeck;
+    it('should not refresh when SWP_SteamDeck is not available', async () => {
+      const { refreshSteamDeckData, getSteamDeckData } = globalThis.SWP_ContentTestExports;
+      delete globalThis.SWP_SteamDeck;
       await refreshSteamDeckData('test');
       expect(getSteamDeckData()).toBeNull();
     });
 
     it('should update steamDeckData on successful refresh', async () => {
-      const { refreshSteamDeckData, getSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { refreshSteamDeckData, getSteamDeckData } = globalThis.SWP_ContentTestExports;
       await refreshSteamDeckData('test');
       const data = getSteamDeckData();
       expect(data).not.toBeNull();
@@ -3738,7 +3738,7 @@ describe('content.js', () => {
     });
 
     it('should remove appids from missing set when found', async () => {
-      const { refreshSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { refreshSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
 
       // Add to missing set
       getMissingSteamDeckAppIds().add('12345');
@@ -3750,13 +3750,13 @@ describe('content.js', () => {
     });
 
     it('should not update when data is empty', async () => {
-      const { refreshSteamDeckData, getSteamDeckData, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { refreshSteamDeckData, getSteamDeckData, setSteamDeckData } = globalThis.SWP_ContentTestExports;
 
       // Set initial data
       setSteamDeckData(new Map([['67890', 2]]));
 
       // Mock empty response
-      globalThis.SCPW_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map());
 
       await refreshSteamDeckData('test');
 
@@ -3766,7 +3766,7 @@ describe('content.js', () => {
     });
 
     it('should skip refresh when already in flight', async () => {
-      const { refreshSteamDeckData, getSteamDeckRefreshInFlight, setSteamDeckRefreshInFlight } = globalThis.SCPW_ContentTestExports;
+      const { refreshSteamDeckData, getSteamDeckRefreshInFlight, setSteamDeckRefreshInFlight } = globalThis.SWP_ContentTestExports;
 
       // Set in-flight flag
       setSteamDeckRefreshInFlight(true);
@@ -3778,7 +3778,7 @@ describe('content.js', () => {
       await refreshSteamDeckData('test');
 
       // waitForDeckData should not have been called
-      expect(globalThis.SCPW_SteamDeck.waitForDeckData).not.toHaveBeenCalled();
+      expect(globalThis.SWP_SteamDeck.waitForDeckData).not.toHaveBeenCalled();
 
       // Reset flag
       setSteamDeckRefreshInFlight(false);
@@ -3794,7 +3794,7 @@ describe('content.js', () => {
 
   describe('createPlatformIcon default tooltip', () => {
     it('should use STATUS_INFO tooltip for non-steamdeck platforms', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('nintendo', 'available', 'Test Game');
 
@@ -3802,7 +3802,7 @@ describe('content.js', () => {
     });
 
     it('should use STATUS_INFO tooltip when no tier provided for steamdeck', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('steamdeck', 'available', 'Test Game');
 
@@ -3817,7 +3817,7 @@ describe('content.js', () => {
         updateIconsWithData,
         getCachedEntriesByAppId,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Create a container and add loader (simulating cold start)
       const container = createIconsContainer('12345', 'Test Game');
@@ -3862,7 +3862,7 @@ describe('content.js', () => {
       const {
         createIconsContainer,
         pendingItems
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Create an old container (not in DOM)
       const oldContainer = createIconsContainer('54321', 'Old Game');
@@ -3903,7 +3903,7 @@ describe('content.js', () => {
         setUserSettings,
         refreshIconsFromCache,
         getCachedEntriesByAppId
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Simulate enabling a platform
       const oldSettings = { showNintendo: false, showPlaystation: true, showXbox: true, showSteamDeck: true };
@@ -3915,7 +3915,7 @@ describe('content.js', () => {
     });
 
     it('should handle settings change when platforms are disabled', () => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
 
       const newSettings = { showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: false };
       setUserSettings(newSettings);
@@ -3953,7 +3953,7 @@ describe('content.js', () => {
       const {
         cleanupAllIcons,
         getSteamDeckRefreshTimer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Call cleanup
       cleanupAllIcons();
@@ -3969,7 +3969,7 @@ describe('content.js', () => {
         setUserSettings,
         createIconsContainer,
         isAnyConsolePlatformEnabled
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Disable all platforms
       setUserSettings({
@@ -3993,7 +3993,7 @@ describe('content.js', () => {
 
   describe('processingAppIds race condition prevention', () => {
     it('should have injectedAppIds as a Set', () => {
-      const { injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Should be a Set
       expect(injectedAppIds).toBeInstanceOf(Set);
@@ -4007,7 +4007,7 @@ describe('content.js', () => {
       const {
         getEnabledPlatforms,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({
         showNintendo: false,
@@ -4029,7 +4029,7 @@ describe('content.js', () => {
     });
 
     it('should exclude steamdeck when deck_filters in URL', () => {
-      const { getEnabledPlatforms } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms } = globalThis.SWP_ContentTestExports;
 
       // Mock URL with deck_filters
       const originalLocation = window.location;
@@ -4049,7 +4049,7 @@ describe('content.js', () => {
       const {
         pendingItems,
         processPendingBatch
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Clear pending items
       pendingItems.clear();
@@ -4066,7 +4066,7 @@ describe('content.js', () => {
         pendingItems,
         createIconsContainer,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Disable all console platforms, HLTB, AND review scores
       // (We still query Wikidata when HLTB or review scores are enabled)
@@ -4116,7 +4116,7 @@ describe('content.js', () => {
         pendingItems,
         createIconsContainer,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Disable console platforms but keep HLTB enabled
       // (We need Wikidata to get English game names for HLTB)
@@ -4163,7 +4163,7 @@ describe('content.js', () => {
       delete chrome.storage.onChanged;
 
       // Should not throw when onChanged is not available
-      const { setupSettingsChangeListener } = globalThis.SCPW_ContentTestExports;
+      const { setupSettingsChangeListener } = globalThis.SWP_ContentTestExports;
       setupSettingsChangeListener();
 
       chrome.storage.onChanged = originalOnChanged;
@@ -4197,7 +4197,7 @@ describe('content.js', () => {
 
   describe('Steam Deck tier handling in createPlatformIcon', () => {
     it('should set unsupported tier class', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('steamdeck', 'unavailable', 'Test Game', null, 'unsupported');
 
@@ -4206,7 +4206,7 @@ describe('content.js', () => {
     });
 
     it('should set unknown tier class', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('steamdeck', 'unknown', 'Test Game', null, 'unknown');
 
@@ -4217,7 +4217,7 @@ describe('content.js', () => {
 
   describe('isAnyConsolePlatformEnabled function', () => {
     it('should return true when any console platform is enabled', () => {
-      const { isAnyConsolePlatformEnabled, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { isAnyConsolePlatformEnabled, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({ showNintendo: true, showPlaystation: false, showXbox: false, showSteamDeck: false });
       expect(isAnyConsolePlatformEnabled()).toBe(true);
@@ -4233,7 +4233,7 @@ describe('content.js', () => {
     });
 
     it('should return false when all console platforms are disabled', () => {
-      const { isAnyConsolePlatformEnabled, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { isAnyConsolePlatformEnabled, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: true });
       expect(isAnyConsolePlatformEnabled()).toBe(false);
@@ -4245,7 +4245,7 @@ describe('content.js', () => {
 
   describe('extractGameName edge cases', () => {
     it('should extract from URL slug when link text is empty but URL has slug', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       const link = document.createElement('a');
@@ -4257,7 +4257,7 @@ describe('content.js', () => {
     });
 
     it('should return Unknown Game when link text is too long', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       const link = document.createElement('a');
@@ -4271,7 +4271,7 @@ describe('content.js', () => {
 
   describe('updateIconsWithData clears existing icons', () => {
     it('should remove existing icons before adding new ones', () => {
-      const { createIconsContainer, updateIconsWithData, createPlatformIcon, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, createPlatformIcon, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       // Disable Steam Deck to simplify
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
@@ -4310,7 +4310,7 @@ describe('content.js', () => {
   describe('processPendingBatch advanced cases', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      const { pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       pendingItems.clear();
       setUserSettings({
         showNintendo: true,
@@ -4322,7 +4322,7 @@ describe('content.js', () => {
 
     afterEach(() => {
       jest.useRealTimers();
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -4332,7 +4332,7 @@ describe('content.js', () => {
     });
 
     it('should handle result.data being null and remove loading state', async () => {
-      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('77777', 'No Data Game');
       // Manually add loader (simulating cold start)
@@ -4367,7 +4367,7 @@ describe('content.js', () => {
     });
 
     it('should log with fromCache: true source', async () => {
-      const { queueForBatchResolution, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const container = createIconsContainer('88888', 'Cached Source Game');
@@ -4404,7 +4404,7 @@ describe('content.js', () => {
     });
 
     it('should log with fromCache: false source as "new"', async () => {
-      const { queueForBatchResolution, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       const container = createIconsContainer('99999', 'New Source Game');
@@ -4441,7 +4441,7 @@ describe('content.js', () => {
     });
 
     it('should log container count when multiple containers exist', async () => {
-      const { queueForBatchResolution, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
       // Create two containers with same appid
@@ -4482,7 +4482,7 @@ describe('content.js', () => {
     });
 
     it('should skip appid when no containers in DOM', async () => {
-      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForBatchResolution, pendingItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('22222', 'Ghost Game');
       // Do NOT add to document.body
@@ -4507,7 +4507,7 @@ describe('content.js', () => {
       });
 
       // Trigger processPendingBatch directly
-      const { processPendingBatch } = globalThis.SCPW_ContentTestExports;
+      const { processPendingBatch } = globalThis.SWP_ContentTestExports;
       await processPendingBatch();
 
       // Should have completed without error (container skipped)
@@ -4517,7 +4517,7 @@ describe('content.js', () => {
 
   describe('processItem with processingAppIds guard', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -4530,7 +4530,7 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -4540,7 +4540,7 @@ describe('content.js', () => {
     });
 
     it('should handle same appid already processed with icons in DOM', async () => {
-      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-55555-0');
@@ -4561,7 +4561,7 @@ describe('content.js', () => {
     });
 
     it('should handle icons verified in DOM when injectedAppIds has appid', async () => {
-      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Pre-add to injectedAppIds
       injectedAppIds.add('66666');
@@ -4589,7 +4589,7 @@ describe('content.js', () => {
     });
 
     it('should re-inject when injectedAppIds has appid but no icons in DOM', async () => {
-      const { processItem, injectedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
 
       // Pre-add to injectedAppIds but no icons in DOM
       injectedAppIds.add('77777');
@@ -4622,7 +4622,7 @@ describe('content.js', () => {
 
   describe('getRenderedIconSummary function', () => {
     it('should return "none" when no icons present', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test');
       // Remove loader
@@ -4640,7 +4640,7 @@ describe('content.js', () => {
 
   describe('sendMessageWithRetry edge cases', () => {
     it('should handle string error conversion', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       // Mock rejection with non-Error object
       chrome.runtime.sendMessage.mockRejectedValueOnce('String error');
@@ -4649,7 +4649,7 @@ describe('content.js', () => {
     });
 
     it('should throw fallback error when loop exits without lastError (line 584)', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       // Mock multiple failed attempts that somehow don't set lastError properly
       // This is an edge case for defensive coding - the actual code path is hard to trigger
@@ -4664,7 +4664,7 @@ describe('content.js', () => {
     });
 
     it('should retry on connection errors up to maxRetries', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       // Mock connection error followed by success
       chrome.runtime.sendMessage
@@ -4679,7 +4679,7 @@ describe('content.js', () => {
     });
 
     it('should exhaust retries on persistent connection errors', async () => {
-      const { sendMessageWithRetry } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry } = globalThis.SWP_ContentTestExports;
 
       // Clear any existing mock implementations
       chrome.runtime.sendMessage.mockReset();
@@ -4742,14 +4742,14 @@ describe('content.js', () => {
 
   describe('isValidGameTitle function behavior', () => {
     it('should reject empty string', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       // No valid title elements
       expect(extractGameName(item)).toBe('Unknown Game');
     });
 
     it('should reject strings starting with $', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const titleEl = document.createElement('div');
       titleEl.className = 'Title';
@@ -4759,7 +4759,7 @@ describe('content.js', () => {
     });
 
     it('should reject strings starting with €', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -4773,7 +4773,7 @@ describe('content.js', () => {
     });
 
     it('should reject Free games label', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -4787,7 +4787,7 @@ describe('content.js', () => {
     });
 
     it('should reject discount percentage', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const link = document.createElement('a');
       link.href = '/app/12345';
@@ -4803,7 +4803,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint with various span titles', () => {
     it('should recognize macOS title', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const group = document.createElement('div');
       const span = document.createElement('span');
@@ -4817,7 +4817,7 @@ describe('content.js', () => {
     });
 
     it('should recognize Linux title', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const group = document.createElement('div');
       const span = document.createElement('span');
@@ -4831,7 +4831,7 @@ describe('content.js', () => {
     });
 
     it('should recognize SteamOS title', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const group = document.createElement('div');
       const span = document.createElement('span');
@@ -4847,7 +4847,7 @@ describe('content.js', () => {
 
   describe('createPlatformIcon clickable behavior', () => {
     it('should create non-clickable span for steamdeck regardless of status', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('steamdeck', 'available', 'Test Game');
 
@@ -4857,7 +4857,7 @@ describe('content.js', () => {
     });
 
     it('should create clickable anchor for console platforms when available', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('nintendo', 'available', 'Test Game');
 
@@ -4867,7 +4867,7 @@ describe('content.js', () => {
     });
 
     it('should create clickable anchor for console platforms when unknown', () => {
-      const { createPlatformIcon } = globalThis.SCPW_ContentTestExports;
+      const { createPlatformIcon } = globalThis.SWP_ContentTestExports;
 
       const icon = createPlatformIcon('playstation', 'unknown', 'Test Game');
 
@@ -4891,7 +4891,7 @@ describe('content.js', () => {
 
   describe('resetItemForReprocess function', () => {
     beforeEach(() => {
-      const { injectedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       pendingItems.clear();
     });
@@ -4910,7 +4910,7 @@ describe('content.js', () => {
     });
 
     it('should remove existing icons from item', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
       const item = document.createElement('div');
       const icons = createIconsContainer('12345', 'Test');
       item.appendChild(icons);
@@ -4925,7 +4925,7 @@ describe('content.js', () => {
     });
 
     it('should delete from injectedAppIds when previousAppId provided', () => {
-      const { injectedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
 
       injectedAppIds.add('99999');
       pendingItems.set('99999', { gameName: 'Old', container: document.createElement('span') });
@@ -4945,7 +4945,7 @@ describe('content.js', () => {
     });
 
     it('should not delete when previousAppId is null', () => {
-      const { injectedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
 
       injectedAppIds.add('88888');
 
@@ -4965,7 +4965,7 @@ describe('content.js', () => {
 
   describe('waitForInjectionPoint retry logic', () => {
     it('should return findInjectionPoint result when SVG found immediately', async () => {
-      const { waitForInjectionPoint, findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { waitForInjectionPoint, findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       const wrapper = document.createElement('span');
@@ -4990,7 +4990,7 @@ describe('content.js', () => {
 
   describe('processItem with same processedAppId and icons', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -5003,7 +5003,7 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -5013,7 +5013,7 @@ describe('content.js', () => {
     });
 
     it('should early return when processedAppId matches and icons exist', async () => {
-      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, createIconsContainer, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-44444-0');
@@ -5041,7 +5041,7 @@ describe('content.js', () => {
     });
 
     it('should reprocess when processedAppId matches but icons missing', async () => {
-      const { processItem, injectedAppIds, pendingItems } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds, pendingItems } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-55555-0');
@@ -5320,7 +5320,7 @@ describe('content.js', () => {
 
   describe('processItem early returns', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       setUserSettings({
@@ -5332,7 +5332,7 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -5342,7 +5342,7 @@ describe('content.js', () => {
     });
 
     it('should skip item without appId', async () => {
-      const { processItem, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       // No data-rfd-draggable-id or app link
@@ -5373,7 +5373,7 @@ describe('content.js', () => {
         })
       };
 
-      const { setUserSettings, setSteamDeckData, getCachedEntriesByAppId, pendingItems, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, setSteamDeckData, getCachedEntriesByAppId, pendingItems, injectedAppIds } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -5386,12 +5386,12 @@ describe('content.js', () => {
       injectedAppIds.clear();
 
       // Re-run setupSettingsChangeListener to register the listener
-      const { setupSettingsChangeListener } = globalThis.SCPW_ContentTestExports;
+      const { setupSettingsChangeListener } = globalThis.SWP_ContentTestExports;
       setupSettingsChangeListener();
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({
         showNintendo: true,
         showPlaystation: true,
@@ -5451,7 +5451,7 @@ describe('content.js', () => {
     });
 
     it('should handle all platforms being disabled', () => {
-      const { createIconsContainer, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, setUserSettings } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       // Create a container with loader
@@ -5469,7 +5469,7 @@ describe('content.js', () => {
     });
 
     it('should update pending items with stale containers', () => {
-      const { pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { pendingItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       // Create stale container (not in DOM)
@@ -5497,14 +5497,14 @@ describe('content.js', () => {
     });
 
     it('should handle steamdeck being enabled when no deck data', async () => {
-      const { setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { setSteamDeckData } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       setSteamDeckData(null);
 
       // Mock SteamDeck client
       const mockDeckData = new Map([['12345', 3]]);
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         waitForDeckData: jest.fn().mockResolvedValue(mockDeckData),
         getDeckStatus: jest.fn(),
         statusToDisplayStatus: jest.fn()
@@ -5520,11 +5520,11 @@ describe('content.js', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
 
     it('should trigger fetch when console platform enabled and cache empty', () => {
-      const { getCachedEntriesByAppId, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { getCachedEntriesByAppId, injectedAppIds } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       getCachedEntriesByAppId().clear();
@@ -5541,7 +5541,7 @@ describe('content.js', () => {
     });
 
     it('should not trigger fetch when cache has entries', () => {
-      const { getCachedEntriesByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       // Add entry to cache
@@ -5558,7 +5558,7 @@ describe('content.js', () => {
     });
 
     it('should update loading container from cache', () => {
-      const { createIconsContainer, getCachedEntriesByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, getCachedEntriesByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       // Create container WITH loader (required for line 145 to be hit)
@@ -5599,7 +5599,7 @@ describe('content.js', () => {
     });
 
     it('should remove loader when all platforms are disabled and no cached data', () => {
-      const { createIconsContainer, setUserSettings, removeLoadingState } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, setUserSettings, removeLoadingState } = globalThis.SWP_ContentTestExports;
       const listener = storageChangeListeners[storageChangeListeners.length - 1];
 
       // Create container with loader (simulating cold start)
@@ -5671,22 +5671,22 @@ describe('content.js', () => {
     it('should set null for hltbId === -1 (not found marker)', () => {
       jest.resetModules();
       // Re-setup mocks
-      globalThis.SCPW_Icons = mockIcons;
-      globalThis.SCPW_PlatformInfo = mockPlatformInfo;
-      globalThis.SCPW_StatusInfo = mockStatusInfo;
-      globalThis.SCPW_SteamDeckTiers = {
+      globalThis.SWP_Icons = mockIcons;
+      globalThis.SWP_PlatformInfo = mockPlatformInfo;
+      globalThis.SWP_StatusInfo = mockStatusInfo;
+      globalThis.SWP_SteamDeckTiers = {
         verified: { tooltip: 'Verified', className: 'scpw-deck-verified' },
         playable: { tooltip: 'Playable', className: 'scpw-deck-playable' },
         unsupported: { tooltip: 'Unsupported', className: 'scpw-deck-unsupported' },
         unknown: { tooltip: 'Unknown', className: 'scpw-deck-unknown' }
       };
-      globalThis.SCPW_StoreUrls = {
+      globalThis.SWP_StoreUrls = {
         nintendo: (gameName) => `https://www.nintendo.com/search/#q=${encodeURIComponent(gameName)}`,
         playstation: (gameName) => `https://store.playstation.com/search/${encodeURIComponent(gameName)}`,
         xbox: (gameName) => `https://www.xbox.com/search?q=${encodeURIComponent(gameName)}`,
         steamdeck: (gameName) => `https://store.steampowered.com/search/?term=${encodeURIComponent(gameName)}`
       };
-      globalThis.SCPW_UserSettings = {
+      globalThis.SWP_UserSettings = {
         DEFAULT_USER_SETTINGS: {
           showNintendo: true,
           showPlaystation: true,
@@ -5700,7 +5700,7 @@ describe('content.js', () => {
       chrome.storage.sync.get.mockResolvedValue({ scpwSettings: { showSteamDeck: true } });
       require('../../dist/content.js');
 
-      const { getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
 
       // Clear HLTB data
       getHltbDataByAppId().clear();
@@ -5722,7 +5722,7 @@ describe('content.js', () => {
 
       // The restoreHltbDataFromEntry is called internally, let's test via processPendingBatch
       // by setting up the cached entry with hltbData and verifying the behavior
-      const { getCachedEntriesByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
       getCachedEntriesByAppId().set('77777', entry);
 
       // Call restoreHltbDataFromEntry indirectly through processItem (uses cache)
@@ -5745,7 +5745,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems filtered view', () => {
     it('should find items in filtered view using app links', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create a filtered view structure (no data-rfd-draggable-id on row)
       const row = document.createElement('div');
@@ -5770,7 +5770,7 @@ describe('content.js', () => {
     });
 
     it('should skip links inside scpw-platforms', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create a row with our own platform link inside scpw-platforms
       const row = document.createElement('div');
@@ -5803,7 +5803,7 @@ describe('content.js', () => {
     });
 
     it('should handle row without valid injection point', () => {
-      const { findWishlistRow } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistRow } = globalThis.SWP_ContentTestExports;
 
       // Create a deeply nested link that won't find a valid row
       const deepContainer = document.createElement('div');
@@ -5827,7 +5827,7 @@ describe('content.js', () => {
 
   describe('createHltbBadge tooltip branches', () => {
     it('should include Main + Extras in tooltip when available', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 123,
@@ -5845,7 +5845,7 @@ describe('content.js', () => {
     });
 
     it('should include Completionist in tooltip when available', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 123,
@@ -5863,7 +5863,7 @@ describe('content.js', () => {
     });
 
     it('should show Unknown tooltip when no times available', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0, // Non-clickable
@@ -5881,7 +5881,7 @@ describe('content.js', () => {
     });
 
     it('should not include click message when hltbId is 0', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0, // Non-clickable
@@ -5901,7 +5901,7 @@ describe('content.js', () => {
 
   describe('getRenderedIconSummary branches', () => {
     it('should return unavailable status for unavailable icon', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('88888', 'Test Game');
       const icon = document.createElement('span');
@@ -5930,7 +5930,7 @@ describe('content.js', () => {
     });
 
     it('should return unknown status for icon without specific class', () => {
-      const { createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('88889', 'Test Game');
       const icon = document.createElement('span');
@@ -5976,20 +5976,20 @@ describe('content.js', () => {
 
   describe('updateIconsWithData HLTB branches', () => {
     beforeEach(() => {
-      const { setUserSettings, getHltbDataByAppId, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, getHltbDataByAppId, setSteamDeckData } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true });
       getHltbDataByAppId().clear();
       setSteamDeckData(null);
     });
 
     afterEach(() => {
-      const { setUserSettings, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
       getHltbDataByAppId().clear();
     });
 
     it('should show HLTB loader when HLTB data not yet known', () => {
-      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true });
 
       const container = createIconsContainer('55555', 'HLTB Test Game');
@@ -6014,7 +6014,7 @@ describe('content.js', () => {
     });
 
     it('should show HLTB badge when HLTB data has times', () => {
-      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true });
 
       const container = createIconsContainer('55556', 'HLTB Badge Game');
@@ -6047,7 +6047,7 @@ describe('content.js', () => {
     });
 
     it('should not show HLTB when showHltb is disabled', () => {
-      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: false });
 
       const container = createIconsContainer('55557', 'No HLTB Game');
@@ -6070,7 +6070,7 @@ describe('content.js', () => {
     });
 
     it('should not show HLTB badge when data has no times (all zero)', () => {
-      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getHltbDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true });
 
       const container = createIconsContainer('55558', 'Zero Time Game');
@@ -6105,7 +6105,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint SVG edge cases', () => {
     it('should skip SVG inside scpw-platforms container', () => {
-      const { findInjectionPoint, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
 
@@ -6131,7 +6131,7 @@ describe('content.js', () => {
     });
 
     it('should handle SVG without parent element', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
 
@@ -6156,7 +6156,7 @@ describe('content.js', () => {
     });
 
     it('should retry on "Receiving end does not exist" error', async () => {
-      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage
         .mockRejectedValueOnce(new Error('Receiving end does not exist'))
@@ -6173,7 +6173,7 @@ describe('content.js', () => {
     });
 
     it('should retry on "Extension context invalidated" error', async () => {
-      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage
         .mockRejectedValueOnce(new Error('Extension context invalidated'))
@@ -6192,7 +6192,7 @@ describe('content.js', () => {
 
   describe('createHltbBadge displayStat preference branches', () => {
     it('should prefer mainExtra when set and available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainExtra' });
 
       const hltbData = {
@@ -6210,7 +6210,7 @@ describe('content.js', () => {
     });
 
     it('should fall back when mainExtra is preferred but zero', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainExtra' });
 
       const hltbData = {
@@ -6229,7 +6229,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to mainExtra when mainStory is zero and mainExtra is available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
 
       const hltbData = {
@@ -6249,34 +6249,34 @@ describe('content.js', () => {
 
   describe('formatHltbTime edge cases', () => {
     it('should return empty string for zero hours', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
       expect(formatHltbTime(0)).toBe('');
     });
 
     it('should return empty string for negative hours', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
       expect(formatHltbTime(-5)).toBe('');
     });
 
     it('should show one decimal for hours < 10', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
       expect(formatHltbTime(5.5)).toBe('5.5h');
     });
 
     it('should round to whole number for hours >= 10', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
       expect(formatHltbTime(15.7)).toBe('16h');
     });
   });
 
   describe('createHltbBadge comprehensive fallback branches', () => {
     beforeEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
     });
 
     it('should fall back to completionist when mainStory and mainExtra are zero', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
 
       const hltbData = {
@@ -6293,7 +6293,7 @@ describe('content.js', () => {
     });
 
     it('should show ?h when all times are zero', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
 
       const hltbData = {
@@ -6310,7 +6310,7 @@ describe('content.js', () => {
     });
 
     it('should use completionist directly when preferred and available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'completionist' });
 
       const hltbData = {
@@ -6327,7 +6327,7 @@ describe('content.js', () => {
     });
 
     it('should include click message in tooltip when hltbId > 0', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 123, // Clickable
@@ -6344,7 +6344,7 @@ describe('content.js', () => {
     });
 
     it('should create anchor element when hltbId > 0', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 456,
@@ -6361,7 +6361,7 @@ describe('content.js', () => {
     });
 
     it('should create span element when hltbId is 0', () => {
-      const { createHltbBadge } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge } = globalThis.SWP_ContentTestExports;
 
       const hltbData = {
         hltbId: 0,
@@ -6379,7 +6379,7 @@ describe('content.js', () => {
 
   describe('processItem persistent cache restoration (lines 876-882)', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, getCachedEntriesByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, getCachedEntriesByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -6388,12 +6388,12 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should restore from persistent storage when not in memory cache', async () => {
-      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SCPW_ContentTestExports;
+      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SWP_ContentTestExports;
 
       // Create item
       const item = document.createElement('div');
@@ -6449,7 +6449,7 @@ describe('content.js', () => {
     });
 
     it('should not restore from expired persistent storage', async () => {
-      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SCPW_ContentTestExports;
+      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SWP_ContentTestExports;
 
       // Create item
       const item = document.createElement('div');
@@ -6499,7 +6499,7 @@ describe('content.js', () => {
     });
 
     it('should not restore from persistent storage with wrong cache version', async () => {
-      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SCPW_ContentTestExports;
+      const { processItem, getCachedEntriesByAppId, pendingItems, CACHE_VERSION } = globalThis.SWP_ContentTestExports;
 
       // Create item
       const item = document.createElement('div');
@@ -6551,7 +6551,7 @@ describe('content.js', () => {
 
   describe('processItem edge cases', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -6559,12 +6559,12 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should short-circuit when all platforms are disabled', async () => {
-      const { processItem, setUserSettings, injectedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { processItem, setUserSettings, injectedAppIds } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: false, showHltb: false });
 
       const item = document.createElement('div');
@@ -6582,7 +6582,7 @@ describe('content.js', () => {
     });
 
     it('should sync state when icons exist in DOM but not tracked', async () => {
-      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-88888-0');
@@ -6612,7 +6612,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems processed item handling', () => {
     it('should skip items that are already processed with matching appid and icons', () => {
-      const { findWishlistItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-77777-0');
@@ -6633,7 +6633,7 @@ describe('content.js', () => {
     });
 
     it('should include items where appid changed (row reuse)', () => {
-      const { findWishlistItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-66666-0'); // New appid
@@ -6656,7 +6656,7 @@ describe('content.js', () => {
 
   describe('getEnabledPlatforms with deck filter', () => {
     it('should hide steamdeck when deck_filters is in URL', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
 
       // Mock location.href with deck_filters
@@ -6689,7 +6689,7 @@ describe('content.js', () => {
     });
 
     it('should return null when item is removed from DOM during wait', async () => {
-      const { waitForInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { waitForInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-11111-0');
@@ -6710,7 +6710,7 @@ describe('content.js', () => {
     });
 
     it('should find fallback injection point when no SVGIcon_ class icons exist', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-22222-0');
@@ -6724,7 +6724,7 @@ describe('content.js', () => {
 
   describe('processItem row reuse scenario', () => {
     beforeEach(() => {
-      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, processedAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       injectedAppIds.clear();
       processedAppIds.clear();
       pendingItems.clear();
@@ -6732,12 +6732,12 @@ describe('content.js', () => {
     });
 
     afterEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should handle row reuse by resetting and reprocessing', async () => {
-      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processItem, injectedAppIds, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       // Row was previously showing game 11111
@@ -6775,7 +6775,7 @@ describe('content.js', () => {
 
   describe('resetItemForReprocess', () => {
     it('should clear item state and remove old icons', () => {
-      const { injectedAppIds, pendingItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { injectedAppIds, pendingItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-scpw-processed', '33333');
@@ -6809,25 +6809,25 @@ describe('content.js', () => {
 
   describe('updateIconsWithData Steam Deck found vs not found', () => {
     beforeEach(() => {
-      globalThis.SCPW_SteamDeck = {
+      globalThis.SWP_SteamDeck = {
         getDeckStatus: jest.fn(),
         statusToDisplayStatus: jest.fn()
       };
     });
 
     afterEach(() => {
-      delete globalThis.SCPW_SteamDeck;
-      const { setSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      delete globalThis.SWP_SteamDeck;
+      const { setSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       setSteamDeckData(null);
       getMissingSteamDeckAppIds().clear();
     });
 
     it('should track missing Steam Deck data when not found', () => {
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
 
-      globalThis.SCPW_SteamDeck.getDeckStatus.mockReturnValue({ found: false, status: 'unknown', category: 0 });
-      globalThis.SCPW_SteamDeck.statusToDisplayStatus.mockReturnValue('unknown');
+      globalThis.SWP_SteamDeck.getDeckStatus.mockReturnValue({ found: false, status: 'unknown', category: 0 });
+      globalThis.SWP_SteamDeck.statusToDisplayStatus.mockReturnValue('unknown');
 
       const deckData = new Map([['other-app', 3]]);
       setSteamDeckData(deckData);
@@ -6849,14 +6849,14 @@ describe('content.js', () => {
     });
 
     it('should remove from missing when Steam Deck data is found', () => {
-      const { createIconsContainer, updateIconsWithData, setSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setSteamDeckData, getMissingSteamDeckAppIds, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: false, showPlaystation: false, showXbox: false, showSteamDeck: true, showHltb: false });
 
       // Pre-populate missing set
       getMissingSteamDeckAppIds().add('44445');
 
-      globalThis.SCPW_SteamDeck.getDeckStatus.mockReturnValue({ found: true, status: 'verified', category: 3 });
-      globalThis.SCPW_SteamDeck.statusToDisplayStatus.mockReturnValue('available');
+      globalThis.SWP_SteamDeck.getDeckStatus.mockReturnValue({ found: true, status: 'verified', category: 3 });
+      globalThis.SWP_SteamDeck.statusToDisplayStatus.mockReturnValue('available');
 
       const deckData = new Map([['44445', 3]]);
       setSteamDeckData(deckData);
@@ -6888,7 +6888,7 @@ describe('content.js', () => {
     });
 
     it('should use exponential backoff for retry delays', async () => {
-      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_RETRY_DELAY_MS } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage
         .mockRejectedValueOnce(new Error('Could not establish connection'))
@@ -6911,7 +6911,7 @@ describe('content.js', () => {
   describe('processPendingHltbBatch', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      const { getPendingHltbItems, setUserSettings, getHltbDataByAppId, getCachedEntriesByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getPendingHltbItems, setUserSettings, getHltbDataByAppId, getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
       getPendingHltbItems().clear();
       getHltbDataByAppId().clear();
       getCachedEntriesByAppId().clear();
@@ -6920,13 +6920,13 @@ describe('content.js', () => {
 
     afterEach(() => {
       jest.useRealTimers();
-      const { setUserSettings, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, getPendingHltbItems } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showHltb: true, showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
       getPendingHltbItems().clear();
     });
 
     it('should return early if pendingHltbItems is empty', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems } = globalThis.SWP_ContentTestExports;
       getPendingHltbItems().clear();
 
       await processPendingHltbBatch();
@@ -6938,7 +6938,7 @@ describe('content.js', () => {
     });
 
     it('should return early if showHltb is disabled', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems, setUserSettings, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems, setUserSettings, createIconsContainer } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showHltb: false });
 
       const container = createIconsContainer('99999', 'Test Game');
@@ -6953,7 +6953,7 @@ describe('content.js', () => {
     });
 
     it('should process pending items and update hltbDataByAppId', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems, getHltbDataByAppId, createIconsContainer, getCachedEntriesByAppId } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems, getHltbDataByAppId, createIconsContainer, getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('88888', 'HLTB Game');
       document.body.appendChild(container);
@@ -6989,7 +6989,7 @@ describe('content.js', () => {
     });
 
     it('should handle batch error gracefully', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       const container = createIconsContainer('77777', 'Error Game');
@@ -7009,7 +7009,7 @@ describe('content.js', () => {
     });
 
     it('should continue processing when no containers found for appid', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems, getHltbDataByAppId, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems, getHltbDataByAppId, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       // Create container but don't add to DOM
       const container = createIconsContainer('66666', 'No Container Game');
@@ -7036,7 +7036,7 @@ describe('content.js', () => {
     });
 
     it('should handle response without hltbResults', async () => {
-      const { processPendingHltbBatch, getPendingHltbItems, createIconsContainer, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { processPendingHltbBatch, getPendingHltbItems, createIconsContainer, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('55555', 'No Results Game');
       getPendingHltbItems().set('55555', { gameName: 'No Results Game', container });
@@ -7054,7 +7054,7 @@ describe('content.js', () => {
 
   describe('restoreHltbDataFromEntry', () => {
     it('should NOT store entry for hltbId === -1 marker (allows re-query)', () => {
-      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       const entry = {
@@ -7079,7 +7079,7 @@ describe('content.js', () => {
     });
 
     it('should set actual data for valid hltbId', () => {
-      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       const entry = {
@@ -7104,7 +7104,7 @@ describe('content.js', () => {
     });
 
     it('should not overwrite existing HLTB data', () => {
-      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       // Pre-populate with existing data
@@ -7129,7 +7129,7 @@ describe('content.js', () => {
     });
 
     it('should return early if entry has no hltbData', () => {
-      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId, restoreHltbDataFromEntry } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       const entry = {
@@ -7150,19 +7150,19 @@ describe('content.js', () => {
   describe('queueForHltbResolution', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      const { getPendingHltbItems, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getPendingHltbItems, setUserSettings } = globalThis.SWP_ContentTestExports;
       getPendingHltbItems().clear();
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: true });
     });
 
     afterEach(() => {
       jest.useRealTimers();
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
     });
 
     it('should add item to pendingHltbItems', () => {
-      const { queueForHltbResolution, getPendingHltbItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { queueForHltbResolution, getPendingHltbItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('44444', 'Queued Game');
       queueForHltbResolution('44444', 'Queued Game', container);
@@ -7172,7 +7172,7 @@ describe('content.js', () => {
     });
 
     it('should set debounce timer', () => {
-      const { queueForHltbResolution, createIconsContainer, HLTB_BATCH_DEBOUNCE_MS } = globalThis.SCPW_ContentTestExports;
+      const { queueForHltbResolution, createIconsContainer, HLTB_BATCH_DEBOUNCE_MS } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('44445', 'Timer Game');
       queueForHltbResolution('44445', 'Timer Game', container);
@@ -7182,7 +7182,7 @@ describe('content.js', () => {
     });
 
     it('should execute timer callback and call processPendingHltbBatch (line 716)', async () => {
-      const { queueForHltbResolution, createIconsContainer, getPendingHltbItems, HLTB_BATCH_DEBOUNCE_MS } = globalThis.SCPW_ContentTestExports;
+      const { queueForHltbResolution, createIconsContainer, getPendingHltbItems, HLTB_BATCH_DEBOUNCE_MS } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('44446', 'Timer Callback Game');
       document.body.appendChild(container);
@@ -7234,7 +7234,7 @@ describe('content.js', () => {
         getPendingHltbItems,
         getPendingReviewScoreItems,
         createIconsContainer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       // Add some pending items
       const container = createIconsContainer('55555', 'Pending Game');
@@ -7254,7 +7254,7 @@ describe('content.js', () => {
         clearPendingTimersAndBatches,
         setReviewScoreBatchDebounceTimer,
         getReviewScoreBatchDebounceTimer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       const timerId = setTimeout(() => {}, 1000);
       setReviewScoreBatchDebounceTimer(timerId);
@@ -7270,7 +7270,7 @@ describe('content.js', () => {
 
   describe('getEnabledPlatforms edge cases', () => {
     it('should handle unknown platform in filter (default case)', () => {
-      const { getEnabledPlatforms, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getEnabledPlatforms, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true });
 
       const platforms = getEnabledPlatforms();
@@ -7285,7 +7285,7 @@ describe('content.js', () => {
 
   describe('createHltbBadge additional coverage', () => {
     it('should handle hltbData with only mainExtra time', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainExtra' });
 
       const hltbData = {
@@ -7303,7 +7303,7 @@ describe('content.js', () => {
     });
 
     it('should handle hltbData with only completionist time', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'completionist' });
 
       const hltbData = {
@@ -7321,7 +7321,7 @@ describe('content.js', () => {
     });
 
     it('should show mainExtra in tooltip when available', () => {
-      const { createHltbBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createHltbBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ hltbDisplayStat: 'mainStory' });
 
       const hltbData = {
@@ -7340,7 +7340,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint secondary strategy', () => {
     it('should find injection point using secondary SVG group strategy', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       // Create item with SVG icons in a group (but no title attributes)
       const item = document.createElement('div');
@@ -7369,7 +7369,7 @@ describe('content.js', () => {
     });
 
     it('should use fallback when no valid injection point found', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       // Create minimal item with no SVG icons
       const item = document.createElement('div');
@@ -7388,7 +7388,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint insertAfter', () => {
     it('should return insertAfter when last platform icon exists', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       // Create item with multiple platform icons
       const item = document.createElement('div');
@@ -7465,7 +7465,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems Strategy 2', () => {
     it('should find items via app link when no draggable-id exists', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create filtered view structure (no data-rfd-draggable-id on parent)
       const row = document.createElement('div');
@@ -7486,7 +7486,7 @@ describe('content.js', () => {
     });
 
     it('should skip links inside scpw-platforms containers', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create a link inside our own icon container
       const ourContainer = document.createElement('span');
@@ -7510,7 +7510,7 @@ describe('content.js', () => {
 
   describe('cleanupAllIcons additional coverage', () => {
     it('should clear processedAppIds set', () => {
-      const { cleanupAllIcons, processedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, processedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Add some processed appids
       processedAppIds.add('111');
@@ -7526,7 +7526,7 @@ describe('content.js', () => {
 
   describe('getUserSettings export', () => {
     it('should return current user settings', () => {
-      const { getUserSettings, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getUserSettings, setUserSettings } = globalThis.SWP_ContentTestExports;
 
       setUserSettings({ showNintendo: false, showPlaystation: true });
 
@@ -7576,7 +7576,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems edge cases', () => {
     it('should handle empty root', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Clear the body using textContent
       document.body.textContent = '';
@@ -7586,7 +7586,7 @@ describe('content.js', () => {
     });
 
     it('should deduplicate items found via both strategies', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create an item that matches both strategies
       const item = document.createElement('div');
@@ -7609,7 +7609,7 @@ describe('content.js', () => {
 
   describe('extractGameName edge cases', () => {
     it('should handle link with only href (no text)', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.setAttribute('data-rfd-draggable-id', 'WishlistItem-12345-0');
@@ -7629,7 +7629,7 @@ describe('content.js', () => {
     });
 
     it('should return Unknown Game for malformed item', () => {
-      const { extractGameName } = globalThis.SCPW_ContentTestExports;
+      const { extractGameName } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       // No link at all
@@ -7646,20 +7646,20 @@ describe('content.js', () => {
 
   describe('formatHltbTime additional', () => {
     it('should format hours >= 10 as whole numbers', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
 
       expect(formatHltbTime(15.3)).toBe('15h');
       expect(formatHltbTime(99.9)).toBe('100h');
     });
 
     it('should handle zero', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
 
       expect(formatHltbTime(0)).toBe('');
     });
 
     it('should handle negative values', () => {
-      const { formatHltbTime } = globalThis.SCPW_ContentTestExports;
+      const { formatHltbTime } = globalThis.SWP_ContentTestExports;
 
       expect(formatHltbTime(-5)).toBe('');
     });
@@ -7667,7 +7667,7 @@ describe('content.js', () => {
 
   describe('createHltbLoader', () => {
     it('should create loader element with correct class', () => {
-      const { createHltbLoader } = globalThis.SCPW_ContentTestExports;
+      const { createHltbLoader } = globalThis.SWP_ContentTestExports;
 
       const loader = createHltbLoader();
 
@@ -7678,7 +7678,7 @@ describe('content.js', () => {
 
   describe('parseSvg error handling', () => {
     it('should return null for invalid SVG', () => {
-      const { parseSvg } = globalThis.SCPW_ContentTestExports;
+      const { parseSvg } = globalThis.SWP_ContentTestExports;
 
       // parseSvg handles errors internally
       // With jsdom, parseSvg may or may not return null for invalid SVG
@@ -7691,7 +7691,7 @@ describe('content.js', () => {
 
   describe('restoreHltbDataFromEntry', () => {
     it('should set null for hltbId === -1', () => {
-      const { getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       // Test the logic directly
@@ -7710,7 +7710,7 @@ describe('content.js', () => {
     });
 
     it('should set actual data for valid hltbId', () => {
-      const { getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       const hltbData = { hltbId: 123, mainStory: 20, mainExtra: 30, completionist: 50, allStyles: 0, steamId: null };
@@ -7737,7 +7737,7 @@ describe('content.js', () => {
     });
 
     it('should not schedule if showSteamDeck is disabled', () => {
-      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showSteamDeck: false });
       setSteamDeckRefreshTimer(null);
 
@@ -7748,7 +7748,7 @@ describe('content.js', () => {
     });
 
     it('should not schedule if already at max attempts', () => {
-      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshAttempts, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshAttempts, STEAM_DECK_REFRESH_DELAYS_MS } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showSteamDeck: true });
 
       // Set attempts to max
@@ -7760,7 +7760,7 @@ describe('content.js', () => {
     });
 
     it('should not schedule if timer already exists', () => {
-      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshTimer } = globalThis.SCPW_ContentTestExports;
+      const { scheduleSteamDeckRefresh, setUserSettings, setSteamDeckRefreshTimer } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showSteamDeck: true });
 
       // Set an existing timer
@@ -7778,7 +7778,7 @@ describe('content.js', () => {
 
   describe('cleanupAllIcons processedAppIds', () => {
     it('should clear processedAppIds set completely', () => {
-      const { cleanupAllIcons, processedAppIds } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, processedAppIds } = globalThis.SWP_ContentTestExports;
 
       // Add some appids
       processedAppIds.add('111');
@@ -7803,7 +7803,7 @@ describe('content.js', () => {
     });
 
     it('should retry on connection error', async () => {
-      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SWP_ContentTestExports;
 
       // Fail first, succeed second
       chrome.runtime.sendMessage
@@ -7820,7 +7820,7 @@ describe('content.js', () => {
     });
 
     it('should throw on non-connection error', async () => {
-      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SCPW_ContentTestExports;
+      const { sendMessageWithRetry, MESSAGE_MAX_RETRIES } = globalThis.SWP_ContentTestExports;
 
       chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Some other error'));
 
@@ -7832,7 +7832,7 @@ describe('content.js', () => {
 
   describe('markMissingSteamDeckData', () => {
     it('should not mark when showSteamDeck is disabled', () => {
-      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       getMissingSteamDeckAppIds().clear();
       setUserSettings({ showSteamDeck: false });
 
@@ -7842,7 +7842,7 @@ describe('content.js', () => {
     });
 
     it('should not mark when appid is null', () => {
-      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       getMissingSteamDeckAppIds().clear();
       setUserSettings({ showSteamDeck: true });
 
@@ -7852,24 +7852,24 @@ describe('content.js', () => {
     });
 
     it('should add appid to missingSteamDeckAppIds when valid', () => {
-      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { markMissingSteamDeckData, setUserSettings, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
       getMissingSteamDeckAppIds().clear();
       setUserSettings({ showSteamDeck: true });
 
-      // Need SCPW_SteamDeck to be available
-      globalThis.SCPW_SteamDeck = { waitForDeckData: jest.fn() };
+      // Need SWP_SteamDeck to be available
+      globalThis.SWP_SteamDeck = { waitForDeckData: jest.fn() };
 
       markMissingSteamDeckData('12345');
 
       expect(getMissingSteamDeckAppIds().has('12345')).toBe(true);
 
-      delete globalThis.SCPW_SteamDeck;
+      delete globalThis.SWP_SteamDeck;
     });
   });
 
   describe('updateIconsWithData icon status classes', () => {
     it('should add scpw-unavailable class for unavailable platforms', () => {
-      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
 
       const container = createIconsContainer('test-unavail', 'Test Game');
@@ -7901,7 +7901,7 @@ describe('content.js', () => {
     });
 
     it('should handle unknown status for platforms', () => {
-      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false });
 
       const container = createIconsContainer('test-unknown', 'Unknown Game');
@@ -7927,7 +7927,7 @@ describe('content.js', () => {
 
   describe('restoreHltbDataFromEntry', () => {
     it('should restore HLTB data with valid hltbId', () => {
-      const { getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
       getHltbDataByAppId().clear();
 
       // Simulate calling the restore function directly
@@ -7954,7 +7954,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems Strategy 2', () => {
     it('should find items via app link when primary strategy fails', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Clear DOM
       document.body.textContent = '';
@@ -7980,7 +7980,7 @@ describe('content.js', () => {
     });
 
     it('should skip links inside existing scpw-platforms containers', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       document.body.textContent = '';
 
@@ -8005,7 +8005,7 @@ describe('content.js', () => {
 
   describe('restoreHltbDataFromEntry coverage (line 145)', () => {
     it('should restore hltbData when entry has valid hltbData and appid not in map', () => {
-      const { restoreHltbDataFromEntry, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreHltbDataFromEntry, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
 
       // Clear any existing data
       getHltbDataByAppId().clear();
@@ -8031,7 +8031,7 @@ describe('content.js', () => {
     });
 
     it('should NOT store when hltbId is -1 (allows re-query for not-found games)', () => {
-      const { restoreHltbDataFromEntry, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreHltbDataFromEntry, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
 
       getHltbDataByAppId().clear();
 
@@ -8057,7 +8057,7 @@ describe('content.js', () => {
 
   describe('findWishlistItems Strategy 2 guard clauses (lines 509-512)', () => {
     it('should handle findWishlistRow returning null', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create a link that's not inside any proper wishlist structure
       const orphanLink = document.createElement('a');
@@ -8072,7 +8072,7 @@ describe('content.js', () => {
     });
 
     it('should handle extractAppId returning null from strategy 2 row', () => {
-      const { findWishlistItems } = globalThis.SCPW_ContentTestExports;
+      const { findWishlistItems } = globalThis.SWP_ContentTestExports;
 
       // Create a panel that would be found by findWishlistRow but without valid appid
       const panel = document.createElement('div');
@@ -8094,7 +8094,7 @@ describe('content.js', () => {
 
   describe('findInjectionPoint SVG group counting (lines 914-917)', () => {
     it('should use secondary SVG strategy when no span[title] with Steam icons exists', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       // Create item without any span[title] elements to skip primary strategy
       const item = document.createElement('div');
@@ -8124,7 +8124,7 @@ describe('content.js', () => {
     });
 
     it('should count SVG icons across multiple groups and select the largest', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       // Create item without span[title] to use secondary strategy
       const item = document.createElement('div');
@@ -8161,7 +8161,7 @@ describe('content.js', () => {
     });
 
     it('should track and update groupCounts info.count incrementally', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.className = 'Panel';
@@ -8198,7 +8198,7 @@ describe('content.js', () => {
     });
 
     it('should skip SVGs inside .scpw-platforms (our own icons)', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.className = 'Panel';
@@ -8226,7 +8226,7 @@ describe('content.js', () => {
     });
 
     it('should skip SVGs without parent element', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.className = 'Panel';
@@ -8246,7 +8246,7 @@ describe('content.js', () => {
     });
 
     it('should skip SVGs where group fails isValidContainer check', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.className = 'Panel';
@@ -8273,7 +8273,7 @@ describe('content.js', () => {
     });
 
     it('should use parent as group when parentElement is null', () => {
-      const { findInjectionPoint } = globalThis.SCPW_ContentTestExports;
+      const { findInjectionPoint } = globalThis.SWP_ContentTestExports;
 
       const item = document.createElement('div');
       item.className = 'Panel';
@@ -8297,7 +8297,7 @@ describe('content.js', () => {
 
   describe('getRenderedIconSummary unknown status (line 855)', () => {
     it('should return "unknown" status when icon has no status class', () => {
-      const { createIconsContainer, createPlatformIcon, getRenderedIconSummary } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, createPlatformIcon, getRenderedIconSummary } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
 
@@ -8313,7 +8313,7 @@ describe('content.js', () => {
     });
 
     it('should correctly identify unavailable status', () => {
-      const { createIconsContainer, getRenderedIconSummary } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, getRenderedIconSummary } = globalThis.SWP_ContentTestExports;
 
       const container = createIconsContainer('12345', 'Test Game');
 
@@ -8330,7 +8330,7 @@ describe('content.js', () => {
 
   describe('cleanupAllIcons missingSteamDeckAppIds (line 96)', () => {
     it('should clear missingSteamDeckAppIds set', () => {
-      const { cleanupAllIcons, getMissingSteamDeckAppIds } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
 
       // Add some items to missingSteamDeckAppIds
       getMissingSteamDeckAppIds().add('111');
@@ -8347,7 +8347,7 @@ describe('content.js', () => {
 
   describe('cleanupAllIcons hltbDataByAppId (line 97)', () => {
     it('should clear hltbDataByAppId map', () => {
-      const { cleanupAllIcons, getHltbDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { cleanupAllIcons, getHltbDataByAppId } = globalThis.SWP_ContentTestExports;
 
       // Add some items
       getHltbDataByAppId().set('111', { hltbId: 1, mainStory: 10 });
@@ -8364,12 +8364,12 @@ describe('content.js', () => {
 
   describe('restoreReviewScoreDataFromEntry', () => {
     beforeEach(() => {
-      const { getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
       getReviewScoreDataByAppId().clear();
     });
 
     it('should skip storing "not found" markers (openCriticId === -1)', () => {
-      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
 
       restoreReviewScoreDataFromEntry('11111', {
         reviewScoreData: { openCriticId: -1, score: 0, tier: 'Unknown', numReviews: 0, percentRecommended: 0 }
@@ -8379,7 +8379,7 @@ describe('content.js', () => {
     });
 
     it('should store valid review score data when not already present', () => {
-      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
 
       const reviewScoreData = {
         openCriticId: 2222,
@@ -8395,7 +8395,7 @@ describe('content.js', () => {
     });
 
     it('should not overwrite existing review score data', () => {
-      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
 
       const existing = { openCriticId: 3333, score: 80, tier: 'Fair', numReviews: 10, percentRecommended: 50 };
       getReviewScoreDataByAppId().set('33333', existing);
@@ -8408,7 +8408,7 @@ describe('content.js', () => {
     });
 
     it('should return early when entry has no reviewScoreData', () => {
-      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { restoreReviewScoreDataFromEntry, getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
 
       restoreReviewScoreDataFromEntry('44444', { appid: '44444', gameName: 'No Review Data' });
 
@@ -8424,14 +8424,14 @@ describe('content.js', () => {
       ['Weak', '#ff6633'],
       ['Unknown', '#888888'],
     ])('should return the correct color for %s', (tier, expected) => {
-      const { getTierColor } = globalThis.SCPW_ContentTestExports;
+      const { getTierColor } = globalThis.SWP_ContentTestExports;
       expect(getTierColor(tier)).toBe(expected);
     });
   });
 
   describe('getDisplayScoreInfo', () => {
     it('should return OpenCritic score when source is opencritic', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ reviewScoreSource: 'opencritic' });
 
       const reviewScoreData = {
@@ -8453,7 +8453,7 @@ describe('content.js', () => {
     });
 
     it('should return IGN score when source is ign and available', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8474,7 +8474,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to OpenCritic when selected outlet is not available', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ reviewScoreSource: 'gamespot' });
 
       const reviewScoreData = {
@@ -8494,7 +8494,7 @@ describe('content.js', () => {
     });
 
     it('should return null when outletScores is undefined', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8511,7 +8511,7 @@ describe('content.js', () => {
     });
 
     it('should return null when outlet score is 0', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8531,7 +8531,7 @@ describe('content.js', () => {
     });
 
     it('should use default reviewScoreSource when not set', () => {
-      const { getDisplayScoreInfo, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { getDisplayScoreInfo, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({}); // No reviewScoreSource set
 
       const reviewScoreData = {
@@ -8551,12 +8551,12 @@ describe('content.js', () => {
 
   describe('createReviewScoreBadge with outlet scores', () => {
     beforeEach(() => {
-      const { setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'opencritic' });
     });
 
     it('should create badge with OpenCritic score by default', () => {
-      const { createReviewScoreBadge } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge } = globalThis.SWP_ContentTestExports;
 
       const reviewScoreData = {
         openCriticId: 123,
@@ -8572,7 +8572,7 @@ describe('content.js', () => {
     });
 
     it('should create clickable badge when openCriticUrl is provided', () => {
-      const { createReviewScoreBadge } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge } = globalThis.SWP_ContentTestExports;
 
       const reviewScoreData = {
         openCriticId: 123,
@@ -8589,7 +8589,7 @@ describe('content.js', () => {
     });
 
     it('should create non-clickable badge when openCriticId is 0', () => {
-      const { createReviewScoreBadge } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge } = globalThis.SWP_ContentTestExports;
 
       const reviewScoreData = {
         openCriticId: 0,
@@ -8604,7 +8604,7 @@ describe('content.js', () => {
     });
 
     it('should show IGN score when selected', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8625,7 +8625,7 @@ describe('content.js', () => {
     });
 
     it('should link to outlet reviewUrl when IGN is selected and has reviewUrl', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8646,7 +8646,7 @@ describe('content.js', () => {
     });
 
     it('should fall back to OpenCritic URL when IGN is selected but has no reviewUrl', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'ign' });
 
       const reviewScoreData = {
@@ -8668,7 +8668,7 @@ describe('content.js', () => {
     });
 
     it('should show all available outlet scores in tooltip', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'opencritic' });
 
       const reviewScoreData = {
@@ -8691,7 +8691,7 @@ describe('content.js', () => {
     });
 
     it('should skip outlet scores with 0 value in tooltip', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'opencritic' });
 
       const reviewScoreData = {
@@ -8713,7 +8713,7 @@ describe('content.js', () => {
     });
 
     it('should include tier and review count in tooltip', () => {
-      const { createReviewScoreBadge, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createReviewScoreBadge, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: true, reviewScoreSource: 'opencritic' });
 
       const reviewScoreData = {
@@ -8734,20 +8734,20 @@ describe('content.js', () => {
 
   describe('updateIconsWithData review score branches', () => {
     beforeEach(() => {
-      const { setUserSettings, getReviewScoreDataByAppId, setSteamDeckData } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, getReviewScoreDataByAppId, setSteamDeckData } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: false, showReviewScores: true, reviewScoreSource: 'opencritic' });
       getReviewScoreDataByAppId().clear();
       setSteamDeckData(null);
     });
 
     afterEach(() => {
-      const { setUserSettings, getReviewScoreDataByAppId } = globalThis.SCPW_ContentTestExports;
+      const { setUserSettings, getReviewScoreDataByAppId } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true, showReviewScores: true });
       getReviewScoreDataByAppId().clear();
     });
 
     it('should show review score loader when data not yet known', () => {
-      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showSteamDeck: false, showHltb: false, showReviewScores: true });
 
       const container = createIconsContainer('66666', 'Review Score Test Game');
@@ -8772,7 +8772,7 @@ describe('content.js', () => {
     });
 
     it('should show review score badge when data has score', () => {
-      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showSteamDeck: false, showHltb: false, showReviewScores: true });
 
       const container = createIconsContainer('66667', 'Review Score Badge Game');
@@ -8804,7 +8804,7 @@ describe('content.js', () => {
     });
 
     it('should not show review score when showReviewScores is disabled', () => {
-      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showSteamDeck: false, showHltb: false, showReviewScores: false });
 
       const container = createIconsContainer('66668', 'No Review Score Game');
@@ -8827,7 +8827,7 @@ describe('content.js', () => {
     });
 
     it('should not show review score badge when score is 0', () => {
-      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SCPW_ContentTestExports;
+      const { createIconsContainer, updateIconsWithData, getReviewScoreDataByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showNintendo: true, showSteamDeck: false, showHltb: false, showReviewScores: true });
 
       const container = createIconsContainer('66669', 'Zero Score Game');
@@ -8867,7 +8867,7 @@ describe('content.js', () => {
         getReviewScoreDataByAppId,
         getCachedEntriesByAppId,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       getPendingReviewScoreItems().clear();
       getReviewScoreDataByAppId().clear();
@@ -8890,7 +8890,7 @@ describe('content.js', () => {
         getReviewScoreDataByAppId,
         getCachedEntriesByAppId,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       getPendingReviewScoreItems().clear();
       getReviewScoreDataByAppId().clear();
@@ -8906,7 +8906,7 @@ describe('content.js', () => {
     });
 
     it('should return early if pendingReviewScoreItems is empty', async () => {
-      const { processPendingReviewScoreBatch, getPendingReviewScoreItems } = globalThis.SCPW_ContentTestExports;
+      const { processPendingReviewScoreBatch, getPendingReviewScoreItems } = globalThis.SWP_ContentTestExports;
       getPendingReviewScoreItems().clear();
 
       await processPendingReviewScoreBatch();
@@ -8922,7 +8922,7 @@ describe('content.js', () => {
         getPendingReviewScoreItems,
         setUserSettings,
         createIconsContainer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
       setUserSettings({ showReviewScores: false });
 
       const container = createIconsContainer('77770', 'Disabled Review Scores');
@@ -8942,7 +8942,7 @@ describe('content.js', () => {
         getReviewScoreDataByAppId,
         getCachedEntriesByAppId,
         createIconsContainer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       const appid = '77771';
       const container = createIconsContainer(appid, 'Review Score Game');
@@ -8982,7 +8982,7 @@ describe('content.js', () => {
         getPendingReviewScoreItems,
         getReviewScoreDataByAppId,
         createIconsContainer
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       const appid = '77772';
       const container = createIconsContainer(appid, 'Detached Container Game');
@@ -9009,7 +9009,7 @@ describe('content.js', () => {
     });
 
     it('should handle batch errors gracefully', async () => {
-      const { processPendingReviewScoreBatch, getPendingReviewScoreItems, createIconsContainer } = globalThis.SCPW_ContentTestExports;
+      const { processPendingReviewScoreBatch, getPendingReviewScoreItems, createIconsContainer } = globalThis.SWP_ContentTestExports;
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
       const container = createIconsContainer('77773', 'Review Error Game');
@@ -9032,7 +9032,7 @@ describe('content.js', () => {
         getReviewScoreDataByAppId,
         getCachedEntriesByAppId,
         setUserSettings
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       getPendingReviewScoreItems().clear();
       getReviewScoreDataByAppId().clear();
@@ -9058,7 +9058,7 @@ describe('content.js', () => {
         getCachedEntriesByAppId,
         createIconsContainer,
         REVIEW_SCORE_BATCH_DEBOUNCE_MS
-      } = globalThis.SCPW_ContentTestExports;
+      } = globalThis.SWP_ContentTestExports;
 
       const appid = '77774';
       const container = createIconsContainer(appid, 'Queued Review Game');
