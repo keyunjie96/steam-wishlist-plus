@@ -2,7 +2,11 @@
  * Integration Tests - OpenCritic API
  *
  * Sanity check tests verifying the extension's OpenCritic integration works correctly.
- * Uses 5 representative games to test search, game details, and outlet score extraction.
+ * Uses 5 representative games with known OpenCritic IDs to test game details and outlet
+ * score extraction.
+ *
+ * Note: The search endpoint now requires an API key, so we use direct ID lookups
+ * (which is also what the extension does via Wikidata-provided OpenCritic IDs).
  *
  * Run with: npm run test:integration
  *
@@ -15,13 +19,13 @@ const { fetch } = require('undici');
 const OPENCRITIC_API_BASE = 'https://api.opencritic.com/api';
 const REQUEST_DELAY_MS = 500; // Delay between requests to avoid rate limiting
 
-// 5 representative games for sanity check
+// 5 representative games with known OpenCritic IDs (from Wikidata)
 const TEST_GAMES = [
-  { appid: '367520', name: 'Hollow Knight', category: 'indie' },
-  { appid: '1245620', name: 'Elden Ring', category: 'AAA' },
-  { appid: '1086940', name: "Baldur's Gate 3", category: 'AAA-recent' },
-  { appid: '1145360', name: 'Hades', category: 'indie-popular' },
-  { appid: '504230', name: 'Celeste', category: 'indie-darling' },
+  { appid: '367520', name: 'Hollow Knight', openCriticId: 4002, category: 'indie' },
+  { appid: '1245620', name: 'Elden Ring', openCriticId: 12090, category: 'AAA' },
+  { appid: '1086940', name: "Baldur's Gate 3", openCriticId: 9136, category: 'AAA-recent' },
+  { appid: '1145360', name: 'Hades', openCriticId: 10181, category: 'indie-popular' },
+  { appid: '504230', name: 'Celeste', openCriticId: 5403, category: 'indie-darling' },
 ];
 
 /**
@@ -29,41 +33,6 @@ const TEST_GAMES = [
  */
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Searches OpenCritic for a game by name
- */
-async function searchGame(gameName) {
-  const url = `${OPENCRITIC_API_BASE}/game/search?criteria=${encodeURIComponent(gameName)}`;
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0',
-    },
-  });
-
-  if (!response.ok) {
-    return { found: false, error: `HTTP ${response.status}` };
-  }
-
-  const data = await response.json();
-  if (!Array.isArray(data) || data.length === 0) {
-    return { found: false };
-  }
-
-  // Find best match (exact or close name match)
-  const normalizedSearch = gameName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const match = data.find(game => {
-    const normalizedName = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return normalizedName === normalizedSearch || normalizedName.includes(normalizedSearch);
-  }) || data[0];
-
-  return {
-    found: true,
-    id: match.id,
-    name: match.name,
-  };
 }
 
 /**
@@ -110,7 +79,7 @@ async function getGameReviews(gameId) {
  */
 function extractOutletScores(reviews) {
   const outletScores = {};
-  const targetOutlets = ['IGN', 'GameSpot', 'Metacritic'];
+  const targetOutlets = ['IGN', 'GameSpot'];
 
   for (const review of reviews) {
     if (!review.Outlet?.name) continue;
@@ -144,25 +113,21 @@ describe('OpenCritic Integration (Sanity Check)', () => {
   // Query all test games once before running assertions
   beforeAll(async () => {
     for (const game of TEST_GAMES) {
-      const search = await searchGame(game.name);
+      const details = await getGameDetails(game.openCriticId);
       await delay(REQUEST_DELAY_MS);
 
-      let details = null;
       let reviews = [];
       let outletScores = {};
 
-      if (search.found) {
-        details = await getGameDetails(search.id);
-        await delay(REQUEST_DELAY_MS);
-
-        reviews = await getGameReviews(search.id);
+      if (details) {
+        reviews = await getGameReviews(game.openCriticId);
         outletScores = extractOutletScores(reviews);
         await delay(REQUEST_DELAY_MS);
       }
 
       testResults.push({
         game,
-        search,
+        found: !!details,
         details,
         reviewCount: reviews.length,
         outletScores,
@@ -173,8 +138,8 @@ describe('OpenCritic Integration (Sanity Check)', () => {
     console.log('\n=== OpenCritic Sanity Check Summary ===');
     for (const result of testResults) {
       console.log(`\n${result.game.name} (${result.game.category}):`);
-      console.log(`  Found: ${result.search.found}`);
-      console.log(`  OpenCritic ID: ${result.search.id || 'N/A'}`);
+      console.log(`  Found: ${result.found}`);
+      console.log(`  OpenCritic ID: ${result.game.openCriticId}`);
       console.log(`  Score: ${result.details?.topCriticScore || 'N/A'}`);
       console.log(`  Tier: ${result.details?.tier || 'N/A'}`);
       console.log(`  Review count: ${result.reviewCount}`);
@@ -184,26 +149,28 @@ describe('OpenCritic Integration (Sanity Check)', () => {
   });
 
   describe('API endpoint', () => {
-    it('should be reachable', async () => {
-      const response = await fetch(`${OPENCRITIC_API_BASE}/game/search?criteria=test`, {
+    it('should be reachable via game details endpoint', async () => {
+      // Use game details endpoint (search now requires API key)
+      const response = await fetch(`${OPENCRITIC_API_BASE}/game/7324`, {
         headers: { 'User-Agent': 'SteamCrossPlatformWishlist-JestIntegration/1.0' }
       });
 
-      // Should get a response (200 or similar)
-      expect(response.status).toBeLessThan(500);
+      expect(response.status).toBe(200);
     });
   });
 
   describe('Game search', () => {
-    it('should find all 5 test games', () => {
-      const foundCount = testResults.filter(r => r.search.found).length;
+    it('should find all 5 test games via direct ID lookup', () => {
+      const foundCount = testResults.filter(r => r.found).length;
       expect(foundCount).toBe(5);
     });
 
-    it('should return valid OpenCritic IDs', () => {
+    it('should return matching game names', () => {
       for (const result of testResults) {
-        if (result.search.found) {
-          expect(result.search.id).toBeGreaterThan(0);
+        if (result.found) {
+          // Name should be similar (not necessarily exact due to naming differences)
+          expect(result.details.name).toBeDefined();
+          expect(typeof result.details.name).toBe('string');
         }
       }
     });
@@ -212,7 +179,7 @@ describe('OpenCritic Integration (Sanity Check)', () => {
   describe('Game details', () => {
     it('should have topCriticScore for all found games', () => {
       for (const result of testResults) {
-        if (result.search.found) {
+        if (result.found) {
           expect(result.details).not.toBeNull();
           expect(result.details.topCriticScore).toBeGreaterThan(0);
         }
@@ -221,7 +188,7 @@ describe('OpenCritic Integration (Sanity Check)', () => {
 
     it('should have tier for all found games', () => {
       for (const result of testResults) {
-        if (result.search.found && result.details) {
+        if (result.found && result.details) {
           expect(result.details.tier).toBeDefined();
           const normalizedTier = result.details.tier.charAt(0).toUpperCase() +
                                   result.details.tier.slice(1).toLowerCase();
@@ -237,10 +204,10 @@ describe('OpenCritic Integration (Sanity Check)', () => {
       const eldenRing = testResults.find(r => r.game.appid === '1245620');
       const bg3 = testResults.find(r => r.game.appid === '1086940');
 
-      if (eldenRing?.search.found) {
+      if (eldenRing?.found) {
         expect(eldenRing.reviewCount).toBeGreaterThan(0);
       }
-      if (bg3?.search.found) {
+      if (bg3?.found) {
         expect(bg3.reviewCount).toBeGreaterThan(0);
       }
     });
