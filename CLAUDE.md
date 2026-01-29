@@ -26,13 +26,13 @@
    │  Client.ts)       │                                   │                      │
    │                   │                                   └──────────┬───────────┘
    │ - Inject Page     │                                              │
-   │   Script          │                    ┌─────────────────────────┼─────────────────────────┐
-   │ - Read DOM        │                    │                         │                         │
-   └───────┬───────────┘             ┌──────▼──────┐           ┌──────▼──────────┐       ┌──────▼──────┐
-           │                         │ Cache       │           │ WikidataClient  │       │ HltbClient  │
-   ┌───────▼────────────┐            │ (cache.ts)  │           │ (wikidata       │       │ (hltb       │
-   │ SteamDeckPageScript│            │             │           │  Client.ts)     │       │  Client.ts) │
-   │ (Injected Script)  │            └─────────────┘           └─────────────────┘       └─────────────┘
+   │   Script          │                    ┌─────────────────────────┼──────────────────────────┬──────────────────────┐
+   │ - Read DOM        │                    │                         │                          │                      │
+   └───────┬───────────┘             ┌──────▼──────┐           ┌──────▼──────────┐       ┌──────▼──────┐       ┌────────▼──────────┐
+           │                         │ Cache       │           │ WikidataClient  │       │ HltbClient  │       │ReviewScoresClient │
+   ┌───────▼────────────┐            │ (cache.ts)  │           │ (wikidata       │       │ (hltb       │       │(reviewScores      │
+   │ SteamDeckPageScript│            │             │           │  Client.ts)     │       │  Client.ts) │       │ Client.ts)        │
+   │ (Injected Script)  │            └─────────────┘           └─────────────────┘       └─────────────┘       └───────────────────┘
    └────────────────────┘
 ```
 
