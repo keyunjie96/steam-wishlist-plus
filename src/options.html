@@ -9,7 +9,6 @@
       /* Steam-inspired color palette */
       --bg-body: #1b2838;
       --bg-card: #16202d;
-      --bg-card-light: #1e2c3a;
       --bg-input: #32404f;
       --bg-hover: rgba(255, 255, 255, 0.075);
 
@@ -24,8 +23,6 @@
 
       /* Unified accent - all switches use this */
       --accent: #4aa3ff;
-      --accent-hover: #6bb5ff;
-      --accent-soft: rgba(74, 163, 255, 0.15);
 
       /* Platform colors - icons only */
       --nintendo: #e60012;
@@ -514,6 +511,10 @@
       background: rgba(192, 48, 48, 0.5);
     }
 
+    .btn-full-width {
+      margin-top: 10px;
+    }
+
     button svg {
       width: 16px;
       height: 16px;
@@ -581,7 +582,7 @@
     .section-divider {
       height: 1px;
       background: var(--border-subtle);
-      margin: 8px 0;
+      margin: 12px 0;
     }
 
     /* Loading state */
@@ -817,7 +818,7 @@
             Export
           </button>
         </div>
-        <button type="button" class="btn-danger" id="clear-cache-btn" style="margin-top: 10px;">
+        <button type="button" class="btn-danger btn-full-width" id="clear-cache-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -845,7 +846,7 @@
             <li>Zero analytics or telemetry</li>
           </ul>
         </div>
-        <div class="section-divider" style="margin: 12px 0;"></div>
+        <div class="section-divider"></div>
         <div class="info-box">
           <strong>Powered by open data</strong>
           <p style="margin-top: 6px;">
