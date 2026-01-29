@@ -115,17 +115,14 @@ describe('HLTB Integration (Sanity Check)', () => {
   });
 
   describe('Game pages', () => {
-    it('should have valid game pages for most test games', () => {
-      // HLTB sometimes blocks or rate-limits requests from CI environments,
-      // so we allow up to 1 failure out of 5 games
+    it('should have valid game pages for all 5 test games', () => {
       const existsCount = gamePageResults.filter(r => r.exists).length;
-      expect(existsCount).toBeGreaterThanOrEqual(4);
+      expect(existsCount).toBe(5);
     });
 
-    it('should return HTTP 200 or 403 for all game pages', () => {
-      // HLTB may return 403 for bot detection in CI; that's expected
+    it('should return HTTP 200 for all game pages', () => {
       for (const result of gamePageResults) {
-        expect([200, 403]).toContain(result.status);
+        expect(result.status).toBe(200);
       }
     });
   });
