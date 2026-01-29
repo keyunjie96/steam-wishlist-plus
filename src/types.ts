@@ -79,7 +79,7 @@ export const SETTING_CHECKBOX_IDS: Partial<Record<keyof UserSettings, string>> =
   showSteamDeck: 'show-steamdeck',
   showHltb: 'show-hltb',
   showReviewScores: 'show-review-scores'
-} as Partial<Record<keyof UserSettings, string>>;
+};
 
 /**
  * Mapping from select setting keys to their element IDs and associated checkbox keys.

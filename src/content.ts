@@ -826,6 +826,17 @@ function getTierColor(tier: ReviewScoreTier): string {
 }
 
 /**
+ * Formats an outlet score for display, using the original scale.
+ * Outlets on a 10-point scale (e.g., IGN) show "7.3", others show "73".
+ */
+function formatOutletScore(outletScore: { score: number; scaleBase?: number }): string {
+  const scaleBase = outletScore.scaleBase || 100;
+  return scaleBase === 10
+    ? (outletScore.score / 10).toFixed(1)
+    : Math.round(outletScore.score).toString();
+}
+
+/**
  * Gets the display score and source name based on user settings.
  * Returns null if the selected outlet score is not available (no fallback).
  */
@@ -852,16 +863,9 @@ function getDisplayScoreInfo(reviewScoreData: ReviewScoreData): {
   if (reviewScoreData.outletScores) {
     const outletScore = reviewScoreData.outletScores[source as 'ign' | 'gamespot'];
     if (outletScore && outletScore.score > 0) {
-      // Calculate display score based on original scale
-      // If scaleBase is 10 (IGN/GameSpot), divide by 10 to show "7.3" instead of "73"
-      // If scaleBase is 100 or not set, show as-is
-      const scaleBase = outletScore.scaleBase || 100;
-      const displayScore = scaleBase === 10
-        ? (outletScore.score / 10).toFixed(1)
-        : Math.round(outletScore.score).toString();
       return {
-        score: outletScore.score,  // Normalized score for color calculation
-        displayScore: displayScore,
+        score: outletScore.score,
+        displayScore: formatOutletScore(outletScore),
         sourceName: outletScore.outletName,
         sourceKey: source,
         reviewUrl: outletScore.reviewUrl
@@ -921,12 +925,7 @@ function createReviewScoreBadge(reviewScoreData: ReviewScoreData): HTMLElement |
       if (outlet === displayInfo.sourceKey) continue;
       const outletScore = reviewScoreData.outletScores[outlet];
       if (outletScore && outletScore.score > 0) {
-        // Show score in original scale (divide by 10 for 10-point outlets)
-        const scaleBase = outletScore.scaleBase || 100;
-        const displayVal = scaleBase === 10
-          ? (outletScore.score / 10).toFixed(1)
-          : Math.round(outletScore.score).toString();
-        tooltipParts.push(`${outletScore.outletName}: ${displayVal}`);
+        tooltipParts.push(`${outletScore.outletName}: ${formatOutletScore(outletScore)}`);
       }
     }
   }
@@ -1581,15 +1580,10 @@ async function processPendingReviewScoreBatch(): Promise<void> {
     if (DEBUG) console.log(`${LOG_PREFIX} Review scores: Sending batch ${batchNum}/${totalBatches} (${games.length} games)`); /* istanbul ignore if */
 
     try {
-      const response = await sendMessageWithRetry<{ success: boolean; reviewScoresResults?: Record<string, ReviewScoreData | null>; _diagnostic?: { total: number; cached: number; toQuery: number; apiCalled: boolean; apiResults: number; error: string | null } }>({
+      const response = await sendMessageWithRetry<{ success: boolean; reviewScoresResults?: Record<string, ReviewScoreData | null> }>({
         type: 'GET_REVIEW_SCORES_BATCH',
         games
       });
-
-      // Log diagnostic info from background
-      if (DEBUG && response?._diagnostic) {
-        console.log(`${LOG_PREFIX} Review scores DIAGNOSTIC from background:`, JSON.stringify(response._diagnostic));
-      }
 
       if (response?.success && response.reviewScoresResults) {
         // Update review score data and re-render icons

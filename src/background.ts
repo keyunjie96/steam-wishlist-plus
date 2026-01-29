@@ -33,18 +33,15 @@ import type {
 
 const LOG_PREFIX = '[SCPW Background]';
 
-// Sentinel value for "searched HLTB but no match found" - prevents repeated searches
-const HLTB_NOT_FOUND_ID = -1;
-
-// Sentinel value for "searched review scores but no match found" - prevents repeated searches
-const REVIEW_SCORES_NOT_FOUND_ID = -1;
+// Sentinel value for "searched but no match found" - prevents repeated searches
+const NOT_FOUND_ID = -1;
 
 /**
  * Creates a "not found" marker for HLTB data to prevent repeated searches.
  */
 function createHltbNotFoundMarker(): HltbData {
   return {
-    hltbId: HLTB_NOT_FOUND_ID,
+    hltbId: NOT_FOUND_ID,
     mainStory: 0,
     mainExtra: 0,
     completionist: 0,
@@ -58,7 +55,7 @@ function createHltbNotFoundMarker(): HltbData {
  */
 function createReviewScoresNotFoundMarker(): ReviewScoreData {
   return {
-    openCriticId: REVIEW_SCORES_NOT_FOUND_ID,
+    openCriticId: NOT_FOUND_ID,
     score: 0,
     tier: 'Unknown',
     numReviews: 0,
@@ -262,7 +259,7 @@ async function getHltbData(message: GetHltbDataRequest): Promise<GetHltbDataResp
   const hltb = cached?.hltbData;
 
   // Check for "not found" marker - don't re-search
-  if (hltb && hltb.hltbId === HLTB_NOT_FOUND_ID) {
+  if (hltb && hltb.hltbId === NOT_FOUND_ID) {
     console.log(`${LOG_PREFIX} HLTB cache hit (not found) for appid ${appid}`);
     return { success: true, data: null };
   }
@@ -329,7 +326,7 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
     const hltb = cached?.hltbData;
 
     // Check for "not found" marker - don't re-search, return null
-    if (hltb && hltb.hltbId === HLTB_NOT_FOUND_ID) {
+    if (hltb && hltb.hltbId === NOT_FOUND_ID) {
       hltbResults[appid] = null;
       continue;
     }
@@ -348,21 +345,11 @@ async function getBatchHltbData(message: GetHltbDataBatchRequest): Promise<Async
   if (uncached.length > 0) {
     console.log(`${LOG_PREFIX} HLTB querying games:`, uncached.map(g => `${g.appid}:${g.gameName}`).join(', '));
     try {
-      console.log(`${LOG_PREFIX} HLTB: SCPW_HltbClient available:`, !!globalThis.SCPW_HltbClient);
       const batchResults = await globalThis.SCPW_HltbClient.batchQueryByGameNames(uncached);
       console.log(`${LOG_PREFIX} HLTB batch returned ${batchResults.size} results`);
-      // Debug: log first result details
-      if (batchResults.size > 0) {
-        const firstEntry = batchResults.entries().next().value;
-        if (firstEntry) {
-          const [appid, result] = firstEntry;
-          console.log(`${LOG_PREFIX} HLTB first result (${appid}):`, JSON.stringify(result?.data || 'null'));
-        }
-      }
 
       for (const { appid } of uncached) {
         const hltbResult = batchResults.get(appid);
-        console.log(`${LOG_PREFIX} HLTB result for ${appid}: ${hltbResult ? `mainStory=${hltbResult.data.mainStory}h, hltbId=${hltbResult.data.hltbId}, similarity=${hltbResult.similarity}` : 'null'}`);
 
         // Update cache
         const cached = await globalThis.SCPW_Cache.getFromCache(appid);
@@ -417,7 +404,7 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
   const reviewScore = cached?.reviewScoreData;
 
   // Check for "not found" marker - don't re-search
-  if (reviewScore && reviewScore.openCriticId === REVIEW_SCORES_NOT_FOUND_ID) {
+  if (reviewScore && reviewScore.openCriticId === NOT_FOUND_ID) {
     console.log(`${LOG_PREFIX} Review scores cache hit (not found) for appid ${appid}`);
     return { success: true, data: null };
   }
@@ -482,7 +469,7 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
     const reviewScore = cached?.reviewScoreData;
 
     // Check for "not found" marker - don't re-search, return null
-    if (reviewScore && reviewScore.openCriticId === REVIEW_SCORES_NOT_FOUND_ID) {
+    if (reviewScore && reviewScore.openCriticId === NOT_FOUND_ID) {
       reviewScoresResults[appid] = null;
       continue;
     }
@@ -508,23 +495,10 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
     });
   }
 
-  const diagnostic = {
-    total: games.length,
-    cached: games.length - uncached.length,
-    toQuery: uncached.length,
-    withOpenCriticId: uncachedWithIds.filter(g => g.openCriticId).length,
-    apiCalled: false,
-    apiResults: 0,
-    nullResults: 0,
-    validResults: 0,
-    gameDetails: [] as Array<{ appid: string; gameName: string; hasResult: boolean; score?: number; failureReason?: string; hadOpenCriticId?: boolean }>,
-    failureReasons: {} as Record<string, string>,
-    error: null as string | null
-  };
-  console.log(`${LOG_PREFIX} Review scores: ${games.length} total, ${games.length - uncached.length} cached, ${uncached.length} to query (${diagnostic.withOpenCriticId} with OpenCritic ID from Wikidata)`);
+  const withOpenCriticIdCount = uncachedWithIds.filter(g => g.openCriticId).length;
+  console.log(`${LOG_PREFIX} Review scores: ${games.length} total, ${games.length - uncached.length} cached, ${uncached.length} to query (${withOpenCriticIdCount} with OpenCritic ID from Wikidata)`);
   if (uncachedWithIds.length > 0) {
     try {
-      diagnostic.apiCalled = true;
       const batchResponse = await globalThis.SCPW_ReviewScoresClient.batchQueryByGameNames(uncachedWithIds);
       // Handle both old Map return (for cached code) and new { results, failureReasons } return
       const batchResults: Map<string, { data: ReviewScoreData } | null> =
@@ -532,23 +506,17 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
       const failureReasons: Record<string, string> =
         batchResponse instanceof Map ? {} : (batchResponse.failureReasons || {});
 
-      diagnostic.apiResults = batchResults.size;
-      diagnostic.failureReasons = failureReasons;
-
-      // Track details for each game
-      for (const { appid, gameName, openCriticId } of uncachedWithIds) {
-        const result = batchResults.get(appid);
-        const failureReason = failureReasons[appid];
-        if (result) {
-          diagnostic.validResults++;
-          diagnostic.gameDetails.push({ appid, gameName, hasResult: true, score: result.data.score, hadOpenCriticId: !!openCriticId });
+      let validCount = 0;
+      let nullCount = 0;
+      for (const { appid } of uncachedWithIds) {
+        if (batchResults.get(appid)) {
+          validCount++;
         } else {
-          diagnostic.nullResults++;
-          diagnostic.gameDetails.push({ appid, gameName, hasResult: false, failureReason, hadOpenCriticId: !!openCriticId });
+          nullCount++;
         }
       }
 
-      console.log(`${LOG_PREFIX} Review scores batch returned ${batchResults.size} results (${diagnostic.validResults} valid, ${diagnostic.nullResults} null)`);
+      console.log(`${LOG_PREFIX} Review scores batch returned ${batchResults.size} results (${validCount} valid, ${nullCount} null)`);
       if (Object.keys(failureReasons).length > 0) {
         console.log(`${LOG_PREFIX} Failure reasons:`, JSON.stringify(failureReasons));
       }
@@ -575,7 +543,6 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      diagnostic.error = errorMessage;
       console.warn(`${LOG_PREFIX} Review scores batch error:`, errorMessage);
       // Mark uncached as null
       for (const { appid } of uncachedWithIds) {
@@ -586,8 +553,8 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
     }
   }
 
-  console.log(`${LOG_PREFIX} Review scores batch complete: ${Object.keys(reviewScoresResults).length} results, diagnostic:`, JSON.stringify(diagnostic));
-  return { success: true, reviewScoresResults, _diagnostic: diagnostic };
+  console.log(`${LOG_PREFIX} Review scores batch complete: ${Object.keys(reviewScoresResults).length} results`);
+  return { success: true, reviewScoresResults };
 }
 
 chrome.runtime.onMessage.addListener(handleMessage);
