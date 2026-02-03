@@ -260,4 +260,301 @@ describe('steamDeckPageScript.js', () => {
             expect(data['old']).toBeUndefined();
         });
     });
+
+    describe('TanStack Query cache extraction', () => {
+        it('should extract data from React fiber QueryClient via memoizedProps', () => {
+            // Set up empty SSR (to not get data from SSR path)
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({ queries: [] })
+                }
+            };
+
+            // Create a mock React root element with fiber
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            document.body.appendChild(rootEl);
+
+            // Mock QueryClient with cache data
+            const mockQueryClient = {
+                getQueryCache: () => ({
+                    getAll: () => [
+                        {
+                            queryKey: ['StoreItem', 'app_55555', 'include_platforms'],
+                            state: { data: { steam_deck_compat_category: 3 } }
+                        },
+                        {
+                            queryKey: ['StoreItem', 'app_66666', 'include_platforms'],
+                            state: { data: { steam_deck_compat_category: 2 } }
+                        }
+                    ]
+                })
+            };
+
+            // Attach React fiber to element (simulating React's internal structure)
+            rootEl['__reactFiber$abc123'] = {
+                return: {
+                    memoizedProps: {
+                        client: mockQueryClient
+                    }
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            expect(data['55555']).toBe(3);
+            expect(data['66666']).toBe(2);
+
+            // Clean up
+            rootEl.remove();
+        });
+
+        it('should extract data from React context QueryClient', () => {
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({ queries: [] })
+                }
+            };
+
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            document.body.appendChild(rootEl);
+
+            const mockQueryClient = {
+                getQueryCache: () => ({
+                    getAll: () => [
+                        {
+                            queryKey: ['StoreItem', 'app_44444', 'include_platforms'],
+                            state: { data: { steam_deck_compat_category: 1 } }
+                        }
+                    ]
+                })
+            };
+
+            // Attach via React context path
+            rootEl['__reactFiber$xyz789'] = {
+                return: {
+                    type: {
+                        _context: {
+                            _currentValue: mockQueryClient
+                        }
+                    }
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            expect(data['44444']).toBe(1);
+
+            rootEl.remove();
+        });
+
+        it('should merge SSR and cache data', () => {
+            // SSR has one game
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_11111', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 3 } }
+                            }
+                        ]
+                    })
+                }
+            };
+
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            document.body.appendChild(rootEl);
+
+            // Cache has a different game (simulating dynamic load)
+            const mockQueryClient = {
+                getQueryCache: () => ({
+                    getAll: () => [
+                        {
+                            queryKey: ['StoreItem', 'app_22222', 'include_platforms'],
+                            state: { data: { steam_deck_compat_category: 2 } }
+                        }
+                    ]
+                })
+            };
+
+            rootEl['__reactFiber$merge'] = {
+                return: {
+                    memoizedProps: {
+                        client: mockQueryClient
+                    }
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            // Should have both SSR and cache data
+            expect(data['11111']).toBe(3);
+            expect(data['22222']).toBe(2);
+
+            rootEl.remove();
+        });
+
+        it('should handle missing fiber key gracefully', () => {
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_33333', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 2 } }
+                            }
+                        ]
+                    })
+                }
+            };
+
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            // No fiber attached
+            document.body.appendChild(rootEl);
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            // Should still have SSR data
+            expect(data['33333']).toBe(2);
+
+            rootEl.remove();
+        });
+
+        it('should handle QueryCache.getAll throwing error', () => {
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_77777', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 3 } }
+                            }
+                        ]
+                    })
+                }
+            };
+
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            document.body.appendChild(rootEl);
+
+            const mockQueryClient = {
+                getQueryCache: () => ({
+                    getAll: () => { throw new Error('Cache error'); }
+                })
+            };
+
+            rootEl['__reactFiber$error'] = {
+                return: {
+                    memoizedProps: {
+                        client: mockQueryClient
+                    }
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            // Should still have SSR data despite cache error
+            expect(data['77777']).toBe(3);
+
+            rootEl.remove();
+        });
+
+        it('should try alternative root elements', () => {
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({ queries: [] })
+                }
+            };
+
+            // Create a root element that will be found by data-react-root selector
+            const rootEl = document.createElement('div');
+            rootEl.setAttribute('data-react-root', 'true');
+            document.body.appendChild(rootEl);
+
+            const mockQueryClient = {
+                getQueryCache: () => ({
+                    getAll: () => [
+                        {
+                            queryKey: ['StoreItem', 'app_88888', 'include_platforms'],
+                            state: { data: { steam_deck_compat_category: 1 } }
+                        }
+                    ]
+                })
+            };
+
+            rootEl['__reactInternalInstance$legacy'] = {
+                return: {
+                    memoizedProps: {
+                        client: mockQueryClient
+                    }
+                }
+            };
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            expect(data['88888']).toBe(1);
+
+            rootEl.remove();
+        });
+
+        it('should handle fiber walking reaching max depth', () => {
+            window.SSR = {
+                renderContext: {
+                    queryData: JSON.stringify({
+                        queries: [
+                            {
+                                queryKey: ['StoreItem', 'app_99999', 'include_platforms'],
+                                state: { data: { steam_deck_compat_category: 2 } }
+                            }
+                        ]
+                    })
+                }
+            };
+
+            const rootEl = document.createElement('div');
+            rootEl.id = 'application_root';
+            document.body.appendChild(rootEl);
+
+            // Create a deeply nested fiber that doesn't have QueryClient
+            // (simulates max depth being reached without finding client)
+            let fiber = { memoizedProps: {} };
+            for (let i = 0; i < 150; i++) {
+                fiber = { return: fiber, memoizedProps: {} };
+            }
+            rootEl['__reactFiber$deep'] = fiber;
+
+            require('../../dist/steamDeckPageScript.js');
+
+            const dataEl = document.getElementById('scpw-steamdeck-data');
+            const data = JSON.parse(dataEl.textContent);
+
+            // Should still have SSR data
+            expect(data['99999']).toBe(2);
+
+            rootEl.remove();
+        });
+    });
 });
