@@ -52,13 +52,20 @@ async function build() {
       // Mark chrome as external (it's a global in extensions)
       external: ['chrome'],
       // Don't include other source files - they're loaded separately via importScripts/script tags
+      // Exception: ./components/* imports are bundled into the consuming file (popup.js, options.js)
       plugins: [{
         name: 'externalize-local-imports',
         setup(build) {
           // Mark all ./foo imports as external - we load them via importScripts
+          // But allow ./components/* imports to be bundled (they're part of the Lit component tree)
           build.onResolve({ filter: /^\.\.?\// }, args => {
             // Only externalize .ts/.js imports from src directory
             if (args.importer.includes('/src/')) {
+              // Allow bundling component imports — they should be included in the output
+              // This covers both ./components/* (from popup/options) and ./* (from within components/)
+              if (args.path.includes('/components/') || args.path.includes('./components/') || args.importer.includes('/components/')) {
+                return; // Don't externalize
+              }
               return { path: args.path, external: true };
             }
           });
@@ -73,6 +80,10 @@ async function build() {
   // Post-process: Add istanbul ignore comments for debug branches
   // This ensures code coverage doesn't penalize debug-only code paths
   addIstanbulIgnoreComments();
+
+  // Post-process: Ignore bundled Lit library code in popup.js and options.js
+  // The Lit framework is bundled into these files by esbuild and shouldn't affect coverage
+  addBundledLibraryIgnoreComments();
 }
 
 /**
@@ -164,6 +175,69 @@ function addIstanbulIgnoreComments() {
   }
 
   console.log('Added istanbul ignore comments for debug branches');
+}
+
+/**
+ * Add istanbul ignore comments for bundled third-party library code
+ * (Lit framework) in popup.js and options.js so that coverage only
+ * measures our own component and application code.
+ *
+ * Only targets top-level declarations (var, function, class) to avoid
+ * breaking syntax by inserting comments inside expressions.
+ */
+function addBundledLibraryIgnoreComments() {
+  const bundledFiles = ['popup.js', 'options.js'];
+  // Pattern: lines that start a new statement (with leading whitespace)
+  const declarationPattern = /^(\s+)(var |const |let |function |class )/;
+
+  for (const file of bundledFiles) {
+    const filePath = path.join(distDir, file);
+    if (!fs.existsSync(filePath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
+    let inNodeModules = false;
+    let modified = false;
+
+    for (let idx = 0; idx < lines.length; idx++) {
+      const trimmed = lines[idx].trim();
+
+      // Detect node_modules section boundaries
+      if (trimmed.startsWith('// node_modules/')) {
+        inNodeModules = true;
+        continue;
+      }
+      if (trimmed.startsWith('// src/')) {
+        inNodeModules = false;
+        continue;
+      }
+
+      // Mark esbuild helper functions at the top (__decorateClass, __defProp, etc.)
+      if (!inNodeModules && declarationPattern.test(lines[idx]) && trimmed.startsWith('var __')) {
+        if (!lines[idx].includes('istanbul ignore')) {
+          const match = lines[idx].match(declarationPattern);
+          lines[idx] = match[1] + '/* istanbul ignore next */ ' + trimmed;
+          modified = true;
+        }
+        continue;
+      }
+
+      // Only add ignore comments to declaration lines in node_modules sections
+      if (inNodeModules && declarationPattern.test(lines[idx])) {
+        if (!lines[idx].includes('istanbul ignore')) {
+          const match = lines[idx].match(declarationPattern);
+          lines[idx] = match[1] + '/* istanbul ignore next */ ' + trimmed;
+          modified = true;
+        }
+      }
+    }
+
+    if (modified) {
+      fs.writeFileSync(filePath, lines.join('\n'));
+    }
+  }
+
+  console.log('Added istanbul ignore comments for bundled library code');
 }
 
 build().catch(err => {

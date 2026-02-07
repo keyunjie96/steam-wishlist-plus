@@ -6,6 +6,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
