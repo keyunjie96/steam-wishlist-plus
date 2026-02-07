@@ -1,0 +1,18 @@
+.swp-status {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.swp-status-success {
+  background: rgba(91, 163, 43, 0.2);
+  color: #8bc34a;
+  border-left: 3px solid var(--swp-success);
+}
+
+.swp-status-error {
+  background: rgba(192, 48, 48, 0.2);
+  color: #f87171;
+  border-left: 3px solid var(--swp-danger);
+}

@@ -1,0 +1,76 @@
+.swp-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 100%;
+}
+
+.swp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.swp-btn-primary {
+  background: var(--swp-gradient-button);
+  color: #ffffff;
+}
+
+.swp-btn-primary:hover:not(:disabled) {
+  background: var(--swp-gradient-button-hover);
+}
+
+.swp-btn-secondary {
+  background: rgba(103, 193, 245, 0.2);
+  color: #67c1f5;
+}
+
+.swp-btn-secondary:hover:not(:disabled) {
+  background: rgba(103, 193, 245, 0.3);
+}
+
+.swp-btn-danger {
+  background: rgba(192, 48, 48, 0.3);
+  color: #e87070;
+}
+
+.swp-btn-danger:hover:not(:disabled) {
+  background: rgba(192, 48, 48, 0.5);
+}
+
+.swp-btn-full {
+  margin-top: 10px;
+}
+
+.swp-btn-icon svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: block;
+}
+
+.swp-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--swp-card-border);
+  border-top-color: var(--swp-accent);
+  border-radius: 50%;
+  animation: swp-spin 0.8s linear infinite;
+}
+
+@keyframes swp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

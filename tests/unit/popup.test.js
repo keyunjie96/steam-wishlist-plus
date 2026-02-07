@@ -1,103 +1,21 @@
 /**
- * Unit tests for popup.js
+ * Unit tests for popup.js (Preact)
  */
 
 describe('popup.js', () => {
-  let statusEl;
-  let cacheCountEl;
-  let cacheAgeEl;
-  let clearBtn;
-  let settingsBtn;
-  let showNintendoCheckbox;
-  let showPlaystationCheckbox;
-  let showXboxCheckbox;
-  let showSteamDeckCheckbox;
-  let showHltbCheckbox;
+  const flush = async () => {
+    for (let i = 0; i < 5; i += 1) {
+      await Promise.resolve();
+      jest.advanceTimersByTime(1);
+    }
+  };
 
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
 
-    // Set up DOM elements that popup.js expects
-    document.body.textContent = '';
-    document.body.className = 'is-loading';
+    document.body.innerHTML = '<div id="app"></div>';
 
-    statusEl = document.createElement('div');
-    statusEl.id = 'status';
-    statusEl.className = 'status';
-    document.body.appendChild(statusEl);
-
-    cacheCountEl = document.createElement('div');
-    cacheCountEl.id = 'cache-count';
-    cacheCountEl.textContent = '-';
-    document.body.appendChild(cacheCountEl);
-
-    cacheAgeEl = document.createElement('div');
-    cacheAgeEl.id = 'cache-age';
-    cacheAgeEl.textContent = '-';
-    document.body.appendChild(cacheAgeEl);
-
-    clearBtn = document.createElement('button');
-    clearBtn.id = 'clear-btn';
-    clearBtn.textContent = 'Clear Cache';
-    document.body.appendChild(clearBtn);
-
-    settingsBtn = document.createElement('button');
-    settingsBtn.id = 'settings-btn';
-    settingsBtn.textContent = '';
-    document.body.appendChild(settingsBtn);
-
-    // Platform toggle checkboxes
-    const createToggle = (id) => {
-      const label = document.createElement('label');
-      label.className = 'platform-toggle';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = id;
-      label.appendChild(checkbox);
-      const span = document.createElement('span');
-      span.textContent = id.replace('show-', '');
-      label.appendChild(span);
-      document.body.appendChild(label);
-      return checkbox;
-    };
-
-    showNintendoCheckbox = createToggle('show-nintendo');
-    showPlaystationCheckbox = createToggle('show-playstation');
-    showXboxCheckbox = createToggle('show-xbox');
-    showSteamDeckCheckbox = createToggle('show-steamdeck');
-    showHltbCheckbox = createToggle('show-hltb');
-
-    // Mock chrome.runtime.sendMessage
-    chrome.runtime.sendMessage.mockClear();
-    chrome.runtime.sendMessage.mockResolvedValue({
-      success: true,
-      count: 10,
-      oldestEntry: Date.now() - 86400000 // 1 day ago
-    });
-
-    // Mock chrome.runtime.openOptionsPage
-    chrome.runtime.openOptionsPage.mockClear();
-
-    // Mock chrome.storage.sync
-    chrome.storage.sync.get.mockClear();
-    chrome.storage.sync.get.mockResolvedValue({
-      scpwSettings: {
-        showNintendo: true,
-        showPlaystation: true,
-        showXbox: false,
-        showSteamDeck: true,
-        showHltb: true,
-        hltbDisplayStat: 'mainStory'
-      }
-    });
-    chrome.storage.sync.set.mockClear();
-    chrome.storage.sync.set.mockResolvedValue();
-
-    // Mock confirm dialog
-    global.confirm = jest.fn(() => true);
-
-    // Mock UserSettings (centralized settings from types.js)
     globalThis.SWP_UserSettings = {
       DEFAULT_USER_SETTINGS: {
         showNintendo: true,
@@ -105,20 +23,43 @@ describe('popup.js', () => {
         showXbox: true,
         showSteamDeck: true,
         showHltb: true,
-        hltbDisplayStat: 'mainStory'
-      },
-      SETTING_CHECKBOX_IDS: {
-        showNintendo: 'show-nintendo',
-        showPlaystation: 'show-playstation',
-        showXbox: 'show-xbox',
-        showSteamDeck: 'show-steamdeck',
-        showHltb: 'show-hltb'
-      },
-      USER_SETTING_KEYS: ['showNintendo', 'showPlaystation', 'showXbox', 'showSteamDeck', 'showHltb']
+        hltbDisplayStat: 'mainStory',
+        showReviewScores: true,
+        reviewScoreSource: 'opencritic'
+      }
     };
 
-    // Load popup.js
-    require('../../dist/popup.js');
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({
+          success: true,
+          count: 10,
+          oldestEntry: Date.now() - 86400000
+        });
+      }
+      if (message.type === 'CLEAR_CACHE') {
+        return Promise.resolve({ success: true });
+      }
+      return Promise.resolve({ success: true });
+    });
+
+    chrome.runtime.openOptionsPage.mockClear();
+
+    chrome.storage.sync.get.mockResolvedValue({
+      scpwSettings: {
+        showNintendo: true,
+        showPlaystation: false,
+        showXbox: true,
+        showSteamDeck: true,
+        showHltb: false,
+        showReviewScores: true,
+        hltbDisplayStat: 'mainStory',
+        reviewScoreSource: 'opencritic'
+      }
+    });
+    chrome.storage.sync.set.mockResolvedValue();
+
+    global.confirm = jest.fn(() => true);
   });
 
   afterEach(() => {
@@ -126,532 +67,303 @@ describe('popup.js', () => {
     delete global.confirm;
   });
 
-  // Helper to get status message
-  const getStatusMessage = () => statusEl.textContent;
-  const getStatusType = () => {
-    if (statusEl.classList.contains('success')) return 'success';
-    if (statusEl.classList.contains('error')) return 'error';
-    return null;
-  };
+  it('renders the popup header and stats after loading', async () => {
+    require('../../dist/popup.js');
+    await flush();
 
-  describe('initialization', () => {
-    it('should get all required DOM elements', () => {
-      expect(statusEl).toBeTruthy();
-      expect(cacheCountEl).toBeTruthy();
-      expect(cacheAgeEl).toBeTruthy();
-      expect(clearBtn).toBeTruthy();
-      expect(settingsBtn).toBeTruthy();
-    });
-
-    it('should add click listener to clear button', () => {
-      expect(clearBtn.onclick !== null || clearBtn.addEventListener).toBeTruthy();
-    });
-
-    it('should add click listener to settings button', () => {
-      expect(settingsBtn.onclick !== null || settingsBtn.addEventListener).toBeTruthy();
-    });
-
-    it('should load cache stats on init', async () => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'GET_CACHE_STATS'
-      });
-    });
+    expect(document.querySelector('.swp-header h1')?.textContent).toBe('Steam Wishlist Plus');
+    expect(document.querySelectorAll('.swp-stat-box').length).toBe(2);
+    expect(document.querySelector('.swp-stat-box .swp-stat-value')?.textContent).toBe('10');
   });
 
-  describe('loadCacheStats', () => {
-    it('should display cache count on init', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: true,
-        count: 25,
-        oldestEntry: Date.now()
-      });
+  it('renders platform and info toggles', async () => {
+    require('../../dist/popup.js');
+    await flush();
 
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheCountEl.textContent).toBe('25');
-    });
-
-    it('should display cache age in days and hours', async () => {
-      const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000); // 1d 2h ago
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: true,
-        count: 5,
-        oldestEntry: oneDayAgo
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheAgeEl.textContent).toMatch(/1d 2h/);
-    });
-
-    it('should display cache age in hours only when less than a day', async () => {
-      const hoursAgo = Date.now() - (5 * 60 * 60 * 1000); // 5h ago
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: true,
-        count: 3,
-        oldestEntry: hoursAgo
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheAgeEl.textContent).toBe('5h');
-    });
-
-    it('should display <1h when cache is less than an hour old', async () => {
-      const recentTime = Date.now() - (30 * 60 * 1000); // 30 min ago
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: true,
-        count: 2,
-        oldestEntry: recentTime
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheAgeEl.textContent).toBe('<1h');
-    });
-
-    it('should display dash when no oldest entry', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: true,
-        count: 0,
-        oldestEntry: null
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheAgeEl.textContent).toBe('-');
-    });
-
-    it('should display question marks on error', async () => {
-      chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Network error'));
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheCountEl.textContent).toBe('?');
-      expect(cacheAgeEl.textContent).toBe('?');
-    });
-
-    it('should not update display when response.success is false', async () => {
-      cacheCountEl.textContent = 'original';
-      cacheAgeEl.textContent = 'original';
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce({
-        success: false,
-        count: 99,
-        oldestEntry: Date.now()
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheCountEl.textContent).toBe('original');
-      expect(cacheAgeEl.textContent).toBe('original');
-    });
-
-    it('should not update display when response is undefined', async () => {
-      cacheCountEl.textContent = 'original';
-      cacheAgeEl.textContent = 'original';
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce(undefined);
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(cacheCountEl.textContent).toBe('original');
-      expect(cacheAgeEl.textContent).toBe('original');
-    });
+    const toggles = document.querySelectorAll('.swp-toggle-mini input[type="checkbox"]');
+    expect(toggles.length).toBe(6);
   });
 
-  describe('clearCache', () => {
-    it('should show confirmation dialog', async () => {
-      clearBtn.click();
+  it('saves settings when a toggle changes', async () => {
+    require('../../dist/popup.js');
+    await flush();
 
-      await jest.advanceTimersByTimeAsync(0);
+    const toggles = document.querySelectorAll('.swp-toggle-mini input[type="checkbox"]');
+    const firstToggle = toggles[0];
+    firstToggle.click();
 
-      expect(global.confirm).toHaveBeenCalledWith(
-        expect.stringContaining('Clear')
-      );
-    });
+    await flush();
 
-    it('should not clear cache if user cancels', async () => {
-      global.confirm.mockReturnValueOnce(false);
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith({
-        type: 'CLEAR_CACHE'
-      });
-    });
-
-    it('should send CLEAR_CACHE message when confirmed', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'CLEAR_CACHE'
-      });
-    });
-
-    it('should show success status on successful clear', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(getStatusMessage()).toContain('cleared');
-      expect(getStatusType()).toBe('success');
-    });
-
-    it('should show error status on failed clear', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({ success: false });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(getStatusMessage()).toContain('Failed');
-      expect(getStatusType()).toBe('error');
-    });
-
-    it('should show error status on exception', async () => {
-      chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Network error'));
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(getStatusMessage()).toContain('Failed');
-      expect(getStatusType()).toBe('error');
-    });
-
-    it('should disable button while loading', async () => {
-      let resolveMessage;
-      const messagePromise = new Promise(resolve => {
-        resolveMessage = resolve;
-      });
-      chrome.runtime.sendMessage.mockReturnValueOnce(messagePromise);
-
-      clearBtn.click();
-
-      expect(clearBtn.disabled).toBe(true);
-
-      resolveMessage({ success: true });
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(clearBtn.disabled).toBe(false);
-    });
-
-    it('should show loading indicator while loading', async () => {
-      let resolveMessage;
-      const messagePromise = new Promise(resolve => {
-        resolveMessage = resolve;
-      });
-      chrome.runtime.sendMessage.mockReturnValueOnce(messagePromise);
-
-      clearBtn.click();
-
-      expect(clearBtn.querySelector('.loading')).toBeTruthy();
-
-      resolveMessage({ success: true });
-
-      await jest.advanceTimersByTimeAsync(0);
-    });
-
-    it('should restore original button text after loading', async () => {
-      const originalText = clearBtn.textContent;
-
-      chrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(clearBtn.textContent).toBe(originalText);
-    });
-
-    it('should refresh stats after clearing cache', async () => {
-      chrome.runtime.sendMessage
-        .mockResolvedValueOnce({ success: true }) // CLEAR_CACHE
-        .mockResolvedValueOnce({ success: true, count: 0, oldestEntry: null }); // GET_CACHE_STATS
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      const calls = chrome.runtime.sendMessage.mock.calls;
-      expect(calls.some(call => call[0].type === 'CLEAR_CACHE')).toBe(true);
-      expect(calls.some(call => call[0].type === 'GET_CACHE_STATS')).toBe(true);
-    });
-
-    it('should auto-hide status after duration', async () => {
-      chrome.runtime.sendMessage.mockResolvedValueOnce({ success: true });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(getStatusType()).toBe('success');
-
-      // Advance past the 3 second status duration
-      await jest.advanceTimersByTimeAsync(3500);
-
-      expect(getStatusType()).toBe(null);
-    });
+    expect(chrome.storage.sync.set).toHaveBeenCalled();
   });
 
-  describe('openOptionsPage', () => {
-    it('should call chrome.runtime.openOptionsPage when settings button clicked', async () => {
-      settingsBtn.click();
+  it('opens the options page from the settings button', async () => {
+    require('../../dist/popup.js');
+    await flush();
 
-      await jest.advanceTimersByTimeAsync(0);
+    const settingsButton = document.querySelector('.swp-settings-btn');
+    settingsButton.click();
 
-      expect(chrome.runtime.openOptionsPage).toHaveBeenCalled();
-    });
+    expect(chrome.runtime.openOptionsPage).toHaveBeenCalled();
   });
 
-  describe('setButtonLoading', () => {
-    it('should save original text to dataset', async () => {
-      const originalText = clearBtn.textContent;
+  it('clears cache when clear cache is confirmed', async () => {
+    require('../../dist/popup.js');
+    await flush();
 
-      let resolveMessage;
-      chrome.runtime.sendMessage.mockReturnValueOnce(new Promise(resolve => {
-        resolveMessage = resolve;
-      }));
+    const clearButton = Array.from(document.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Clear Cache'));
 
-      clearBtn.click();
+    clearButton.click();
 
-      expect(clearBtn.dataset.originalText).toBe(originalText);
+    await flush();
 
-      resolveMessage({ success: true });
-      await jest.advanceTimersByTimeAsync(0);
-    });
-
-    it('should restore original text when loading completes', async () => {
-      const originalText = clearBtn.textContent;
-
-      chrome.runtime.sendMessage
-        .mockResolvedValueOnce({ success: true })
-        .mockResolvedValueOnce({ success: true, count: 0, oldestEntry: null });
-
-      clearBtn.click();
-
-      await jest.advanceTimersByTimeAsync(0);
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(clearBtn.textContent).toBe(originalText);
-      expect(clearBtn.disabled).toBe(false);
-    });
-
-    it('should handle setButtonLoading without originalText', async () => {
-      delete clearBtn.dataset.originalText;
-      clearBtn.textContent = 'Test';
-
-      clearBtn.disabled = true;
-
-      clearBtn.disabled = false;
-
-      expect(clearBtn.disabled).toBe(false);
-    });
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: 'CLEAR_CACHE' });
+    expect(document.querySelector('.swp-status')?.textContent).toBe('Cache cleared');
   });
 
-  describe('platform toggles', () => {
-    it('should load settings from chrome.storage.sync on init', async () => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(chrome.storage.sync.get).toHaveBeenCalledWith('scpwSettings');
+  it('formats cache age in days and hours', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({
+          success: true,
+          count: 2,
+          oldestEntry: Date.now() - (26 * 60 * 60 * 1000)
+        });
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it('should set checkbox states based on loaded settings', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({
-        scpwSettings: {
-          showNintendo: true,
-          showPlaystation: false,
-          showXbox: true,
-          showSteamDeck: false,
-          showHltb: true,
-          hltbDisplayStat: 'mainStory'
-        }
-      });
+    require('../../dist/popup.js');
+    await flush();
 
-      jest.resetModules();
-      require('../../dist/popup.js');
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    expect(document.querySelectorAll('.swp-stat-box').length).toBe(2);
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[1]?.textContent).toContain('1d');
+  });
 
-      expect(showNintendoCheckbox.checked).toBe(true);
-      expect(showPlaystationCheckbox.checked).toBe(false);
-      expect(showXboxCheckbox.checked).toBe(true);
-      expect(showSteamDeckCheckbox.checked).toBe(false);
-      expect(showHltbCheckbox.checked).toBe(true);
+  it('formats cache age in hours only', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({
+          success: true,
+          count: 3,
+          oldestEntry: Date.now() - (5 * 60 * 60 * 1000)
+        });
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it('should use default settings when none are stored', async () => {
-      chrome.storage.sync.get.mockResolvedValueOnce({});
+    require('../../dist/popup.js');
+    await flush();
 
-      jest.resetModules();
-      require('../../dist/popup.js');
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[1]?.textContent).toBe('5h');
+  });
 
-      // Default is all true
-      expect(showNintendoCheckbox.checked).toBe(true);
-      expect(showPlaystationCheckbox.checked).toBe(true);
-      expect(showXboxCheckbox.checked).toBe(true);
-      expect(showSteamDeckCheckbox.checked).toBe(true);
-      expect(showHltbCheckbox.checked).toBe(true);
+  it('formats cache age under an hour', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({
+          success: true,
+          count: 1,
+          oldestEntry: Date.now() - (30 * 60 * 1000)
+        });
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it('should save settings when Nintendo toggle is changed', async () => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    require('../../dist/popup.js');
+    await flush();
 
-      showNintendoCheckbox.checked = false;
-      showNintendoCheckbox.dispatchEvent(new Event('change'));
-      await jest.advanceTimersByTimeAsync(0);
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[1]?.textContent).toBe('<1h');
+  });
 
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: expect.objectContaining({
-          showNintendo: false
-        })
-      });
+  it('handles cache stats errors', async () => {
+    chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('nope'));
+
+    require('../../dist/popup.js');
+    await flush();
+
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[0]?.textContent).toBe('?');
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[1]?.textContent).toBe('?');
+  });
+
+  it('keeps default cache stats when response is missing a count', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({ success: true });
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it.each([
-      ['PlayStation', () => showPlaystationCheckbox],
-      ['Xbox', () => showXboxCheckbox],
-      ['Steam Deck', () => showSteamDeckCheckbox]
-    ])('should save settings when %s toggle is changed', async (name, getCheckbox) => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    require('../../dist/popup.js');
+    await flush();
 
-      const checkbox = getCheckbox();
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change'));
-      await jest.advanceTimersByTimeAsync(0);
+    expect(document.querySelectorAll('.swp-stat-box .swp-stat-value')[0]?.textContent).toBe('-');
+  });
 
-      expect(chrome.storage.sync.set).toHaveBeenCalled();
+  it('handles settings load failures gracefully', async () => {
+    chrome.storage.sync.get.mockRejectedValueOnce(new Error('fail'));
+
+    require('../../dist/popup.js');
+    await flush();
+
+    expect(document.querySelectorAll('.swp-toggle-mini').length).toBe(6);
+  });
+
+  it('shows an error when settings fail to save', async () => {
+    chrome.storage.sync.set.mockRejectedValueOnce(new Error('fail'));
+
+    require('../../dist/popup.js');
+    await flush();
+
+    const toggles = document.querySelectorAll('.swp-toggle-mini input[type="checkbox"]');
+    toggles[0].click();
+
+    await flush();
+
+    expect(document.querySelector('.swp-status')?.textContent).toBe('Failed to save');
+  });
+
+  it('auto-hides status messages', async () => {
+    require('../../dist/popup.js');
+    await flush();
+
+    const toggles = document.querySelectorAll('.swp-toggle-mini input[type="checkbox"]');
+    toggles[0].click();
+
+    await flush();
+
+    expect(document.querySelector('.swp-status')?.textContent).toBe('Settings saved');
+
+    jest.advanceTimersByTime(3000);
+    jest.runAllTimers();
+    await flush();
+
+    expect(document.querySelector('.swp-status')).toBeNull();
+  });
+
+  it('renders full toggle and icon button variants from the popup bundle', async () => {
+    require('../../dist/popup.js');
+    await flush();
+
+    const { Toggle, IconButton } = globalThis.SWP_PopupUI;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    globalThis.preact.render(
+      globalThis.preact.h(Toggle, {
+        variant: 'full',
+        label: 'Test Toggle',
+        checked: true,
+        onChange: jest.fn(),
+        icon: '<svg viewBox=\"0 0 24 24\"></svg>',
+        selectOptions: [{ value: 'one', label: 'One' }],
+        selectValue: 'one',
+        onSelectChange: jest.fn()
+      }),
+      container
+    );
+
+    expect(container.querySelector('select')).not.toBeNull();
+
+    globalThis.preact.render(
+      globalThis.preact.h(Toggle, {
+        variant: 'full',
+        label: 'Test Toggle',
+        checked: false,
+        onChange: jest.fn(),
+        selectOptions: [{ value: 'one', label: 'One' }],
+        selectValue: 'one'
+      }),
+      container
+    );
+
+    expect(container.querySelector('select')).toBeNull();
+
+    globalThis.preact.render(
+      globalThis.preact.h(IconButton, {
+        label: 'Icon',
+        icon: '<svg viewBox=\"0 0 24 24\"></svg>',
+        onClick: jest.fn()
+      }),
+      container
+    );
+
+    expect(container.querySelector('svg')).not.toBeNull();
+
+    globalThis.preact.render(
+      globalThis.preact.h(IconButton, {
+        label: 'Loading',
+        loading: true,
+        onClick: jest.fn()
+      }),
+      container
+    );
+
+    expect(container.textContent).toContain('Loading');
+  });
+
+  it('does not clear cache when confirmation is cancelled', async () => {
+    global.confirm = jest.fn(() => false);
+
+    require('../../dist/popup.js');
+    await flush();
+
+    const clearButton = Array.from(document.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Clear Cache'));
+
+    clearButton.click();
+
+    await flush();
+
+    expect(chrome.runtime.sendMessage.mock.calls.some(([call]) => call?.type === 'CLEAR_CACHE')).toBe(false);
+  });
+
+  it('shows an error when cache clear fails', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({ success: true, count: 1, oldestEntry: null });
+      }
+      if (message.type === 'CLEAR_CACHE') {
+        return Promise.resolve({ success: false });
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it('should show success status when settings are saved', async () => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    require('../../dist/popup.js');
+    await flush();
 
-      showNintendoCheckbox.checked = false;
-      showNintendoCheckbox.dispatchEvent(new Event('change'));
-      await jest.advanceTimersByTimeAsync(0);
+    const clearButton = Array.from(document.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Clear Cache'));
 
-      expect(getStatusMessage()).toContain('saved');
-      expect(getStatusType()).toBe('success');
+    clearButton.click();
+
+    await flush();
+
+    expect(document.querySelector('.swp-status')?.textContent).toBe('Failed to clear cache');
+  });
+
+  it('handles cache clear exceptions', async () => {
+    chrome.runtime.sendMessage.mockImplementation((message) => {
+      if (message.type === 'GET_CACHE_STATS') {
+        return Promise.resolve({ success: true, count: 1, oldestEntry: null });
+      }
+      if (message.type === 'CLEAR_CACHE') {
+        return Promise.reject(new Error('fail'));
+      }
+      return Promise.resolve({ success: true });
     });
 
-    it('should show error status when settings fail to save', async () => {
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
+    require('../../dist/popup.js');
+    await flush();
 
-      chrome.storage.sync.set.mockRejectedValueOnce(new Error('Storage error'));
+    const clearButton = Array.from(document.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Clear Cache'));
 
-      showNintendoCheckbox.checked = false;
-      showNintendoCheckbox.dispatchEvent(new Event('change'));
-      await jest.advanceTimersByTimeAsync(0);
+    clearButton.click();
 
-      expect(getStatusMessage()).toContain('Failed');
-      expect(getStatusType()).toBe('error');
-    });
+    await flush();
 
-    it('should handle loadSettings error gracefully', async () => {
-      chrome.storage.sync.get.mockRejectedValueOnce(new Error('Storage error'));
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
-
-      // Should not throw - the error is caught and logged
-      // Checkboxes keep their initial HTML state (unchecked)
-      expect(chrome.storage.sync.get).toHaveBeenCalled();
-    });
-
-    it('should remove is-loading class after initialization', async () => {
-      // Ensure is-loading is set
-      document.body.classList.add('is-loading');
-      expect(document.body.classList.contains('is-loading')).toBe(true);
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(document.body.classList.contains('is-loading')).toBe(false);
-    });
-
-    it('should handle missing checkbox elements gracefully', async () => {
-      // Remove all checkboxes from DOM to test null checks
-      showNintendoCheckbox.parentElement.remove();
-      showPlaystationCheckbox.parentElement.remove();
-      showXboxCheckbox.parentElement.remove();
-      showSteamDeckCheckbox.parentElement.remove();
-      showHltbCheckbox.parentElement.remove();
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-
-      // Should not throw
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      await jest.advanceTimersByTimeAsync(0);
-
-      expect(document.body.classList.contains('is-loading')).toBe(false);
-    });
-
-    it('should initialize immediately when document already loaded', async () => {
-      // Simulate document already loaded (readyState !== 'loading')
-      Object.defineProperty(document, 'readyState', {
-        value: 'complete',
-        writable: true
-      });
-
-      jest.resetModules();
-      require('../../dist/popup.js');
-      await jest.advanceTimersByTimeAsync(0);
-
-      // Should have loaded stats without needing DOMContentLoaded event
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'GET_CACHE_STATS'
-      });
-
-      // Restore
-      Object.defineProperty(document, 'readyState', {
-        value: 'loading',
-        writable: true
-      });
-    });
+    expect(document.querySelector('.swp-status')?.textContent).toBe('Failed to clear cache');
   });
 });

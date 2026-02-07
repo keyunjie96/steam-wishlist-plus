@@ -1,0 +1,121 @@
+@import "./components/theme.css";
+@import "./components/Toggle.css";
+@import "./components/StatBox.css";
+@import "./components/StatusMessage.css";
+@import "./components/IconButton.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+  width: 280px;
+  margin: 0;
+  padding: 14px;
+  background: linear-gradient(to bottom, var(--swp-bg-body) 0%, #171a21 100%);
+  color: var(--swp-text-primary);
+  line-height: 1.5;
+}
+
+.swp-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.swp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--swp-card-border);
+}
+
+.swp-header-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.swp-header-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swp-header h1 {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.swp-settings-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--swp-text-muted);
+  padding: 0;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.swp-settings-btn:hover {
+  color: var(--swp-text-primary);
+  background: var(--swp-bg-hover);
+}
+
+.swp-settings-btn:hover svg {
+  transform: rotate(90deg);
+}
+
+.swp-settings-btn:focus-visible {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-settings-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+.swp-stats {
+  display: flex;
+  gap: 10px;
+}
+
+.swp-section-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swp-section-title {
+  font-size: 10px;
+  color: var(--swp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.swp-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

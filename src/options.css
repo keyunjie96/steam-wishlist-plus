@@ -1,0 +1,132 @@
+@import "./components/theme.css";
+@import "./components/Toggle.css";
+@import "./components/StatBox.css";
+@import "./components/StatusMessage.css";
+@import "./components/Section.css";
+@import "./components/IconButton.css";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+  background: linear-gradient(to bottom, #1b2838 0%, #171a21 100%);
+  background-attachment: fixed;
+  color: var(--swp-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.swp-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.swp-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--swp-border-color);
+}
+
+.swp-header-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.swp-header-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swp-header-text h1 {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--swp-text-bright);
+  letter-spacing: 0.5px;
+}
+
+.swp-version {
+  font-size: 12px;
+  color: var(--swp-text-muted);
+  margin-top: 4px;
+}
+
+.swp-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.swp-button-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.swp-info-box {
+  background: var(--swp-bg-input);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--swp-text-secondary);
+  border-left: 3px solid var(--swp-accent);
+}
+
+.swp-info-box strong {
+  color: var(--swp-text-bright);
+  font-weight: 500;
+}
+
+.swp-info-box a {
+  color: var(--swp-accent);
+  text-decoration: none;
+}
+
+.swp-info-box a:hover {
+  text-decoration: underline;
+}
+
+.swp-info-box ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.swp-info-box p {
+  margin-top: 6px;
+}
+
+.swp-info-box li {
+  padding: 2px 0;
+}
+
+.swp-divider {
+  height: 1px;
+  background: var(--swp-border-subtle);
+  margin: 12px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -81,6 +81,8 @@ const runtimeMock = {
     });
   }),
 
+  getManifest: jest.fn(() => ({ version: '0.0.0' })),
+
   getURL: jest.fn((path) => `chrome-extension://test-id/${path}`),
 
   openOptionsPage: jest.fn(() => Promise.resolve()),

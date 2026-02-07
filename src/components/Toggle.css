@@ -1,0 +1,233 @@
+.swp-toggle-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  font-size: 12px;
+  color: var(--swp-text-primary);
+}
+
+.swp-toggle-mini:hover {
+  background: var(--swp-bg-hover);
+}
+
+.swp-toggle-mini.swp-dimmed {
+  opacity: 0.8;
+}
+
+.swp-toggle-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.swp-mini-switch {
+  position: relative;
+  width: 32px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.swp-mini-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.swp-mini-switch .swp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--swp-bg-input);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.swp-mini-switch .swp-slider::before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 2px;
+  top: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.swp-mini-switch input:checked + .swp-slider {
+  background: var(--swp-accent);
+}
+
+.swp-mini-switch input:checked + .swp-slider::before {
+  transform: translateX(16px);
+  background: #ffffff;
+}
+
+.swp-mini-switch input:focus-visible + .swp-slider {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-toggle-item {
+  display: grid;
+  grid-template-columns: var(--swp-icon-size, 40px) 1fr auto;
+  align-items: center;
+  gap: var(--swp-col-gap, 12px);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--swp-card-border);
+  background: var(--swp-card-bg);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.swp-toggle-item.swp-active {
+  background: var(--swp-bg-hover);
+  border-color: var(--swp-border-color);
+}
+
+.swp-toggle-icon {
+  width: var(--swp-icon-size, 40px);
+  height: var(--swp-icon-size, 40px);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  display: grid;
+  place-items: center;
+  color: var(--swp-text-primary);
+}
+
+.swp-toggle-icon svg {
+  width: 70%;
+  height: 70%;
+  fill: currentColor;
+}
+
+.swp-toggle-item[data-platform="nintendo"] .swp-toggle-icon {
+  color: var(--swp-nintendo);
+}
+
+.swp-toggle-item[data-platform="playstation"] .swp-toggle-icon {
+  color: var(--swp-playstation);
+}
+
+.swp-toggle-item[data-platform="xbox"] .swp-toggle-icon {
+  color: var(--swp-xbox);
+}
+
+.swp-toggle-item[data-platform="hltb"] .swp-toggle-icon {
+  color: var(--swp-hltb);
+}
+
+.swp-toggle-item[data-platform="review-scores"] .swp-toggle-icon {
+  color: var(--swp-review-scores);
+}
+
+.swp-steamdeck-icon {
+  background: var(--swp-sd-tile-base);
+}
+
+.swp-steamdeck-icon svg {
+  width: 90%;
+  height: 90%;
+}
+
+.swp-toggle-content {
+  min-width: 0;
+}
+
+.swp-toggle-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--swp-text-primary);
+  letter-spacing: 0.01em;
+}
+
+.swp-toggle-desc {
+  font-size: 12px;
+  color: var(--swp-text-secondary);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+.swp-toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 20px;
+}
+
+.swp-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.swp-toggle-switch .swp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--swp-bg-input);
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.swp-toggle-switch .swp-slider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  top: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.swp-toggle-switch input:checked + .swp-slider {
+  background: var(--swp-accent);
+}
+
+.swp-toggle-switch input:checked + .swp-slider::before {
+  transform: translateX(20px);
+  background: #ffffff;
+}
+
+.swp-toggle-switch input:focus-visible + .swp-slider {
+  outline: 2px solid var(--swp-accent);
+  outline-offset: 2px;
+}
+
+.swp-toggle-item.swp-has-select {
+  grid-template-columns: var(--swp-icon-size, 40px) 1fr 160px auto;
+}
+
+.swp-inline-select {
+  width: 160px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--swp-border-color);
+  background: var(--swp-bg-input);
+  color: var(--swp-text-primary);
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .swp-toggle-item.swp-has-select {
+    grid-template-columns: var(--swp-icon-size, 40px) 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .swp-inline-select {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    width: 100%;
+    margin-top: 8px;
+  }
+}

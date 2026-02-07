@@ -1,0 +1,29 @@
+.swp-stat-box {
+  text-align: center;
+  background: var(--swp-card-bg);
+  border: 1px solid var(--swp-card-border);
+  border-radius: 8px;
+  padding: 12px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.swp-stat-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--swp-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.swp-stat-label {
+  font-size: 10px;
+  color: var(--swp-text-muted);
+  margin-top: 2px;
+}
+
+.swp-stat-compact {
+  padding: 10px 8px;
+}
+
+.swp-stat-compact .swp-stat-value {
+  font-size: 1.2rem;
+}

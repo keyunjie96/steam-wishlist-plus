@@ -75,6 +75,12 @@ module.exports = {
   // Module paths for imports
   moduleDirectories: ['node_modules', '<rootDir>'],
 
+  // Map Preact imports to UMD builds for Jest
+  moduleNameMapper: {
+    '^preact$': '<rootDir>/src/vendor/preact.umd.js',
+    '^preact/hooks$': '<rootDir>/src/vendor/preact-hooks.umd.js'
+  },
+
   // No transformation needed for CommonJS output
   transform: {},
 

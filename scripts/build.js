@@ -30,14 +30,14 @@ const files = [
   'resolver.ts',
   'background.ts',
   'content.ts',
-  'options.ts',
-  'popup.ts',
+  'options.tsx',
+  'popup.tsx',
 ];
 
 async function build() {
   for (const file of files) {
     const entryPoint = path.join(srcDir, file);
-    const outfile = path.join(distDir, file.replace('.ts', '.js'));
+    const outfile = path.join(distDir, file.replace(/\.tsx?$/, '.js'));
 
     await esbuild.build({
       entryPoints: [entryPoint],
@@ -47,6 +47,9 @@ async function build() {
       platform: 'browser',
       target: 'es2020',
       sourcemap: true,
+      jsx: 'transform',
+      jsxFactory: 'h',
+      jsxFragment: 'Fragment',
       // Preserve istanbul ignore comments for test coverage
       legalComments: 'inline',
       // Mark chrome as external (it's a global in extensions)
@@ -57,9 +60,13 @@ async function build() {
         setup(build) {
           // Mark all ./foo imports as external - we load them via importScripts
           build.onResolve({ filter: /^\.\.?\// }, args => {
-            // Only externalize .ts/.js imports from src directory
             if (args.importer.includes('/src/')) {
-              return { path: args.path, external: true };
+              const isComponentImport = args.path.includes('/components/') || args.path.startsWith('./components/');
+              const isPreactShim = args.path === './preact' || args.path === '../preact' || args.path.endsWith('/preact');
+              const shouldBundle = isComponentImport || isPreactShim;
+              if (!shouldBundle) {
+                return { path: args.path, external: true };
+              }
             }
           });
         }

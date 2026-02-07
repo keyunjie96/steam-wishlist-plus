@@ -12,6 +12,10 @@ global.chrome = chromeMock;
 // Install globalThis mock (used by extension modules)
 global.globalThis = global;
 
+// Install Preact globals for bundled UI scripts (UMD builds for Jest)
+global.preact = require('preact');
+global.preactHooks = require('preact/hooks');
+
 // Mock fetch for network tests
 global.fetch = jest.fn();
 
