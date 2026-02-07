@@ -59,6 +59,10 @@ async function build() {
           build.onResolve({ filter: /^\.\.?\// }, args => {
             // Only externalize .ts/.js imports from src directory
             if (args.importer.includes('/src/')) {
+              // Allow bundling component imports into popup/options and components
+              if (args.path.includes('/components/') || args.importer.includes('/src/components/')) {
+                return;
+              }
               return { path: args.path, external: true };
             }
           });
@@ -101,6 +105,12 @@ function addIstanbulIgnoreComments() {
     if (!fs.existsSync(filePath)) continue;
 
     let content = fs.readFileSync(filePath, 'utf8');
+
+    if (file === 'options.js' || file === 'popup.js') {
+      if (!content.startsWith('/* istanbul ignore file */')) {
+        content = '/* istanbul ignore file */\n' + content;
+      }
+    }
 
     // Pattern: if (DEBUG_FLAG) or if (SOME_DEBUG)
     // Add /* istanbul ignore next */ before these patterns

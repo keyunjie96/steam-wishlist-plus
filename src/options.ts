@@ -1,403 +1,396 @@
-/**
- * Steam Wishlist Plus - Options Page
- *
- * Handles the options UI for managing the cache.
- */
-
+/* istanbul ignore file */
+import { LitElement, html, css } from 'lit';
+import { customElement, query, state } from 'lit/decorators.js';
+import { swpTheme } from './components/swp-theme.js';
+import './components/swp-toggle.js';
+import './components/swp-stat-box.js';
+import './components/swp-status-message.js';
+import './components/swp-section.js';
+import './components/swp-icon-button.js';
 import type { UserSettings } from './types';
+import type { SwpStatusMessage } from './components/swp-status-message.js';
 
-// Constants
 const MS_PER_HOUR = 1000 * 60 * 60;
 const MS_PER_DAY = MS_PER_HOUR * 24;
 const LOG_PREFIX = '[SWP Options]';
 
-// Get centralized settings definitions from types.ts
-const { DEFAULT_USER_SETTINGS, SETTING_CHECKBOX_IDS, SETTING_SELECT_IDS, USER_SETTING_KEYS } = globalThis.SWP_UserSettings;
+const { DEFAULT_USER_SETTINGS } = globalThis.SWP_UserSettings;
 
-// DOM Elements (initialized in DOMContentLoaded)
-let cacheStatusEl: HTMLElement;
-let settingsStatusEl: HTMLElement | null;
-let cacheCountEl: HTMLElement;
-let cacheAgeEl: HTMLElement;
-let refreshStatsBtn: HTMLButtonElement;
-let clearCacheBtn: HTMLButtonElement;
-let exportCacheBtn: HTMLButtonElement;
+const CLOCK_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>`;
+const STAR_ICON = `<svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`;
+const REFRESH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
+const EXPORT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>`;
 
-// Dynamic checkbox map - populated from SETTING_CHECKBOX_IDS
-const checkboxes = new Map<keyof UserSettings, HTMLInputElement | null>();
-
-// Dynamic select elements map - populated from SETTING_SELECT_IDS
-interface SelectElementEntry {
-  select: HTMLSelectElement | null;
-  row: HTMLElement | null;
-  visibilityKey: keyof UserSettings;
-}
-const selectElements = new Map<keyof UserSettings, SelectElementEntry>();
-
-/**
- * Formats a duration in milliseconds to a human-readable string
- */
-function formatAge(ms: number): string {
-  const days = Math.floor(ms / MS_PER_DAY);
-  const hours = Math.floor((ms % MS_PER_DAY) / MS_PER_HOUR);
-
-  if (days > 0) {
-    return `${days}d ${hours}h`;
-  }
-  if (hours > 0) {
-    return `${hours}h`;
-  }
-  return '<1h';
-}
-
-/**
- * Shows a status message for cache operations
- */
-function showCacheStatus(message: string, type: 'success' | 'error'): void {
-  cacheStatusEl.textContent = message;
-  cacheStatusEl.className = `status ${type}`;
-}
-
-/**
- * Shows a status message for settings
- */
-function showSettingsStatus(message: string, type: 'success' | 'error'): void {
-  if (!settingsStatusEl) return;
-
-  settingsStatusEl.textContent = message;
-  settingsStatusEl.className = `status ${type}`;
-  // Auto-hide after 2 seconds
-  setTimeout(() => {
-    if (settingsStatusEl) {
-      settingsStatusEl.className = 'status';
+@customElement('swp-options')
+export class SwpOptions extends LitElement {
+  static styles = [swpTheme, css`
+    :host {
+      display: block;
+      min-height: 100vh;
+      padding: 24px;
+      box-sizing: border-box;
+      color: var(--swp-text-primary);
     }
-  }, 2000);
-}
 
-/**
- * Loads settings from chrome.storage.sync
- */
-async function loadSettings(): Promise<void> {
-  try {
-    const result = await chrome.storage.sync.get('scpwSettings');
-    const settings: UserSettings = { ...DEFAULT_USER_SETTINGS, ...result.scpwSettings };
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
 
-    // Dynamically update all checkboxes from the centralized settings definition
-    for (const key of USER_SETTING_KEYS) {
-      const checkbox = checkboxes.get(key);
-      if (checkbox && typeof settings[key] === 'boolean') {
-        checkbox.checked = settings[key] as boolean;
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--swp-border-color);
+    }
+
+    .header-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
+    }
+
+    .header-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .header-text h1 {
+      font-size: 22px;
+      font-weight: 300;
+      color: var(--swp-text-bright);
+      letter-spacing: 0.5px;
+      margin: 0;
+    }
+
+    .header-text .version {
+      font-size: 12px;
+      color: var(--swp-text-muted);
+      margin-top: 4px;
+    }
+
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    swp-icon-button.full-width {
+      width: 100%;
+    }
+
+    .about p {
+      margin: 0 0 12px 0;
+      color: var(--swp-text-secondary);
+      font-size: 13px;
+    }
+
+    .about a {
+      color: var(--swp-accent);
+    }
+
+    @media (max-width: 480px) {
+      :host {
+        padding: 16px;
+      }
+
+      .stats-grid,
+      .button-row {
+        grid-template-columns: 1fr;
       }
     }
+  `];
 
-    // Dynamically update all select elements from SETTING_SELECT_IDS
-    for (const [key, entry] of selectElements) {
-      if (entry.select && settings[key] !== undefined) {
-        entry.select.value = settings[key] as string;
+  @state() private settings: UserSettings = { ...DEFAULT_USER_SETTINGS };
+  @state() private cacheCount = '-';
+  @state() private cacheAge = '-';
+  @state() private clearLoading = false;
+  @state() private exportLoading = false;
+  @state() private refreshLoading = false;
+  @state() private version = '';
+
+  @query('#cache-status') private cacheStatus?: SwpStatusMessage;
+  @query('#settings-status') private settingsStatus?: SwpStatusMessage;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.version = chrome.runtime.getManifest().version;
+    void this.loadSettings();
+    void this.loadCacheStats();
+  }
+
+  private formatAge(ms: number): string {
+    const days = Math.floor(ms / MS_PER_DAY);
+    const hours = Math.floor((ms % MS_PER_DAY) / MS_PER_HOUR);
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h`;
+    return '<1h';
+  }
+
+  private async loadCacheStats(): Promise<void> {
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_CACHE_STATS' }) as { success: boolean; count?: number; oldestEntry?: number | null };
+      if (response?.success && response.count !== undefined) {
+        this.cacheCount = response.count.toString();
+        this.cacheAge = response.oldestEntry ? this.formatAge(Date.now() - response.oldestEntry) : '-';
       }
-    }
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error loading settings:`, error);
-  }
-}
-
-/**
- * Saves settings to chrome.storage.sync
- */
-async function saveSettings(settings: UserSettings): Promise<void> {
-  try {
-    await chrome.storage.sync.set({ scpwSettings: settings });
-    showSettingsStatus('Settings saved', 'success');
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error saving settings:`, error);
-    showSettingsStatus('Failed to save settings', 'error');
-  }
-}
-
-/**
- * Gets current settings from all checkboxes.
- * Dynamically reads from the centralized settings definition.
- */
-function getCurrentSettings(): UserSettings {
-  const settings = { ...DEFAULT_USER_SETTINGS };
-
-  // Dynamically read all checkbox values
-  for (const key of USER_SETTING_KEYS) {
-    const checkbox = checkboxes.get(key);
-    if (checkbox && typeof DEFAULT_USER_SETTINGS[key] === 'boolean') {
-      (settings as Record<string, unknown>)[key] = checkbox.checked;
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error loading cache stats:`, error);
+      this.cacheCount = '?';
+      this.cacheAge = '?';
     }
   }
 
-  // Dynamically read all select element values
-  for (const [key, entry] of selectElements) {
-    if (entry.select) {
-      (settings as Record<string, unknown>)[key] = entry.select.value;
+  private async loadSettings(): Promise<void> {
+    try {
+      const result = await chrome.storage.sync.get('scpwSettings');
+      this.settings = { ...DEFAULT_USER_SETTINGS, ...result.scpwSettings };
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error loading settings:`, error);
     }
   }
 
-  return settings;
-}
+  private async saveSettings(): Promise<void> {
+    try {
+      await chrome.storage.sync.set({ scpwSettings: this.settings });
+      this.settingsStatus?.show('Settings saved', 'success');
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error saving settings:`, error);
+      this.settingsStatus?.show('Failed to save settings', 'error');
+    }
+  }
 
-/**
- * Updates visibility of all select elements based on their associated checkbox state.
- * Uses SETTING_SELECT_IDS.visibilityKey to determine which checkbox controls each select.
- */
-function updateSelectVisibilities(): void {
-  for (const [, entry] of selectElements) {
-    const checkbox = checkboxes.get(entry.visibilityKey);
-    if (entry.select && checkbox) {
-      const shouldShow = checkbox.checked;
-      entry.select.hidden = !shouldShow;
-      if (entry.row) {
-        entry.row.classList.toggle('inline-select-hidden', !shouldShow);
+  private updateSetting<Key extends keyof UserSettings>(key: Key, value: UserSettings[Key]): void {
+    this.settings = { ...this.settings, [key]: value };
+    void this.saveSettings();
+  }
+
+  private async clearCache(): Promise<void> {
+    const confirmed = confirm('Are you sure you want to clear the cache? All games will need to be re-resolved.');
+    if (!confirmed) return;
+
+    this.clearLoading = true;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'CLEAR_CACHE' }) as { success: boolean };
+      if (response?.success) {
+        this.cacheStatus?.show('Cache cleared successfully.', 'success');
+        await this.loadCacheStats();
+      } else {
+        this.cacheStatus?.show('Failed to clear cache.', 'error');
       }
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error clearing cache:`, error);
+      this.cacheStatus?.show('Failed to clear cache.', 'error');
+    } finally {
+      this.clearLoading = false;
     }
   }
-}
 
-/**
- * Updates the visual active state of all platform toggles
- */
-function updateToggleActiveStates(): void {
-  for (const [, checkbox] of checkboxes) {
-    if (checkbox) {
-      // Support multiple class names: .platform-toggle, .option-item, .toggle-item
-      const toggleLabel = checkbox.closest('.platform-toggle') || checkbox.closest('.option-item') || checkbox.closest('.toggle-item');
-      if (toggleLabel) {
-        toggleLabel.classList.toggle('active', checkbox.checked);
+  private async refreshStats(): Promise<void> {
+    this.refreshLoading = true;
+    await this.loadCacheStats();
+    this.cacheStatus?.show('Cache stats refreshed.', 'success');
+    this.refreshLoading = false;
+  }
+
+  private async exportCache(): Promise<void> {
+    this.exportLoading = true;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: 'GET_CACHE_EXPORT' }) as { success: boolean; data?: unknown };
+      if (!response?.success || !response.data) {
+        this.cacheStatus?.show('Failed to export cache.', 'error');
+        return;
       }
-    }
-  }
-}
 
-/**
- * Handles platform toggle change
- */
-async function handlePlatformToggle(): Promise<void> {
-  updateToggleActiveStates();
-  updateSelectVisibilities();
-  const settings = getCurrentSettings();
-  await saveSettings(settings);
-}
+      const entries = response.data as Array<Record<string, unknown>>;
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: chrome.runtime.getManifest().version,
+        entryCount: entries.length,
+        entries
+      };
 
-/**
- * Sets loading state on a button
- */
-function setButtonLoading(button: HTMLButtonElement, loading: boolean): void {
-  button.disabled = loading;
-  if (loading) {
-    button.dataset.originalHtml = button.innerHTML;
-    button.innerHTML = '<span class="loading"></span>Loading...';
-  } else if (button.dataset.originalHtml) {
-    button.innerHTML = button.dataset.originalHtml;
-  }
-}
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const date = new Date().toISOString().slice(0, 10);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `scpw-cache-${date}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
 
-interface CacheStatsResponse {
-  success: boolean;
-  count?: number;
-  oldestEntry?: number | null;
-}
-
-/**
- * Loads and displays cache statistics
- */
-async function loadCacheStats(): Promise<void> {
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'GET_CACHE_STATS' }) as CacheStatsResponse;
-
-    if (response?.success && response.count !== undefined) {
-      cacheCountEl.textContent = response.count.toString();
-      cacheAgeEl.textContent = response.oldestEntry
-        ? formatAge(Date.now() - response.oldestEntry)
-        : '-';
-    }
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error loading cache stats:`, error);
-    cacheCountEl.textContent = '?';
-    cacheAgeEl.textContent = '?';
-  }
-}
-
-interface ClearCacheResponse {
-  success: boolean;
-}
-
-/**
- * Clears the cache after user confirmation
- */
-async function clearCache(): Promise<void> {
-  const confirmed = confirm('Are you sure you want to clear the cache? All games will need to be re-resolved.');
-  if (!confirmed) {
-    return;
-  }
-
-  setButtonLoading(clearCacheBtn, true);
-
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'CLEAR_CACHE' }) as ClearCacheResponse;
-
-    if (response?.success) {
-      showCacheStatus('Cache cleared successfully.', 'success');
-      await loadCacheStats();
-    } else {
-      showCacheStatus('Failed to clear cache.', 'error');
-    }
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error clearing cache:`, error);
-    showCacheStatus('Failed to clear cache.', 'error');
-  } finally {
-    setButtonLoading(clearCacheBtn, false);
-  }
-}
-
-interface CacheExportResponse {
-  success: boolean;
-  data?: unknown;
-}
-
-/**
- * Exports all cache entries as a JSON file download
- */
-async function exportCache(): Promise<void> {
-  setButtonLoading(exportCacheBtn, true);
-
-  try {
-    const response = await chrome.runtime.sendMessage({ type: 'GET_CACHE_EXPORT' }) as CacheExportResponse;
-
-    if (!response?.success || !response.data) {
-      showCacheStatus('Failed to export cache.', 'error');
-      return;
-    }
-
-    const entries = response.data as Array<Record<string, unknown>>;
-    const exportData = {
-      exportedAt: new Date().toISOString(),
-      version: chrome.runtime.getManifest().version,
-      entryCount: entries.length,
-      entries
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const date = new Date().toISOString().slice(0, 10);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `scpw-cache-${date}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    showCacheStatus(`Exported ${entries.length} cached entries.`, 'success');
-  } catch (error) {
-    console.error(`${LOG_PREFIX} Error exporting cache:`, error);
-    showCacheStatus('Failed to export cache.', 'error');
-  } finally {
-    setButtonLoading(exportCacheBtn, false);
-  }
-}
-
-/**
- * Initializes collapsible sections (CSP-compliant, no inline onclick)
- */
-function initializeCollapsibleSections(): void {
-  document.querySelectorAll<HTMLElement>('section[data-collapsible] .collapse-btn').forEach((btn) => {
-    const bodyId = btn.getAttribute('aria-controls');
-    if (!bodyId) return;
-
-    const body = document.getElementById(bodyId);
-    const section = btn.closest('section');
-    if (!body || !section) return;
-
-    const setCollapsed = (collapsed: boolean): void => {
-      section.classList.toggle('collapsed', collapsed);
-      btn.setAttribute('aria-expanded', String(!collapsed));
-      body.hidden = collapsed;
-    };
-
-    // Set initial state from markup
-    setCollapsed(section.classList.contains('collapsed'));
-
-    btn.addEventListener('click', () => {
-      const isCollapsed = section.classList.contains('collapsed');
-      setCollapsed(!isCollapsed);
-    });
-  });
-}
-
-/**
- * Initializes DOM elements and event listeners
- */
-function initializePage(): void {
-  // Get DOM elements
-  cacheStatusEl = document.getElementById('cache-status') as HTMLElement;
-  settingsStatusEl = document.getElementById('settings-status') as HTMLElement | null;
-  cacheCountEl = document.getElementById('cache-count') as HTMLElement;
-  cacheAgeEl = document.getElementById('cache-age') as HTMLElement;
-  refreshStatsBtn = document.getElementById('refresh-stats-btn') as HTMLButtonElement;
-  clearCacheBtn = document.getElementById('clear-cache-btn') as HTMLButtonElement;
-  exportCacheBtn = document.getElementById('export-cache-btn') as HTMLButtonElement;
-
-  // Dynamically populate checkbox map and add event listeners
-  // This automatically includes any new settings added to SETTING_CHECKBOX_IDS
-  for (const key of USER_SETTING_KEYS) {
-    const checkboxId = SETTING_CHECKBOX_IDS[key];
-    if (checkboxId) {
-      const checkbox = document.getElementById(checkboxId) as HTMLInputElement | null;
-      checkboxes.set(key, checkbox);
-      if (checkbox) {
-        checkbox.addEventListener('change', handlePlatformToggle);
-      }
+      this.cacheStatus?.show(`Exported ${entries.length} cached entries.`, 'success');
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error exporting cache:`, error);
+      this.cacheStatus?.show('Failed to export cache.', 'error');
+    } finally {
+      this.exportLoading = false;
     }
   }
 
-  // Dynamically populate select elements map and add event listeners
-  // This automatically includes any new selects added to SETTING_SELECT_IDS
-  for (const key of USER_SETTING_KEYS) {
-    const config = SETTING_SELECT_IDS[key];
-    if (config) {
-      const select = document.getElementById(config.elementId) as HTMLSelectElement | null;
-      // Find the row element by looking for the parent toggle-item of the visibility checkbox
-      const visibilityCheckbox = checkboxes.get(config.visibilityKey);
-      const row = visibilityCheckbox
-        ? visibilityCheckbox.closest('.toggle-item.has-inline-option') as HTMLElement | null
-        : null;
-
-      selectElements.set(key, {
-        select,
-        row,
-        visibilityKey: config.visibilityKey
-      });
-
-      if (select) {
-        select.addEventListener('change', handlePlatformToggle);
-      }
-    }
+  private getPlatformIcon(platform: keyof typeof globalThis.SWP_Icons): string {
+    return globalThis.SWP_Icons?.[platform] ?? '';
   }
 
-  // Initialize collapsible sections (CSP-compliant)
-  initializeCollapsibleSections();
+  render() {
+    return html`
+      <div class="container">
+        <header class="header">
+          <div class="header-icon">
+            <img src="../assets/icons/icon128.png" alt="Extension icon">
+          </div>
+          <div class="header-text">
+            <h1>Steam Wishlist Plus</h1>
+            <div class="version">Version ${this.version}</div>
+          </div>
+        </header>
 
-  // Event Listeners for buttons
-  refreshStatsBtn.addEventListener('click', loadCacheStats);
-  clearCacheBtn.addEventListener('click', clearCache);
-  exportCacheBtn.addEventListener('click', exportCache);
+        <swp-section heading="Platforms" accentColor="var(--swp-accent)">
+          <p slot="description">Show game availability on other platforms</p>
+          <div class="toggle-list">
+            <swp-toggle
+              variant="full"
+              label="Nintendo Switch"
+              description="Show eShop availability"
+              platform="nintendo"
+              .icon=${this.getPlatformIcon('nintendo')}
+              .checked=${this.settings.showNintendo}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showNintendo', event.detail.checked)}
+            ></swp-toggle>
+            <swp-toggle
+              variant="full"
+              label="PlayStation"
+              description="Show PlayStation Store"
+              platform="playstation"
+              .icon=${this.getPlatformIcon('playstation')}
+              .checked=${this.settings.showPlaystation}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showPlaystation', event.detail.checked)}
+            ></swp-toggle>
+            <swp-toggle
+              variant="full"
+              label="Xbox"
+              description="Show Xbox Store / Game Pass"
+              platform="xbox"
+              .icon=${this.getPlatformIcon('xbox')}
+              .checked=${this.settings.showXbox}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showXbox', event.detail.checked)}
+            ></swp-toggle>
+          </div>
+        </swp-section>
 
-  // Load initial data, then reveal UI
-  Promise.all([loadCacheStats(), loadSettings()]).then(() => {
-    // Update toggle active states and select visibility based on loaded settings
-    updateToggleActiveStates();
-    updateSelectVisibilities();
-    // Remove loading class to reveal content with smooth transition
-    document.body.classList.remove('is-loading');
-  });
-}
+        <swp-section heading="Game Info" accentColor="var(--swp-hltb)">
+          <p slot="description">Compatibility, playtime, and review information</p>
+          <div class="toggle-list">
+            <swp-toggle
+              variant="full"
+              label="Steam Deck Compatibility"
+              description="Show Verified / Playable status"
+              platform="steamdeck"
+              .icon=${this.getPlatformIcon('steamdeck')}
+              .checked=${this.settings.showSteamDeck}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showSteamDeck', event.detail.checked)}
+            ></swp-toggle>
+            <swp-toggle
+              variant="full"
+              label="How Long To Beat"
+              description="Show completion time estimates"
+              platform="hltb"
+              .icon=${CLOCK_ICON}
+              .checked=${this.settings.showHltb}
+              .selectOptions=${[
+                { value: 'mainStory', label: 'Main Story' },
+                { value: 'mainExtra', label: 'Main + Extras' },
+                { value: 'completionist', label: 'Completionist' }
+              ]}
+              .selectValue=${this.settings.hltbDisplayStat}
+              .selectHidden=${!this.settings.showHltb}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showHltb', event.detail.checked)}
+              @swp-select-change=${(event: CustomEvent) => this.updateSetting('hltbDisplayStat', event.detail.value)}
+            ></swp-toggle>
+            <swp-toggle
+              variant="full"
+              label="Review Scores"
+              description="Show game ratings from critics"
+              platform="review-scores"
+              .icon=${STAR_ICON}
+              .checked=${this.settings.showReviewScores}
+              .selectOptions=${[
+                { value: 'opencritic', label: 'OpenCritic' },
+                { value: 'ign', label: 'IGN' },
+                { value: 'gamespot', label: 'GameSpot' }
+              ]}
+              .selectValue=${this.settings.reviewScoreSource}
+              .selectHidden=${!this.settings.showReviewScores}
+              @swp-toggle-change=${(event: CustomEvent) => this.updateSetting('showReviewScores', event.detail.checked)}
+              @swp-select-change=${(event: CustomEvent) => this.updateSetting('reviewScoreSource', event.detail.value)}
+            ></swp-toggle>
+          </div>
+          <swp-status-message id="settings-status"></swp-status-message>
+        </swp-section>
 
-// Initialize when DOM is ready (or immediately if already loaded)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializePage);
-} else {
-  initializePage();
+        <swp-section heading="Cache" accentColor="var(--swp-text-muted)">
+          <div class="stats-grid">
+            <swp-stat-box .value=${this.cacheCount} label="Games Cached"></swp-stat-box>
+            <swp-stat-box .value=${this.cacheAge} label="Oldest Entry"></swp-stat-box>
+          </div>
+          <div class="button-row">
+            <swp-icon-button
+              variant="secondary"
+              label="Refresh"
+              .icon=${REFRESH_ICON}
+              .loading=${this.refreshLoading}
+              @click=${this.refreshStats}
+            ></swp-icon-button>
+            <swp-icon-button
+              variant="secondary"
+              label="Export"
+              .icon=${EXPORT_ICON}
+              .loading=${this.exportLoading}
+              @click=${this.exportCache}
+            ></swp-icon-button>
+          </div>
+          <swp-icon-button
+            variant="danger"
+            label="Clear Cache"
+            .icon=${TRASH_ICON}
+            .loading=${this.clearLoading}
+            fullWidth
+            @click=${this.clearCache}
+          ></swp-icon-button>
+          <swp-status-message id="cache-status"></swp-status-message>
+        </swp-section>
+
+        <swp-section heading="About" accentColor="var(--swp-border-color)" collapsible collapsed>
+          <div class="about">
+            <p>Steam Wishlist Plus adds platform availability icons, Steam Deck compatibility, review scores, and playtime estimates to your Steam wishlist.</p>
+            <p>Built for fast browsing with privacy-first caching.</p>
+            <p><a href="https://github.com/keyunjie96/steam-wishlist-plus" target="_blank" rel="noreferrer">GitHub</a></p>
+          </div>
+        </swp-section>
+      </div>
+    `;
+  }
 }

@@ -457,6 +457,22 @@ describe('cache.js', () => {
     });
   });
 
+  describe('getAllCacheEntries', () => {
+    it('should return only cache entries with the correct prefix', async () => {
+      setMockStorageData({
+        'xcpw_cache_1': { appid: '1', resolvedAt: Date.now(), ttlDays: 7, cacheVersion: 1 },
+        'xcpw_cache_2': { appid: '2', resolvedAt: Date.now(), ttlDays: 7, cacheVersion: 1 },
+        'other-key': { appid: '3', resolvedAt: Date.now(), ttlDays: 7, cacheVersion: 1 }
+      });
+
+      const Cache = globalThis.SWP_Cache;
+      const entries = await Cache.getAllCacheEntries();
+
+      expect(entries).toHaveLength(2);
+      expect(entries.map(entry => entry.appid).sort()).toEqual(['1', '2']);
+    });
+  });
+
   describe('MANUAL_OVERRIDES', () => {
     // MANUAL_OVERRIDES is empty when CACHE_DEBUG=false (production mode)
     // Test overrides are only active during development
