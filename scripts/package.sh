@@ -19,9 +19,12 @@ rm -f "$FILENAME"
 # Create zip with only required files
 zip -r "$FILENAME" \
   manifest.json \
+  dist/preact-vendor.js \
   dist/*.js \
   src/options.html \
   src/popup.html \
+  src/popup.css \
+  src/options.css \
   src/styles.css \
   assets/icons/icon16.png \
   assets/icons/icon48.png \

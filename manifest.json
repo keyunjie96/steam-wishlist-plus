@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steam Wishlist Plus",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Adds platform availability, review scores, and completion times to your Steam wishlist",
   "icons": {
     "16": "assets/icons/icon16.png",

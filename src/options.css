@@ -1,0 +1,615 @@
+/* Options page styles - extracted from options.html inline styles */
+
+:root {
+  /* Steam-inspired color palette */
+  --bg-body: #1b2838;
+  --bg-card: #16202d;
+  --bg-input: #32404f;
+  --bg-hover: rgba(255, 255, 255, 0.075);
+
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.68);
+  --text-bright: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.45);
+
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+
+  --accent: #4aa3ff;
+
+  --nintendo: #e60012;
+  --playstation: #006fcd;
+  --xbox: #107c10;
+  --hltb: #4aa3ff;
+  --review-scores: #ffcc33;
+
+  --sd-tile-base: #343a43;
+  --sd-arc: #ffffff;
+
+  --success: #5ba32b;
+  --danger: #c03030;
+
+  --icon-size: 40px;
+  --col-gap: 12px;
+
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.08);
+
+  --gradient-button: linear-gradient(to right, #47bfff 0%, #1a9fff 100%);
+  --gradient-button-hover: linear-gradient(to right, #5bc7ff 0%, #47bfff 100%);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+  background: linear-gradient(to bottom, #1b2838 0%, #171a21 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.swp-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Header */
+.swp-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.swp-header-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.swp-header-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swp-header-text h1 {
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--text-bright);
+  letter-spacing: 0.5px;
+}
+
+.swp-header-text .swp-version {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Sections */
+.swp-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.swp-section-header {
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+  border-left: 3px solid var(--text-muted);
+}
+
+.swp-section-header h2 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin: 0;
+}
+
+/* Collapsible section button */
+.swp-collapse-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.swp-collapse-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.swp-collapse-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.swp-collapse-icon {
+  color: var(--text-muted);
+  font-size: 10px;
+  transition: transform 0.15s ease;
+  opacity: 0.7;
+}
+
+.swp-section:not(.swp-collapsed) .swp-collapse-icon {
+  transform: rotate(90deg);
+}
+
+.swp-section-body {
+  padding: 12px 16px;
+}
+
+.swp-section-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* Toggle list */
+.swp-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swp-toggle-item {
+  display: grid;
+  grid-template-columns: var(--icon-size) 1fr auto;
+  align-items: center;
+  column-gap: var(--col-gap);
+  padding: 14px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+}
+
+.swp-toggle-item:hover {
+  background: var(--bg-hover);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.swp-toggle-item:has(input:focus-visible) {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-toggle-item:focus-within {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-toggle-item.swp-active {
+  background: var(--card-bg);
+  border-color: rgba(74, 163, 255, 0.32);
+  box-shadow: 0 0 0 2px rgba(74, 163, 255, 0.10);
+}
+
+/* Platform icon */
+.swp-toggle-icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-input);
+  transition: all 0.2s;
+}
+
+.swp-toggle-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  display: block;
+  opacity: 0.8;
+}
+
+/* Steam Deck icon needs larger size */
+.swp-steamdeck-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.swp-toggle-item[data-platform="nintendo"] .swp-toggle-icon { color: var(--nintendo); }
+.swp-toggle-item[data-platform="playstation"] .swp-toggle-icon { color: var(--playstation); }
+.swp-toggle-item[data-platform="xbox"] .swp-toggle-icon { color: var(--xbox); }
+.swp-toggle-item[data-platform="hltb"] .swp-toggle-icon { color: var(--hltb); }
+.swp-toggle-item[data-platform="review-scores"] .swp-toggle-icon { color: var(--review-scores); }
+
+/* Active icon tint for all platforms EXCEPT Steam Deck */
+.swp-toggle-item.swp-active:not([data-platform="steamdeck"]) .swp-toggle-icon {
+  background: currentColor;
+}
+
+.swp-toggle-item.swp-active:not([data-platform="steamdeck"]) .swp-toggle-icon svg {
+  fill: white;
+  opacity: 1;
+}
+
+.swp-toggle-item[data-platform="steamdeck"]:not(.swp-active) .swp-toggle-icon {
+  opacity: 0.6;
+  filter: saturate(0.7) brightness(0.9);
+}
+
+.swp-toggle-item:not(.swp-active):not([data-platform="steamdeck"]) .swp-toggle-icon {
+  opacity: 0.5;
+  filter: saturate(0.5);
+}
+
+/* Steam Deck icon tile */
+.swp-toggle-item[data-platform="steamdeck"] .swp-toggle-icon {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.22)),
+    var(--sd-tile-base);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.swp-toggle-item[data-platform="steamdeck"] .swp-toggle-icon svg {
+  fill: none;
+  opacity: 1;
+}
+
+.swp-toggle-item[data-platform="steamdeck"] .swp-toggle-icon svg path:nth-of-type(2) {
+  fill: var(--sd-arc);
+}
+
+.swp-toggle-content {
+  min-width: 0;
+}
+
+.swp-toggle-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+}
+
+.swp-toggle-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Toggle switch */
+.swp-toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 20px;
+}
+
+.swp-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.swp-toggle-switch .swp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--bg-input);
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.swp-toggle-switch .swp-slider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  top: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.swp-toggle-switch input:checked + .swp-slider {
+  background: var(--accent);
+}
+
+.swp-toggle-switch input:checked + .swp-slider::before {
+  transform: translateX(20px);
+  background: white;
+}
+
+.swp-toggle-switch input:focus-visible + .swp-slider {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggle item with inline select (4-column grid) */
+.swp-toggle-item.swp-has-select {
+  grid-template-columns: var(--icon-size) 1fr 160px auto;
+}
+
+.swp-inline-select {
+  grid-column: 3;
+  width: 160px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  align-self: center;
+  justify-self: end;
+  margin-right: 8px;
+}
+
+.swp-toggle-item.swp-has-select .swp-toggle-switch {
+  grid-column: 4;
+  justify-self: end;
+}
+
+.swp-toggle-item.swp-select-hidden {
+  grid-template-columns: var(--icon-size) 1fr auto;
+}
+
+.swp-toggle-item.swp-select-hidden .swp-toggle-switch {
+  grid-column: 3;
+}
+
+.swp-inline-select:hover {
+  border-color: var(--accent);
+}
+
+.swp-inline-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Stats grid */
+.swp-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.swp-stat-box {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  text-align: center;
+}
+
+.swp-stat-value {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+  min-height: 1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.swp-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Steam-style buttons */
+.swp-button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.swp-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: 100%;
+}
+
+.swp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.swp-btn-primary {
+  background: var(--gradient-button);
+  color: white;
+}
+
+.swp-btn-primary:hover:not(:disabled) {
+  background: var(--gradient-button-hover);
+}
+
+.swp-btn-secondary {
+  background: rgba(103, 193, 245, 0.2);
+  color: #67c1f5;
+}
+
+.swp-btn-secondary:hover:not(:disabled) {
+  background: rgba(103, 193, 245, 0.3);
+}
+
+.swp-btn-danger {
+  background: rgba(192, 48, 48, 0.3);
+  color: #e87070;
+}
+
+.swp-btn-danger:hover:not(:disabled) {
+  background: rgba(192, 48, 48, 0.5);
+}
+
+.swp-btn-full {
+  margin-top: 10px;
+}
+
+.swp-btn svg,
+.swp-btn-icon svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: block;
+}
+
+.swp-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: swp-spin 0.7s linear infinite;
+}
+
+@keyframes swp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Status messages */
+.swp-status {
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.swp-status-success {
+  background: rgba(91, 163, 43, 0.2);
+  color: #8bc34a;
+  border-left: 3px solid var(--success);
+}
+
+.swp-status-error {
+  background: rgba(192, 48, 48, 0.2);
+  color: #e87070;
+  border-left: 3px solid var(--danger);
+}
+
+/* Info box */
+.swp-info-box {
+  background: var(--bg-input);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-left: 3px solid var(--accent);
+}
+
+.swp-info-box strong {
+  color: var(--text-bright);
+  font-weight: 500;
+}
+
+.swp-info-box a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.swp-info-box a:hover {
+  text-decoration: underline;
+}
+
+.swp-info-box ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.swp-info-box li {
+  padding: 2px 0;
+}
+
+.swp-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 12px 0;
+}
+
+/* Focus styles */
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  body {
+    padding: 16px;
+  }
+
+  .swp-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .swp-button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .swp-toggle-item.swp-has-select {
+    grid-template-columns: var(--icon-size) 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .swp-toggle-item.swp-has-select .swp-toggle-switch {
+    grid-column: 3;
+  }
+
+  .swp-toggle-item.swp-has-select .swp-inline-select {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    width: 100%;
+    margin: 8px 0 0;
+  }
+}
