@@ -489,14 +489,16 @@ describe('popup.js', () => {
       });
     });
 
-    it('should show success status when settings are saved', async () => {
+    it('should save settings silently without status message', async () => {
       await loadPopup();
 
       const checkboxes = appEl.querySelectorAll('input[type="checkbox"]');
       checkboxes[0].click();
       await flush();
 
-      expect(getAppText()).toContain('saved');
+      // Settings saved silently - no "saved" message shown in popup
+      expect(getAppText()).not.toContain('saved');
+      expect(chrome.storage.sync.set).toHaveBeenCalled();
     });
 
     it('should show error status when settings fail to save', async () => {

@@ -470,6 +470,12 @@ export interface WikidataResult {
 export type DeckCategory = 0 | 1 | 2 | 3;
 export type DeckStatus = 'unknown' | 'unsupported' | 'playable' | 'verified';
 
+export interface DeckCacheEntry {
+  data: Record<string, DeckCategory>;
+  updatedAt: number;
+  cacheVersion: number;
+}
+
 // HLTB (How Long To Beat) types
 export interface HltbData {
   hltbId: number;        // HLTB game ID for linking

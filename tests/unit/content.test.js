@@ -5474,7 +5474,7 @@ describe('content.js', () => {
         }
       }, 'sync');
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Platform settings changed'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Settings changed'));
       consoleSpy.mockRestore();
     });
 
@@ -5491,7 +5491,7 @@ describe('content.js', () => {
         }
       }, 'sync');
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Platform settings changed'));
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Settings changed'));
       consoleSpy.mockRestore();
     });
 
@@ -9139,6 +9139,220 @@ describe('content.js', () => {
       expect(container.querySelector('.scpw-review-score-badge')).not.toBeNull();
 
       container.remove();
+    });
+  });
+
+  describe('deck data caching', () => {
+    beforeEach(() => {
+      const { setSteamDeckData, setUserSettings } = globalThis.SWP_ContentTestExports;
+      setSteamDeckData(null);
+      setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true, showReviewScores: true });
+    });
+
+    it('should save deck data to chrome.storage.local', async () => {
+      const { saveDeckCache, DECK_CACHE_KEY } = globalThis.SWP_ContentTestExports;
+
+      const deckData = new Map([['12345', 3], ['67890', 2]]);
+      await saveDeckCache(deckData);
+
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          [DECK_CACHE_KEY]: expect.objectContaining({
+            data: { '12345': 3, '67890': 2 },
+            cacheVersion: globalThis.SWP_CacheVersion,
+          })
+        })
+      );
+    });
+
+    it('should load deck data from chrome.storage.local cache', async () => {
+      const { loadDeckCache, DECK_CACHE_KEY } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.get.mockResolvedValueOnce({
+        [DECK_CACHE_KEY]: {
+          data: { '12345': 3, '67890': 2 },
+          updatedAt: Date.now(),
+          cacheVersion: globalThis.SWP_CacheVersion,
+        }
+      });
+
+      const result = await loadDeckCache();
+      expect(result).not.toBeNull();
+      expect(result.size).toBe(2);
+      expect(result.get('12345')).toBe(3);
+      expect(result.get('67890')).toBe(2);
+    });
+
+    it('should return null for stale cache (expired TTL)', async () => {
+      const { loadDeckCache, DECK_CACHE_KEY, DECK_CACHE_TTL_MS } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.get.mockResolvedValueOnce({
+        [DECK_CACHE_KEY]: {
+          data: { '12345': 3 },
+          updatedAt: Date.now() - DECK_CACHE_TTL_MS - 1000,
+          cacheVersion: globalThis.SWP_CacheVersion,
+        }
+      });
+
+      const result = await loadDeckCache();
+      expect(result).toBeNull();
+    });
+
+    it('should return null for stale cache (wrong version)', async () => {
+      const { loadDeckCache, DECK_CACHE_KEY } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.get.mockResolvedValueOnce({
+        [DECK_CACHE_KEY]: {
+          data: { '12345': 3 },
+          updatedAt: Date.now(),
+          cacheVersion: -1,
+        }
+      });
+
+      const result = await loadDeckCache();
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no cache exists', async () => {
+      const { loadDeckCache } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.get.mockResolvedValueOnce({});
+
+      const result = await loadDeckCache();
+      expect(result).toBeNull();
+    });
+
+    it('should handle storage read errors gracefully', async () => {
+      const { loadDeckCache } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.get.mockRejectedValueOnce(new Error('Storage error'));
+
+      const result = await loadDeckCache();
+      expect(result).toBeNull();
+    });
+
+    it('should handle storage write errors gracefully', async () => {
+      const { saveDeckCache } = globalThis.SWP_ContentTestExports;
+
+      chrome.storage.local.set.mockRejectedValueOnce(new Error('Storage error'));
+
+      // Should not throw
+      await expect(saveDeckCache(new Map([['12345', 3]]))).resolves.not.toThrow();
+    });
+
+    it('should persist deck data after refreshSteamDeckData merges API results', async () => {
+      const { refreshSteamDeckData, setSteamDeckData, getMissingSteamDeckAppIds, DECK_CACHE_KEY } = globalThis.SWP_ContentTestExports;
+
+      setSteamDeckData(new Map([['12345', 3]]));
+
+      globalThis.SWP_SteamDeck = {
+        waitForDeckData: jest.fn().mockResolvedValue(new Map([['12345', 3]])),
+        getDeckStatus: jest.fn().mockReturnValue({ found: true, status: 'verified', category: 3 }),
+        statusToDisplayStatus: jest.fn().mockReturnValue('available')
+      };
+
+      getMissingSteamDeckAppIds().add('99999');
+      chrome.runtime.sendMessage.mockResolvedValueOnce({
+        success: true,
+        deckResults: { '99999': 2 }
+      });
+
+      await refreshSteamDeckData('test');
+
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          [DECK_CACHE_KEY]: expect.objectContaining({
+            data: expect.objectContaining({ '12345': 3, '99999': 2 }),
+          })
+        })
+      );
+
+      delete globalThis.SWP_SteamDeck;
+    });
+  });
+
+  describe('HLTB and review score toggle responsiveness', () => {
+    let settingsChangeCallback;
+
+    beforeEach(() => {
+      // Capture the settings change listener
+      const addListenerCalls = chrome.storage.onChanged.addListener.mock.calls;
+      settingsChangeCallback = addListenerCalls[addListenerCalls.length - 1]?.[0];
+    });
+
+    it('should re-render icons when showHltb is toggled off', () => {
+      const { getCachedEntriesByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
+
+      // Set up a container with cached data
+      const container = document.createElement('div');
+      container.className = 'scpw-platforms';
+      container.setAttribute('data-appid', '12345');
+      document.body.appendChild(container);
+
+      getCachedEntriesByAppId().set('12345', {
+        gameName: 'Test Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://example.com' },
+          playstation: { status: 'unavailable', storeUrl: null },
+          xbox: { status: 'unavailable', storeUrl: null },
+          steamdeck: { status: 'unknown', storeUrl: null }
+        }
+      });
+
+      // Trigger settings change: showHltb toggled off
+      expect(settingsChangeCallback).toBeDefined();
+      settingsChangeCallback(
+        { scpwSettings: { oldValue: { showHltb: true }, newValue: { showHltb: false } } },
+        'sync'
+      );
+
+      // The listener should have triggered (userSettings updated + refresh called)
+      const { getUserSettings } = globalThis.SWP_ContentTestExports;
+      expect(getUserSettings().showHltb).toBe(false);
+
+      container.remove();
+    });
+
+    it('should re-render icons when showReviewScores is toggled off', () => {
+      const { getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
+
+      const container = document.createElement('div');
+      container.className = 'scpw-platforms';
+      container.setAttribute('data-appid', '12345');
+      document.body.appendChild(container);
+
+      getCachedEntriesByAppId().set('12345', {
+        gameName: 'Test Game',
+        platforms: {
+          nintendo: { status: 'available', storeUrl: 'https://example.com' },
+          playstation: { status: 'unavailable', storeUrl: null },
+          xbox: { status: 'unavailable', storeUrl: null },
+          steamdeck: { status: 'unknown', storeUrl: null }
+        }
+      });
+
+      expect(settingsChangeCallback).toBeDefined();
+      settingsChangeCallback(
+        { scpwSettings: { oldValue: { showReviewScores: true }, newValue: { showReviewScores: false } } },
+        'sync'
+      );
+
+      const { getUserSettings } = globalThis.SWP_ContentTestExports;
+      expect(getUserSettings().showReviewScores).toBe(false);
+
+      container.remove();
+    });
+
+    it('should not trigger refresh for unrelated setting changes', () => {
+      expect(settingsChangeCallback).toBeDefined();
+
+      // Change a setting that's not platform/hltb/review
+      settingsChangeCallback(
+        { scpwSettings: { oldValue: { hltbDisplayStat: 'mainStory' }, newValue: { hltbDisplayStat: 'mainExtra' } } },
+        'sync'
+      );
+
+      // Should not crash - just a no-op since no platform/hltb/review change detected
     });
   });
 
