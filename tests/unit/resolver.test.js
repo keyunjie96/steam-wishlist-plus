@@ -272,13 +272,12 @@ describe('resolver.js', () => {
     it('should use US fallback URLs when direct URL validation fails', async () => {
       const Resolver = globalThis.SWP_Resolver;
 
-      // Mock fetch to fail for all invalid store URLs (redirect to error page)
+      // Mock fetch to return 404 for invalid store URLs (product not found)
       global.fetch = jest.fn().mockImplementation((url) => {
-        // All invalid-store.com URLs fail validation (simulate error page redirect)
         if (url.includes('invalid-store.com')) {
-          return Promise.resolve({ ok: true, status: 200, url: url + '/error?notfound' });
+          return Promise.resolve({ ok: false, status: 404 });
         }
-        return Promise.resolve({ ok: true, status: 200, url: url });
+        return Promise.resolve({ ok: true, status: 200 });
       });
 
       mockWikidataClient.queryBySteamAppId.mockResolvedValueOnce({

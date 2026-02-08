@@ -81,10 +81,12 @@ function createEmptyWikidataResult(gameName: string): WikidataResult {
  */
 async function validateStoreUrl(url: string): Promise<boolean> {
   try {
-    const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-    const isErrorPage = response.url.includes('/error?') || response.url.includes('/error/');
-    const isValid = response.ok && !isErrorPage;
-    if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} URL validation: ${url} -> ${response.url}, status=${response.status}, valid=${isValid}`); /* istanbul ignore if */
+    // Use redirect: 'manual' to avoid CORS errors when stores redirect
+    // to domains outside our host_permissions (e.g. nintendo.com → support.nintendo.com)
+    const response = await fetch(url, { method: 'HEAD', redirect: 'manual' });
+    // 2xx = direct hit, 3xx = redirect (page exists, just moved)
+    const isValid = response.ok || (response.status >= 300 && response.status < 400);
+    if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} URL validation: ${url}, status=${response.status}, valid=${isValid}`); /* istanbul ignore if */
     return isValid;
   } catch (error) {
     if (RESOLVER_DEBUG) console.log(`${RESOLVER_LOG_PREFIX} URL validation failed for ${url}:`, error); /* istanbul ignore if */
