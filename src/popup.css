@@ -161,7 +161,7 @@ body {
   opacity: 0.55;
 }
 
-.swp-toggle-mini:focus-within {
+.swp-toggle-mini:has(:focus-visible) {
   outline: 2px solid rgba(74, 163, 255, 0.65);
   outline-offset: 1px;
   border-radius: 4px;
