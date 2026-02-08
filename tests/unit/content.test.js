@@ -3749,7 +3749,7 @@ describe('content.js', () => {
       expect(getMissingSteamDeckAppIds().has('12345')).toBe(false);
     });
 
-    it('should not update when data is empty', async () => {
+    it('should not update when data is empty and no missing appids', async () => {
       const { refreshSteamDeckData, getSteamDeckData, setSteamDeckData } = globalThis.SWP_ContentTestExports;
 
       // Set initial data
@@ -3763,6 +3763,51 @@ describe('content.js', () => {
       // Should keep old data
       const data = getSteamDeckData();
       expect(data.get('67890')).toBe(2);
+    });
+
+    it('should fetch missing deck data from background API', async () => {
+      const { refreshSteamDeckData, getSteamDeckData, setSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
+
+      // Set initial deck data from SSR (first 20 games)
+      setSteamDeckData(new Map([['12345', 3]]));
+
+      // SSR returns same data (no new items)
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
+
+      // Simulate lazy-loaded appid missing from SSR
+      getMissingSteamDeckAppIds().add('99999');
+
+      // Mock background API response
+      chrome.runtime.sendMessage.mockResolvedValueOnce({
+        success: true,
+        deckResults: { '99999': 2 }
+      });
+
+      await refreshSteamDeckData('test');
+
+      // Should have merged API data
+      const data = getSteamDeckData();
+      expect(data.get('99999')).toBe(2);
+      expect(data.get('12345')).toBe(3); // Original data preserved
+      expect(getMissingSteamDeckAppIds().has('99999')).toBe(false);
+    });
+
+    it('should handle background API failure gracefully', async () => {
+      const { refreshSteamDeckData, getSteamDeckData, setSteamDeckData, getMissingSteamDeckAppIds } = globalThis.SWP_ContentTestExports;
+
+      setSteamDeckData(new Map([['12345', 3]]));
+      globalThis.SWP_SteamDeck.waitForDeckData.mockResolvedValue(new Map([['12345', 3]]));
+      getMissingSteamDeckAppIds().add('99999');
+
+      // Mock background API failure
+      chrome.runtime.sendMessage.mockRejectedValueOnce(new Error('Service worker inactive'));
+
+      await refreshSteamDeckData('test');
+
+      // Should keep existing data, missing appid still tracked
+      const data = getSteamDeckData();
+      expect(data.get('12345')).toBe(3);
+      expect(getMissingSteamDeckAppIds().has('99999')).toBe(true);
     });
 
     it('should skip refresh when already in flight', async () => {

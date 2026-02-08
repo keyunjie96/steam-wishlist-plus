@@ -1,6 +1,6 @@
 {
   "name": "steam-wishlist-plus",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Chrome extension that adds platform availability, review scores, and completion times to your Steam wishlist",
   "repository": {
     "type": "git",
@@ -23,6 +23,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/preact": "^3.2.4",
     "@types/chrome": "^0.0.268",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.14.0",
@@ -39,6 +41,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "howlongtobeat": "^1.8.0"
+    "howlongtobeat": "^1.8.0",
+    "preact": "^10.28.3"
   }
 }

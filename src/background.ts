@@ -28,7 +28,9 @@ import type {
   ReviewScoreData,
   GetReviewScoresRequest,
   GetReviewScoresResponse,
-  GetReviewScoresBatchRequest
+  GetReviewScoresBatchRequest,
+  GetDeckDataBatchRequest,
+  GetDeckDataBatchResponse
 } from './types';
 
 const LOG_PREFIX = '[SWP Background]';
@@ -73,6 +75,7 @@ interface AsyncResponse {
   results?: Record<string, { data: CacheEntry; fromCache: boolean }>;
   hltbResults?: Record<string, HltbData | null>;
   reviewScoresResults?: Record<string, ReviewScoreData | null>;
+  deckResults?: Record<string, number | null>;
 }
 
 /**
@@ -146,6 +149,10 @@ function handleMessage(
 
     case 'GET_REVIEW_SCORES_BATCH':
       handleAsync(() => getBatchReviewScores(message as GetReviewScoresBatchRequest), sendResponse, { success: false, reviewScoresResults: {} });
+      return true;
+
+    case 'GET_DECK_DATA_BATCH':
+      handleAsync(() => getDeckDataBatch(message as GetDeckDataBatchRequest), sendResponse, { success: false, deckResults: {} });
       return true;
 
     default:
@@ -569,5 +576,57 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
   return { success: true, reviewScoresResults };
 }
 
+const STEAM_API_BASE = 'https://api.steampowered.com';
+
+/**
+ * Fetches Steam Deck compatibility data from Steam's store API for given appids.
+ * Uses IStoreBrowseService/GetItems with JSON format (no auth required).
+ */
+async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<GetDeckDataBatchResponse> {
+  const { appids } = message;
+
+  if (!appids || !Array.isArray(appids) || appids.length === 0) {
+    return { success: false, deckResults: {} };
+  }
+
+  console.log(`${LOG_PREFIX} Deck data batch request for ${appids.length} appids`);
+
+  const deckResults: Record<string, number | null> = {};
+
+  try {
+    const inputJson = JSON.stringify({
+      ids: appids.map(id => ({ appid: parseInt(id, 10) })),
+      context: { language: 'english', country_code: 'US' },
+      data_request: { include_platforms: true }
+    });
+
+    const url = `${STEAM_API_BASE}/IStoreBrowseService/GetItems/v1?format=json&input_json=${encodeURIComponent(inputJson)}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(`${LOG_PREFIX} Deck data API returned ${response.status}`);
+      return { success: false, deckResults: {} };
+    }
+
+    const data = await response.json();
+    const items = data?.response?.store_items;
+
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        const appid = String(item.appid);
+        const category = item.platforms?.steam_deck_compat_category;
+        deckResults[appid] = category ?? null;
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`${LOG_PREFIX} Deck data batch error:`, errorMessage);
+    return { success: false, deckResults: {} };
+  }
+
+  console.log(`${LOG_PREFIX} Deck data batch complete: ${Object.keys(deckResults).length} results`);
+  return { success: true, deckResults };
+}
+
 chrome.runtime.onMessage.addListener(handleMessage);
-console.log(`${LOG_PREFIX} Service worker initialized (v0.7.2)`);
+console.log(`${LOG_PREFIX} Service worker initialized (v0.8.0)`);

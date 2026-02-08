@@ -420,6 +420,8 @@ function refreshIconsFromCache(reason: string): void {
 
 /**
  * Refreshes Steam Deck data and re-renders icons if new data arrives.
+ * First re-reads SSR data (covers initial load race conditions), then
+ * fetches missing appids from Steam's store API via the background worker.
  */
 async function refreshSteamDeckData(reason: string): Promise<void> {
   if (steamDeckRefreshInFlight) return;
@@ -428,23 +430,51 @@ async function refreshSteamDeckData(reason: string): Promise<void> {
 
   steamDeckRefreshInFlight = true;
   try {
+    // First, try re-reading SSR (handles race conditions on initial load)
     const latest = await SteamDeck.waitForDeckData();
     if (latest.size > 0) {
-      const previous = steamDeckData;
-      steamDeckData = latest;
-
-      if (missingSteamDeckAppIds.size > 0) {
-        for (const appid of missingSteamDeckAppIds) {
-          if (latest.has(appid)) {
-            missingSteamDeckAppIds.delete(appid);
-          }
+      if (!steamDeckData) {
+        steamDeckData = latest;
+      } else {
+        // Merge SSR data into existing map
+        for (const [appid, category] of latest) {
+          steamDeckData.set(appid, category);
         }
       }
 
-      if (!isSameDeckData(latest, previous)) {
-        refreshIconsFromCache(reason);
+      for (const appid of missingSteamDeckAppIds) {
+        if (steamDeckData.has(appid)) {
+          missingSteamDeckAppIds.delete(appid);
+        }
       }
     }
+
+    // If still missing appids, fetch from Steam's store API via background
+    if (missingSteamDeckAppIds.size > 0) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: 'GET_DECK_DATA_BATCH',
+          appids: Array.from(missingSteamDeckAppIds)
+        });
+
+        if (response?.success && response.deckResults) {
+          if (!steamDeckData) {
+            steamDeckData = new Map();
+          }
+          for (const [appid, category] of Object.entries(response.deckResults)) {
+            if (category != null) {
+              steamDeckData.set(appid, category as DeckCategory);
+              missingSteamDeckAppIds.delete(appid);
+            }
+          }
+        }
+      } catch {
+        // Background message failed - will retry on next schedule
+      }
+    }
+
+    // Re-render if data changed
+    refreshIconsFromCache(reason);
   } finally {
     steamDeckRefreshInFlight = false;
     if (steamDeckRefreshAttempts < STEAM_DECK_REFRESH_DELAYS_MS.length && missingSteamDeckAppIds.size > 0) {

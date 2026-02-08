@@ -1,0 +1,300 @@
+/* Popup-specific styles */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+  width: 280px;
+  margin: 0;
+  padding: 14px;
+  background: linear-gradient(to bottom, #1b2838 0%, #171a21 100%);
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.5;
+}
+
+/* Header with gear icon */
+.swp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.swp-header-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.swp-header-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swp-header h1 {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.swp-settings-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.swp-settings-btn:hover {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.swp-settings-btn:hover svg {
+  transform: rotate(90deg);
+}
+
+.swp-settings-btn:focus-visible {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-settings-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+}
+
+/* Stats */
+.swp-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.swp-stat-compact {
+  flex: 1;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  padding: 10px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.swp-stat-compact .swp-stat-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #4aa3ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.swp-stat-compact .swp-stat-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+}
+
+/* Section groups */
+.swp-section-group {
+  margin-bottom: 12px;
+}
+
+.swp-section-title {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.swp-toggles {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Toggle rows — clean, no card borders */
+.swp-toggle-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.swp-toggle-mini:hover {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.swp-toggle-mini .swp-toggle-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dim unchecked toggles */
+.swp-toggle-mini.swp-dimmed {
+  opacity: 0.55;
+}
+
+.swp-toggle-mini:has(:focus-visible) {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* Mini toggle switch (32x16) */
+.swp-mini-switch {
+  position: relative;
+  width: 32px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.swp-mini-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.swp-mini-switch .swp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #32404f;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.swp-mini-switch .swp-slider::before {
+  position: absolute;
+  content: "";
+  height: 10px;
+  width: 10px;
+  left: 3px;
+  top: 3px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.swp-mini-switch input:checked + .swp-slider {
+  background: #4aa3ff;
+}
+
+.swp-mini-switch input:checked + .swp-slider::before {
+  transform: translateX(16px);
+  background: white;
+}
+
+.swp-mini-switch input:focus-visible + .swp-slider {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+.swp-toggle-mini,
+button {
+  user-select: none;
+}
+
+/* Clear Cache button */
+.swp-btn-danger {
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid rgba(192, 48, 48, 0.35);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  background: rgba(150, 54, 54, 0.85);
+  color: #ffffff;
+  transition: background-color 0.15s, opacity 0.15s;
+  margin-top: 4px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.swp-btn-danger:hover:not(:disabled) {
+  background: rgba(176, 68, 68, 0.90);
+}
+
+.swp-btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:focus-visible {
+  outline: 2px solid rgba(74, 163, 255, 0.65);
+  outline-offset: 2px;
+}
+
+/* Status */
+.swp-status {
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.swp-status-success {
+  background: #1e4620;
+  color: #4ade80;
+  border: 1px solid #22c55e;
+}
+
+.swp-status-error {
+  background: #461e1e;
+  color: #f87171;
+  border: 1px solid #dc2626;
+}
+
+.swp-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.10);
+  border-top-color: #4aa3ff;
+  border-radius: 50%;
+  animation: swp-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes swp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

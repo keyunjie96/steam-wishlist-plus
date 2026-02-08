@@ -232,7 +232,7 @@ async function rateLimit(): Promise<void> {
 function createSearchPayload(gameName: string) {
   return {
     searchType: 'games',
-    searchTerms: [gameName],
+    searchTerms: gameName.trim().split(' '),
     searchPage: 1,
     size: 20,
     searchOptions: {
@@ -269,7 +269,7 @@ function secondsToHours(seconds: number): number {
  */
 async function getAuthToken(): Promise<string | null> {
   try {
-    const response = await fetch(`${HLTB_BASE_URL}/api/search/init?t=${Date.now()}`);
+    const response = await fetch(`${HLTB_BASE_URL}/api/finder/init?t=${Date.now()}`);
     if (!response.ok) {
       if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Auth token request failed: ${response.status}`); /* istanbul ignore if */
       return null;
@@ -288,7 +288,7 @@ async function getAuthToken(): Promise<string | null> {
  */
 async function performHltbSearch(searchName: string, authToken: string): Promise<{ data: GameData[] } | null> {
   try {
-    const response = await fetch(`${HLTB_BASE_URL}/api/search`, {
+    const response = await fetch(`${HLTB_BASE_URL}/api/finder`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

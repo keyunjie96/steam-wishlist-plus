@@ -222,6 +222,17 @@ export interface GetReviewScoresBatchResponse {
   error?: string;
 }
 
+export interface GetDeckDataBatchRequest {
+  type: 'GET_DECK_DATA_BATCH';
+  appids: string[];
+}
+
+export interface GetDeckDataBatchResponse {
+  success: boolean;
+  deckResults: Record<string, number | null>;
+  error?: string;
+}
+
 export type ExtensionMessage =
   | GetPlatformDataRequest
   | GetPlatformDataBatchRequest
@@ -232,7 +243,8 @@ export type ExtensionMessage =
   | GetHltbDataRequest
   | GetHltbDataBatchRequest
   | GetReviewScoresRequest
-  | GetReviewScoresBatchRequest;
+  | GetReviewScoresBatchRequest
+  | GetDeckDataBatchRequest;
 
 // Store URL builders
 export const StoreUrls = {
