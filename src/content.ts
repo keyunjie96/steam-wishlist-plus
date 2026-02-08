@@ -8,10 +8,13 @@
  * - Handles infinite scroll with MutationObserver
  */
 
-import type { Platform, PlatformStatus, CacheEntry, DeckCategory, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse, ReviewScoreData, ReviewScoreTier } from './types';
+import type { Platform, PlatformStatus, CacheEntry, DeckCategory, DeckCacheEntry, GetPlatformDataResponse, HltbData, GetHltbDataBatchResponse, ReviewScoreData, ReviewScoreTier } from './types';
 
 // Use globalThis for shared values (set by types.ts at runtime)
 const CACHE_VERSION = globalThis.SWP_CacheVersion;
+
+const DECK_CACHE_KEY = 'xcpw_deck_cache';
+const DECK_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days
 
 const PROCESSED_ATTR = 'data-scpw-processed';
 const ICONS_INJECTED_ATTR = 'data-scpw-icons';
@@ -313,8 +316,17 @@ function setupSettingsChangeListener(): void {
     if (!newSettings.showXbox && oldSettings.showXbox) platformsJustDisabled.push('xbox');
     if (!newSettings.showSteamDeck && oldSettings.showSteamDeck) platformsJustDisabled.push('steamdeck');
 
-    if (platformsJustEnabled.length > 0 || platformsJustDisabled.length > 0) {
-      console.log(`${LOG_PREFIX} Platform settings changed - enabled: [${platformsJustEnabled.join(', ')}], disabled: [${platformsJustDisabled.join(', ')}]`);
+    // Check if HLTB or review score visibility changed
+    const hltbChanged = newSettings.showHltb !== oldSettings.showHltb;
+    const reviewScoresChanged = newSettings.showReviewScores !== oldSettings.showReviewScores;
+
+    if (platformsJustEnabled.length > 0 || platformsJustDisabled.length > 0 || hltbChanged || reviewScoresChanged) {
+      const parts: string[] = [];
+      if (platformsJustEnabled.length > 0) parts.push(`enabled: [${platformsJustEnabled.join(', ')}]`);
+      if (platformsJustDisabled.length > 0) parts.push(`disabled: [${platformsJustDisabled.join(', ')}]`);
+      if (hltbChanged) parts.push(`hltb: ${newSettings.showHltb ? 'on' : 'off'}`);
+      if (reviewScoresChanged) parts.push(`reviews: ${newSettings.showReviewScores ? 'on' : 'off'}`);
+      console.log(`${LOG_PREFIX} Settings changed - ${parts.join(', ')}`);
 
       // Refresh icons from cache for all visible containers
       // This will show/hide icons based on new settings without re-fetching data
@@ -398,6 +410,39 @@ function isSameDeckData(
 }
 
 /**
+ * Loads Steam Deck data from chrome.storage.local cache.
+ * Returns a Map of appid → DeckCategory, or null if cache is stale/missing.
+ */
+async function loadDeckCache(): Promise<Map<string, DeckCategory> | null> {
+  try {
+    const result = await chrome.storage.local.get(DECK_CACHE_KEY);
+    const cached: DeckCacheEntry | undefined = result[DECK_CACHE_KEY];
+    if (!cached || cached.cacheVersion !== CACHE_VERSION) return null;
+    if (Date.now() > cached.updatedAt + DECK_CACHE_TTL_MS) return null;
+    return new Map(Object.entries(cached.data) as [string, DeckCategory][]);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Saves Steam Deck data to chrome.storage.local cache.
+ */
+async function saveDeckCache(deckData: Map<string, DeckCategory>): Promise<void> {
+  try {
+    const entry: DeckCacheEntry = {
+      data: Object.fromEntries(deckData) as Record<string, DeckCategory>,
+      updatedAt: Date.now(),
+      cacheVersion: CACHE_VERSION,
+    };
+    await chrome.storage.local.set({ [DECK_CACHE_KEY]: entry });
+    if (DEBUG) console.log(`${LOG_PREFIX} Saved ${deckData.size} deck entries to cache`); /* istanbul ignore if */
+  } catch {
+    // Cache write failure is non-critical
+  }
+}
+
+/**
  * Refreshes icons for containers using cached platform data.
  */
 function refreshIconsFromCache(reason: string): void {
@@ -471,6 +516,11 @@ async function refreshSteamDeckData(reason: string): Promise<void> {
       } catch {
         // Background message failed - will retry on next schedule
       }
+    }
+
+    // Persist deck data to cache after merging
+    if (steamDeckData && steamDeckData.size > 0) {
+      saveDeckCache(steamDeckData);
     }
 
     // Re-render if data changed
@@ -1947,12 +1997,24 @@ async function init(): Promise<void> {
   await loadUserSettings();
   setupSettingsChangeListener();
 
-  // Load Steam Deck data from page script (runs in MAIN world)
-  const SteamDeck = globalThis.SWP_SteamDeck;
-  if (SteamDeck && userSettings.showSteamDeck) {
-    const latestDeckData = await SteamDeck.waitForDeckData();
-    if (latestDeckData.size > 0) {
-      steamDeckData = latestDeckData;
+  // Load Steam Deck data: first from cache (instant), then overlay SSR (fresher)
+  if (userSettings.showSteamDeck) {
+    const cachedDeck = await loadDeckCache();
+    if (cachedDeck && cachedDeck.size > 0) {
+      steamDeckData = cachedDeck;
+      console.log(`${LOG_PREFIX} Loaded ${cachedDeck.size} deck entries from cache`);
+    }
+
+    const SteamDeck = globalThis.SWP_SteamDeck;
+    if (SteamDeck) {
+      const latestDeckData = await SteamDeck.waitForDeckData();
+      if (latestDeckData.size > 0) {
+        if (!steamDeckData) steamDeckData = new Map();
+        for (const [appid, category] of latestDeckData) {
+          steamDeckData.set(appid, category);
+        }
+        saveDeckCache(steamDeckData);
+      }
     }
   }
 
@@ -2107,6 +2169,11 @@ if (typeof globalThis !== 'undefined') {
     setSteamDeckRefreshInFlight: (val: boolean) => { steamDeckRefreshInFlight = val; },
     // In-flight tracking for loader visibility fix
     getInFlightHltbAppIds: () => inFlightHltbAppIds,
-    getInFlightReviewScoreAppIds: () => inFlightReviewScoreAppIds
+    getInFlightReviewScoreAppIds: () => inFlightReviewScoreAppIds,
+    // Deck cache helpers
+    loadDeckCache,
+    saveDeckCache,
+    DECK_CACHE_KEY,
+    DECK_CACHE_TTL_MS
   };
 }

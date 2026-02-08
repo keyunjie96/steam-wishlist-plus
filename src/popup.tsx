@@ -90,7 +90,6 @@ function SwpPopup() {
     setSettings(updated);
     try {
       await chrome.storage.sync.set({ scpwSettings: updated });
-      setStatus({ message: 'Settings saved', type: 'success' });
     } catch (err) {
       console.error(`${LOG_PREFIX} Error saving settings:`, err);
       setStatus({ message: 'Failed to save', type: 'error' });
