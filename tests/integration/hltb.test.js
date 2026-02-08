@@ -153,7 +153,7 @@ describe('HLTB Integration (Sanity Check)', () => {
         },
         body: JSON.stringify({
           searchType: 'games',
-          searchTerms: ['Hollow Knight'],
+          searchTerms: ['Hollow', 'Knight'],
           searchPage: 1,
           size: 10,
           searchOptions: {

@@ -78,7 +78,7 @@
 | File | Purpose | Critical Functions |
 |------|---------|-------------------|
 | `src/content.ts` | DOM manipulation, icon injection | `init()`, `processWishlistItems()`, `createPlatformIcon()`, `updateIconsWithData()` |
-| `src/background.ts` | Service worker, message routing | Message handlers for `GET_PLATFORM_DATA`, `UPDATE_CACHE` |
+| `src/background.ts` | Service worker, message routing | Message handlers for `GET_PLATFORM_DATA`, `GET_PLATFORM_DATA_BATCH`, `GET_HLTB_DATA_BATCH`, `GET_DECK_DATA_BATCH`, `UPDATE_CACHE` |
 | `src/resolver.ts` | Orchestrates data resolution | `resolvePlatformData()` |
 | `src/cache.ts` | Chrome storage operations | `getFromCache()`, `saveToCache()`, `getOrCreatePlatformData()` |
 | `src/wikidataClient.ts` | Wikidata SPARQL queries | `queryBySteamAppId()`, `executeSparqlQuery()` |
@@ -318,7 +318,7 @@ When an external API (like HLTB) stops working:
 - Search endpoint: POST `/api/finder`
 - **Important:** Search API blocks non-browser requests (bot detection). Only works from real browser context (extension, Playwright). Node.js/undici requests get 404.
 - Request body must include nested objects: `rangeTime`, `gameplay`, `rangeYear`, `users`, `lists`
-- `searchTerms` must be `["Full Game Name"]` (single element), NOT split by spaces
+- `searchTerms` must be split by spaces: `["Hollow", "Knight"]` (array of words, NOT a single element)
 - Response times are in **seconds**, divide by 3600 for hours
 - Search alternatives: HLTB uses colons in series names (e.g., "Assassin's Creed: Unity"). The extension auto-tries colon variations at word boundaries.
 
