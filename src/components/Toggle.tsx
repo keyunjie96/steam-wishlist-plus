@@ -77,10 +77,10 @@ function FullToggle({
           ))}
         </select>
       )}
-      <span class="swp-toggle-switch">
+      <label class="swp-toggle-switch">
         <input type="checkbox" checked={checked} onChange={handleToggle} />
         <span class="swp-slider" />
-      </span>
+      </label>
     </div>
   );
 }

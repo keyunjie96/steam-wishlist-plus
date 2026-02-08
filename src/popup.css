@@ -1,5 +1,9 @@
 /* Popup-specific styles */
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
   width: 280px;
