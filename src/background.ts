@@ -582,7 +582,7 @@ const STEAM_API_BASE = 'https://api.steampowered.com';
  * Fetches Steam Deck compatibility data from Steam's store API for given appids.
  * Uses IStoreBrowseService/GetItems with JSON format (no auth required).
  */
-async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<AsyncResponse> {
+async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<GetDeckDataBatchResponse> {
   const { appids } = message;
 
   if (!appids || !Array.isArray(appids) || appids.length === 0) {
@@ -615,7 +615,7 @@ async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<Async
       for (const item of items) {
         const appid = String(item.appid);
         const category = item.platforms?.steam_deck_compat_category;
-        deckResults[appid] = category !== undefined ? category : null;
+        deckResults[appid] = category ?? null;
       }
     }
   } catch (error) {
@@ -629,4 +629,4 @@ async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<Async
 }
 
 chrome.runtime.onMessage.addListener(handleMessage);
-console.log(`${LOG_PREFIX} Service worker initialized (v0.7.2)`);
+console.log(`${LOG_PREFIX} Service worker initialized (v0.8.0)`);

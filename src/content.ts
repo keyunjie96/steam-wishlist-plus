@@ -462,7 +462,7 @@ async function refreshSteamDeckData(reason: string): Promise<void> {
             steamDeckData = new Map();
           }
           for (const [appid, category] of Object.entries(response.deckResults)) {
-            if (category !== null && category !== undefined) {
+            if (category != null) {
               steamDeckData.set(appid, category as DeckCategory);
               missingSteamDeckAppIds.delete(appid);
             }
