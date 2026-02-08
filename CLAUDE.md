@@ -314,8 +314,8 @@ When an external API (like HLTB) stops working:
 
 **HLTB (HowLongToBeat):**
 - Uses an undocumented API that changes periodically
-- Requires auth token from `/api/search/init?t=<timestamp>`
-- Search endpoint: POST `/api/search` (not `/api/s/`)
+- Requires auth token from `/api/finder/init?t=<timestamp>`
+- Search endpoint: POST `/api/finder`
 - **Important:** Search API blocks non-browser requests (bot detection). Only works from real browser context (extension, Playwright). Node.js/undici requests get 404.
 - Request body must include nested objects: `rangeTime`, `gameplay`, `rangeYear`, `users`, `lists`
 - `searchTerms` must be `["Full Game Name"]` (single element), NOT split by spaces
