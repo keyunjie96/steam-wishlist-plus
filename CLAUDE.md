@@ -4,7 +4,7 @@
 
 **Steam Wishlist Plus** is a Chrome extension (Manifest V3) that adds platform availability icons (Nintendo Switch, PlayStation, Xbox, Steam Deck), review scores, and completion times to Steam wishlist pages using Wikidata, Steam's SSR data, OpenCritic, and HowLongToBeat.
 
-**Version:** 0.8.0
+**Version:** 0.8.1
 **Status:** Production-ready
 **Tech Stack:** TypeScript, Preact, Chrome Extensions API (MV3), Jest
 
