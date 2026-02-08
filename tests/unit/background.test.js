@@ -1795,4 +1795,143 @@ describe('background.js', () => {
       );
     });
   });
+
+  describe('GET_DECK_DATA_BATCH', () => {
+    let originalFetch;
+
+    beforeEach(() => {
+      originalFetch = global.fetch;
+    });
+
+    afterEach(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should fetch deck compatibility data for multiple appids', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          response: {
+            store_items: [
+              { appid: 1245620, name: 'ELDEN RING', platforms: { steam_deck_compat_category: 3 } },
+              { appid: 289650, name: 'AC Unity', platforms: { steam_deck_compat_category: 2 } }
+            ]
+          }
+        })
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH',
+        appids: ['1245620', '289650']
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        deckResults: { '1245620': 3, '289650': 2 }
+      });
+
+      // Verify correct API URL
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('IStoreBrowseService/GetItems/v1')
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('include_platforms')
+      );
+    });
+
+    it('should return empty results for missing appids', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH'
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        deckResults: {}
+      });
+    });
+
+    it('should return empty results for empty appids array', async () => {
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH',
+        appids: []
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        deckResults: {}
+      });
+    });
+
+    it('should handle API errors gracefully', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH',
+        appids: ['12345']
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        deckResults: {}
+      });
+    });
+
+    it('should handle network errors gracefully', async () => {
+      global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH',
+        appids: ['12345']
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        deckResults: {}
+      });
+    });
+
+    it('should handle items without deck category', async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          response: {
+            store_items: [
+              { appid: 12345, name: 'Game', platforms: { windows: true } }
+            ]
+          }
+        })
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_DECK_DATA_BATCH',
+        appids: ['12345']
+      }, {}, sendResponse);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        deckResults: { '12345': null }
+      });
+    });
+  });
 });

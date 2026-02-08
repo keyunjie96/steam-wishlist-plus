@@ -17,7 +17,8 @@
     "https://opencritic.com/*",
     "https://store.playstation.com/*",
     "https://www.nintendo.com/*",
-    "https://www.xbox.com/*"
+    "https://www.xbox.com/*",
+    "https://api.steampowered.com/*"
   ],
   "action": {
     "default_popup": "src/popup.html",
