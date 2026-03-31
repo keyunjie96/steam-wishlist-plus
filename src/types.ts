@@ -50,6 +50,7 @@ export interface UserSettings {
   hltbDisplayStat: HltbDisplayStat;
   showReviewScores: boolean;
   reviewScoreSource: ReviewScoreSource;
+  openCriticApiKey: string;
 }
 
 /**
@@ -63,8 +64,9 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   showSteamDeck: true,
   showHltb: true,
   hltbDisplayStat: 'mainStory',
-  showReviewScores: true,
-  reviewScoreSource: 'opencritic'
+  showReviewScores: false,
+  reviewScoreSource: 'opencritic',
+  openCriticApiKey: ''
 };
 
 /**
@@ -319,6 +321,8 @@ declare global {
       calculateSimilarity: (a: string, b: string) => number;
       formatScore: (score: number) => string;
       getTierColor: (tier: ReviewScoreTier) => string;
+      setApiKey: (key: string) => void;
+      hasApiKey: () => boolean;
     };
     SWP_ContentTestExports?: {
       queueForBatchResolution: (appid: string, gameName: string, iconsContainer: HTMLElement) => void;

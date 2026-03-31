@@ -530,6 +530,55 @@ body {
   border-left: 3px solid var(--danger);
 }
 
+/* API key input */
+.swp-api-key-row {
+  padding: 8px 14px 12px;
+}
+
+.swp-api-key-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.swp-api-key-link {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.swp-api-key-link:hover {
+  text-decoration: underline;
+}
+
+.swp-api-key-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 12px;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.swp-api-key-input:hover {
+  border-color: var(--accent);
+}
+
+.swp-api-key-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.15);
+}
+
+.swp-api-key-input::placeholder {
+  color: var(--text-muted);
+}
+
 /* Info box */
 .swp-info-box {
   background: var(--bg-input);

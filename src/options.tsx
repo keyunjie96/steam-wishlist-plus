@@ -209,10 +209,16 @@ function SwpOptions() {
             selectValue={settings.hltbDisplayStat}
             onSelectChange={val => updateSetting('hltbDisplayStat', val)} />
           <Toggle variant="full" label="Review Scores"
-            description="Show game ratings from critics"
+            description={settings.openCriticApiKey ? "Show game ratings from critics" : "Requires OpenCritic API key (enter below)"}
             icon={STAR_SVG} platform="review-scores"
-            checked={settings.showReviewScores}
-            onChange={val => updateSetting('showReviewScores', val)}
+            checked={settings.showReviewScores && !!settings.openCriticApiKey}
+            onChange={val => {
+              if (val && !settings.openCriticApiKey) {
+                setSettingsStatus({ message: 'Enter an API key first', type: 'error' });
+                return;
+              }
+              updateSetting('showReviewScores', val);
+            }}
             selectOptions={[
               { value: 'opencritic', label: 'OpenCritic' },
               { value: 'ign', label: 'IGN' },
@@ -220,6 +226,18 @@ function SwpOptions() {
             ]}
             selectValue={settings.reviewScoreSource}
             onSelectChange={val => updateSetting('reviewScoreSource', val)} />
+          <div class="swp-api-key-row">
+            <label class="swp-api-key-label" for="opencritic-api-key">
+              OpenCritic API Key
+              <a href="https://rapidapi.com/opencritic-opencritic-default/api/opencritic-api"
+                 target="_blank" rel="noopener" class="swp-api-key-link">(get free key)</a>
+            </label>
+            <input type="password" id="opencritic-api-key"
+              class="swp-api-key-input"
+              placeholder="Enter RapidAPI key"
+              value={settings.openCriticApiKey}
+              onInput={(e) => updateSetting('openCriticApiKey', (e.target as HTMLInputElement).value)} />
+          </div>
         </div>
         <StatusMessage message={settingsStatus.message} type={settingsStatus.type}
           autoHideMs={2000}

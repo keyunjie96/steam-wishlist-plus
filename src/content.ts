@@ -1790,6 +1790,14 @@ async function processItem(item: Element): Promise<void> {
       if (iconsExistInDom) {
         return;
       }
+      // BUG-14 FIX: Check processingAppIds BEFORE resetItemForReprocess
+      // Previously, resetItemForReprocess ran first (clearing injectedAppIds + PROCESSED_ATTR),
+      // then processingAppIds blocked the call. This left damaged tracking state that
+      // allowed a third call to slip through all guards, creating duplicate containers.
+      if (processingAppIds.has(appId)) {
+        if (DEBUG) console.log(`${LOG_PREFIX} Skipping ${appId} - already being processed (icons pending)`); /* istanbul ignore if */
+        return;
+      }
       if (DEBUG) console.log(`${LOG_PREFIX} Icons missing, reprocessing ${appId}`); /* istanbul ignore if */
     /* istanbul ignore else */
     } else if (DEBUG) {
@@ -1838,8 +1846,6 @@ async function processItem(item: Element): Promise<void> {
     console.log(`${LOG_PREFIX} Found appid: ${appId}`);
   }
 
-  const gameName = extractGameName(item);
-
   // BUG-13 FIX: Mark as "in-flight" to prevent concurrent calls from creating duplicates
   // This must happen BEFORE any async work
   processingAppIds.add(appId);
@@ -1855,6 +1861,20 @@ async function processItem(item: Element): Promise<void> {
   }
   const { container, insertAfter } = injectionPoint;
 
+  // BUG-14 FIX: Extract game name AFTER waitForInjectionPoint resolves.
+  // For lazy-loaded items (21+), the DOM text isn't populated when processing starts.
+  // By waiting for SVGs (injection point), the title link text is also available.
+  const gameName = extractGameName(item);
+
+  // BUG-14 FIX: Guard against duplicate containers created by concurrent calls
+  // whose tracking state was damaged by earlier resetItemForReprocess calls
+  const existingContainer = item.querySelector(`.scpw-platforms[data-appid="${appId}"]`);
+  if (existingContainer) {
+    if (DEBUG) console.log(`${LOG_PREFIX} Container already exists for ${appId}, skipping injection`); /* istanbul ignore if */
+    processingAppIds.delete(appId);
+    return;
+  }
+
   // Create and inject icons container (initially in loading state)
   const iconsContainer = createIconsContainer(appId, gameName);
 
@@ -1865,6 +1885,11 @@ async function processItem(item: Element): Promise<void> {
     container.appendChild(iconsContainer);
   }
   item.setAttribute(ICONS_INJECTED_ATTR, 'true');
+  // BUG-14 FIX: Re-sync tracking state after injection.
+  // A concurrent blocked call may have cleared injectedAppIds/PROCESSED_ATTR
+  // via resetItemForReprocess before being blocked by processingAppIds.
+  injectedAppIds.add(appId);
+  item.setAttribute(PROCESSED_ATTR, appId);
   // BUG-13 FIX: Done processing - remove from in-flight set
   processingAppIds.delete(appId);
 

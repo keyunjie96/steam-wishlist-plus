@@ -5117,6 +5117,155 @@ describe('content.js', () => {
     });
   });
 
+  describe('BUG-14: processingAppIds checked before resetItemForReprocess', () => {
+    beforeEach(() => {
+      const { injectedAppIds, processedAppIds, processingAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
+      injectedAppIds.clear();
+      processedAppIds.clear();
+      processingAppIds.clear();
+      pendingItems.clear();
+      setUserSettings({
+        showNintendo: true,
+        showPlaystation: true,
+        showXbox: true,
+        showSteamDeck: false
+      });
+    });
+
+    afterEach(() => {
+      const { setUserSettings, processingAppIds } = globalThis.SWP_ContentTestExports;
+      processingAppIds.clear();
+      setUserSettings({
+        showNintendo: true,
+        showPlaystation: true,
+        showXbox: true,
+        showSteamDeck: true
+      });
+    });
+
+    it('should skip when processedAppId matches, icons missing, but processingAppIds has it', async () => {
+      const { processItem, processingAppIds, injectedAppIds } = globalThis.SWP_ContentTestExports;
+
+      // Simulate a concurrent call: appId is being processed by another call
+      processingAppIds.add('88888');
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-88888-0');
+      item.setAttribute('data-scpw-processed', '88888'); // Same appid, no icons
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // Should have early-returned WITHOUT calling resetItemForReprocess
+      // Key: PROCESSED_ATTR should still be set (not cleared by resetItemForReprocess)
+      expect(item.getAttribute('data-scpw-processed')).toBe('88888');
+      // No icons should be created (skipped)
+      expect(item.querySelector('.scpw-platforms')).toBeNull();
+
+      item.remove();
+    });
+
+    it('should not create duplicate containers when existing container found after await', async () => {
+      const { processItem, createIconsContainer, injectedAppIds, processingAppIds } = globalThis.SWP_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-99999-0');
+
+      // Add SVG for injection point
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('title', 'Windows');
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_Windows');
+      wrapper.appendChild(svg);
+      item.appendChild(wrapper);
+
+      // Add app link for game name
+      const link = document.createElement('a');
+      link.href = '/app/99999/Test_Game';
+      link.textContent = 'Test Game';
+      item.appendChild(link);
+
+      // Pre-inject a container to simulate race condition where another call
+      // injected icons during the await window
+      const existingContainer = createIconsContainer('99999', 'Test Game');
+      wrapper.parentElement.appendChild(existingContainer);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // Should NOT have created a second container
+      expect(item.querySelectorAll('.scpw-platforms').length).toBe(1);
+
+      item.remove();
+    });
+
+    it('should re-sync injectedAppIds and PROCESSED_ATTR after injection', async () => {
+      const { processItem, injectedAppIds, processingAppIds } = globalThis.SWP_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-11111-0');
+
+      // Add SVG for injection point
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('title', 'Windows');
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_Windows');
+      wrapper.appendChild(svg);
+      item.appendChild(wrapper);
+
+      // Add app link
+      const link = document.createElement('a');
+      link.href = '/app/11111/Sync_Test';
+      link.textContent = 'Sync Test';
+      item.appendChild(link);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // After injection, state should be fully synced
+      expect(injectedAppIds.has('11111')).toBe(true);
+      expect(item.getAttribute('data-scpw-processed')).toBe('11111');
+      expect(item.querySelector('.scpw-platforms')).toBeTruthy();
+      expect(processingAppIds.has('11111')).toBe(false);
+
+      item.remove();
+    });
+
+    it('should extract game name after waiting for injection point', async () => {
+      const { processItem, injectedAppIds } = globalThis.SWP_ContentTestExports;
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-22222-0');
+
+      // Add SVG for injection point
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('title', 'Windows');
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_Windows');
+      wrapper.appendChild(svg);
+      item.appendChild(wrapper);
+
+      // Add app link with game name
+      const link = document.createElement('a');
+      link.href = '/app/22222/My_Cool_Game';
+      link.textContent = 'My Cool Game';
+      item.appendChild(link);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // Game name should be extracted from the link (not "Unknown Game")
+      const container = item.querySelector('.scpw-platforms');
+      expect(container).toBeTruthy();
+      expect(container.getAttribute('data-game-name')).toBe('My Cool Game');
+
+      item.remove();
+    });
+  });
+
   describe('processingAppIds concurrent request prevention', () => {
     it('should track appids being processed', () => {
       // Access the processingAppIds Set through pattern used in processItem
@@ -6650,6 +6799,128 @@ describe('content.js', () => {
       // Should sync state - add to injectedAppIds without creating new container
       expect(injectedAppIds.has('88888')).toBe(true);
       expect(item.querySelectorAll('.scpw-platforms').length).toBe(1);
+
+      item.remove();
+    });
+  });
+
+  describe('processItem in-memory cache restoration path', () => {
+    beforeEach(() => {
+      const { injectedAppIds, processedAppIds, processingAppIds, pendingItems, getCachedEntriesByAppId, setUserSettings } = globalThis.SWP_ContentTestExports;
+      injectedAppIds.clear();
+      processedAppIds.clear();
+      processingAppIds.clear();
+      pendingItems.clear();
+      getCachedEntriesByAppId().clear();
+      setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: false, showReviewScores: false });
+    });
+
+    afterEach(() => {
+      const { setUserSettings, getCachedEntriesByAppId } = globalThis.SWP_ContentTestExports;
+      getCachedEntriesByAppId().clear();
+      setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true, showReviewScores: true });
+    });
+
+    it('should restore HLTB and review data from in-memory cache after injection', async () => {
+      const { processItem, getCachedEntriesByAppId, CACHE_VERSION } = globalThis.SWP_ContentTestExports;
+
+      // Pre-populate in-memory cache
+      getCachedEntriesByAppId().set('33333', {
+        platforms: {
+          nintendo: { status: 'unavailable' },
+          playstation: { status: 'unavailable' },
+          xbox: { status: 'unavailable' }
+        },
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        gameName: 'Cached Game',
+        cacheVersion: CACHE_VERSION,
+        hltbData: { hltbId: 100, mainStory: 10, mainExtra: 15, completionist: 25, allStyles: 0, steamId: null },
+        reviewScoreData: { topCriticScore: 85, percentRecommended: 90, tier: 'Mighty', numReviews: 50, openCriticId: 200, similarity: 1.0, outletScores: [] }
+      });
+
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-33333-0');
+
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('title', 'Windows');
+      const svg = document.createElement('svg');
+      svg.setAttribute('class', 'SVGIcon_Windows');
+      wrapper.appendChild(svg);
+      item.appendChild(wrapper);
+
+      const link = document.createElement('a');
+      link.href = '/app/33333/Cached_Game';
+      link.textContent = 'Cached Game';
+      item.appendChild(link);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // Should have used in-memory cache and restored data
+      const container = item.querySelector('.scpw-platforms');
+      expect(container).toBeTruthy();
+
+      item.remove();
+    });
+  });
+
+  describe('processItem insertAfter injection branch', () => {
+    beforeEach(() => {
+      const { injectedAppIds, processedAppIds, processingAppIds, pendingItems, setUserSettings } = globalThis.SWP_ContentTestExports;
+      injectedAppIds.clear();
+      processedAppIds.clear();
+      processingAppIds.clear();
+      pendingItems.clear();
+      setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: false, showHltb: false });
+    });
+
+    afterEach(() => {
+      const { setUserSettings } = globalThis.SWP_ContentTestExports;
+      setUserSettings({ showNintendo: true, showPlaystation: true, showXbox: true, showSteamDeck: true, showHltb: true });
+    });
+
+    it('should inject after the last platform icon wrapper when insertAfter is set', async () => {
+      const { processItem, injectedAppIds } = globalThis.SWP_ContentTestExports;
+
+      // Create item where findInjectionPoint uses the secondary strategy (SVG counting).
+      // The primary strategy requires span[title] — we avoid that so it falls through.
+      const item = document.createElement('div');
+      item.setAttribute('data-rfd-draggable-id', 'WishlistItem-55555-0');
+
+      const group = document.createElement('div');
+
+      // Two SVG wrappers WITHOUT title attributes (secondary strategy counts these)
+      const wrapper1 = document.createElement('span');
+      const svg1 = document.createElement('svg');
+      svg1.setAttribute('class', 'SVGIcon_WindowsLogo');
+      wrapper1.appendChild(svg1);
+      group.appendChild(wrapper1);
+
+      const wrapper2 = document.createElement('span');
+      const svg2 = document.createElement('svg');
+      svg2.setAttribute('class', 'SVGIcon_AppleLogo');
+      wrapper2.appendChild(svg2);
+      group.appendChild(wrapper2);
+
+      item.appendChild(group);
+
+      const link = document.createElement('a');
+      link.href = '/app/55555/InsertAfter_Game';
+      link.textContent = 'InsertAfter Game';
+      item.appendChild(link);
+
+      document.body.appendChild(item);
+
+      await processItem(item);
+
+      // Should have injected via insertAfter (after wrapper2)
+      const container = item.querySelector('.scpw-platforms');
+      expect(container).toBeTruthy();
+      // The container should be after wrapper2 in the DOM
+      expect(wrapper2.nextSibling).toBe(container);
+      expect(injectedAppIds.has('55555')).toBe(true);
 
       item.remove();
     });

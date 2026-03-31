@@ -181,7 +181,11 @@ const declarativeNetRequestMock = {
 const chromeMock = {
   storage: {
     local: storageMock,
-    sync: syncStorageMock
+    sync: syncStorageMock,
+    onChanged: {
+      addListener: jest.fn(),
+      removeListener: jest.fn()
+    }
   },
   runtime: runtimeMock,
   declarativeNetRequest: declarativeNetRequestMock

@@ -264,18 +264,27 @@ function secondsToHours(seconds: number): number {
   return Math.round(seconds / 3600 * 10) / 10;
 }
 
+interface HltbAuthData {
+  token: string;
+  hpKey: string;
+  hpVal: string;
+}
+
 /**
- * Fetches auth token from HLTB API
+ * Fetches auth token and anti-bot fingerprint from HLTB API.
+ * The init endpoint returns a token plus hpKey/hpVal pair that must be
+ * included as both headers and a body field in search requests.
  */
-async function getAuthToken(): Promise<string | null> {
+async function getAuthToken(): Promise<HltbAuthData | null> {
   try {
-    const response = await fetch(`${HLTB_BASE_URL}/api/finder/init?t=${Date.now()}`);
+    const response = await fetch(`${HLTB_BASE_URL}/api/find/init?t=${Date.now()}`);
     if (!response.ok) {
       if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Auth token request failed: ${response.status}`); /* istanbul ignore if */
       return null;
     }
     const data = await response.json();
-    return data.token || null;
+    if (!data.token) return null;
+    return { token: data.token, hpKey: data.hpKey || '', hpVal: data.hpVal || '' };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Auth token error:`, errorMessage); /* istanbul ignore if */
@@ -284,17 +293,26 @@ async function getAuthToken(): Promise<string | null> {
 }
 
 /**
- * Performs a single HLTB API search for a given name
+ * Performs a single HLTB API search for a given name.
+ * Includes anti-bot fingerprint (hpKey/hpVal) as both headers and body field.
  */
-async function performHltbSearch(searchName: string, authToken: string): Promise<{ data: GameData[] } | null> {
+async function performHltbSearch(searchName: string, auth: HltbAuthData): Promise<{ data: GameData[] } | null> {
   try {
-    const response = await fetch(`${HLTB_BASE_URL}/api/finder`, {
+    const payload = createSearchPayload(searchName);
+    // HLTB requires the hp key/val pair as a dynamic body field
+    if (auth.hpKey) {
+      (payload as Record<string, unknown>)[auth.hpKey] = auth.hpVal;
+    }
+
+    const response = await fetch(`${HLTB_BASE_URL}/api/find`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Auth-Token': authToken
+        'x-auth-token': auth.token,
+        'x-hp-key': auth.hpKey,
+        'x-hp-val': auth.hpVal
       },
-      body: JSON.stringify(createSearchPayload(searchName))
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -343,8 +361,8 @@ async function searchHltb(gameName: string, steamAppId?: string): Promise<HltbSe
     }
   }
 
-  const authToken = await getAuthToken();
-  if (!authToken) {
+  const auth = await getAuthToken();
+  if (!auth) {
     if (HLTB_DEBUG) console.log(`${HLTB_LOG_PREFIX} Failed to get auth token`); /* istanbul ignore if */
     return null;
   }
@@ -354,7 +372,7 @@ async function searchHltb(gameName: string, steamAppId?: string): Promise<HltbSe
   let usedSearchName = cleanedName;
 
   for (const searchName of searchAlternatives) {
-    result = await performHltbSearch(searchName, authToken);
+    result = await performHltbSearch(searchName, auth);
     if (result?.data && result.data.length > 0) {
       usedSearchName = searchName;
       if (HLTB_DEBUG && searchName !== cleanedName) {
