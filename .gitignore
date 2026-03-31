@@ -40,3 +40,4 @@ coverage/
 # Debug/test scripts
 test-*.mjs
 
+.gstack/

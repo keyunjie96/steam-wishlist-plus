@@ -1,23 +1,58 @@
 /**
  * Steam Wishlist Plus - Review Scores Client
  *
- * Queries OpenCritic for game review scores.
+ * Queries OpenCritic for game review scores via RapidAPI.
  * OpenCritic aggregates reviews from multiple sources and provides a unified score.
  *
- * API endpoints:
- * - Search: GET https://api.opencritic.com/api/game/search?criteria=<name>
- * - Game details: GET https://api.opencritic.com/api/game/<id>
+ * Requires a RapidAPI key (free tier available).
+ * API endpoints (via RapidAPI proxy):
+ * - Search: GET https://opencritic-api.p.rapidapi.com/game/search?criteria=<name>
+ * - Game details: GET https://opencritic-api.p.rapidapi.com/game/<id>
+ * - Reviews: GET https://opencritic-api.p.rapidapi.com/review/game/<id>
  */
 
 import type { ReviewScoreData, ReviewScoreTier, ReviewScoreSearchResult, OutletScore } from './types';
 
-const OPENCRITIC_API_BASE = 'https://api.opencritic.com/api';
+const RAPIDAPI_HOST = 'opencritic-api.p.rapidapi.com';
+const OPENCRITIC_API_BASE = `https://${RAPIDAPI_HOST}`;
 const LOG_PREFIX = '[SWP ReviewScores]';
 const DEBUG = false;
+
+/** API key set by the background worker from user settings */
+let apiKey = '';
 
 const REQUEST_DELAY_MS = 300;
 
 let requestQueue = Promise.resolve();
+
+/**
+ * Sets the RapidAPI key for OpenCritic requests.
+ * Called by the background worker when settings are loaded/changed.
+ */
+function setApiKey(key: string): void {
+  apiKey = key || '';
+}
+
+/**
+ * Returns whether an API key is configured.
+ * Used by the background worker to avoid caching "not found" markers
+ * when lookups fail due to missing key rather than the game not existing.
+ */
+function hasApiKey(): boolean {
+  return !!apiKey;
+}
+
+/**
+ * Returns common headers for RapidAPI requests.
+ * Returns null if no API key is configured.
+ */
+function getRapidApiHeaders(): Record<string, string> | null {
+  if (!apiKey) return null;
+  return {
+    'X-RapidAPI-Key': apiKey,
+    'X-RapidAPI-Host': RAPIDAPI_HOST
+  };
+}
 
 /**
  * Serializes requests through a queue to prevent concurrent bursts.
@@ -202,17 +237,20 @@ interface SearchResultWithError {
  * Searches OpenCritic for a game by name
  */
 async function searchOpenCritic(gameName: string): Promise<SearchResultWithError> {
+  const rapidHeaders = getRapidApiHeaders();
+  if (!rapidHeaders) return { results: [], error: 'No API key configured' };
+
   try {
     const url = `${OPENCRITIC_API_BASE}/game/search?criteria=${encodeURIComponent(gameName)}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-      }
-    });
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      }
       let errorBody = '';
       try { errorBody = await response.text(); } catch { /* ignore */ }
       if (DEBUG) console.log(`${LOG_PREFIX} Search failed: ${response.status} - ${errorBody}`); /* istanbul ignore if */
@@ -235,17 +273,22 @@ async function searchOpenCritic(gameName: string): Promise<SearchResultWithError
  * Gets detailed game info from OpenCritic API
  */
 async function getGameDetails(gameId: number): Promise<OpenCriticGameDetails | null> {
+  const rapidHeaders = getRapidApiHeaders();
+  if (!rapidHeaders) return null;
+
   try {
     const url = `${OPENCRITIC_API_BASE}/game/${gameId}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching details: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-      }
-    });
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
-      if (DEBUG) console.log(`${LOG_PREFIX} Game details failed with status ${response.status}`); /* istanbul ignore if */
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      } else if (DEBUG) {
+        console.log(`${LOG_PREFIX} Game details failed with status ${response.status}`); /* istanbul ignore if */
+      }
       return null;
     }
 
@@ -265,17 +308,22 @@ async function getGameDetails(gameId: number): Promise<OpenCriticGameDetails | n
  * Gets individual outlet reviews from OpenCritic
  */
 async function getGameReviews(gameId: number): Promise<OpenCriticReviewItem[]> {
+  const rapidHeaders = getRapidApiHeaders();
+  if (!rapidHeaders) return [];
+
   try {
     const url = `${OPENCRITIC_API_BASE}/review/game/${gameId}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching reviews: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-      }
-    });
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
-      if (DEBUG) console.log(`${LOG_PREFIX} Game reviews failed with status ${response.status}`); /* istanbul ignore if */
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      } else if (DEBUG) {
+        console.log(`${LOG_PREFIX} Game reviews failed with status ${response.status}`); /* istanbul ignore if */
+      }
       return [];
     }
 
@@ -534,7 +582,9 @@ globalThis.SWP_ReviewScoresClient = {
   formatScore,
   getTierColor,
   slugifyGameName,
-  buildOpenCriticUrl
+  buildOpenCriticUrl,
+  setApiKey,
+  hasApiKey
 };
 
 // Also export for module imports in tests

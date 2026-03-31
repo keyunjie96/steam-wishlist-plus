@@ -418,6 +418,11 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
     return { success: false, data: null, error: 'Review scores client not loaded' };
   }
 
+  // Skip if no API key is configured — don't cache "not found" markers
+  if (!globalThis.SWP_ReviewScoresClient.hasApiKey()) {
+    return { success: true, data: null };
+  }
+
   // Check if we have cached review score data first
   const cached = await globalThis.SWP_Cache.getFromCache(appid);
   const reviewScore = cached?.reviewScoreData;
@@ -449,12 +454,13 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
       return { success: true, data: result.data };
     }
 
-    // Save "not found" marker to cache to prevent repeated searches
+    // Cache "not found" marker to prevent repeated searches
+    // (safe to cache — we returned early above if no API key)
     if (cached) {
       cached.reviewScoreData = createReviewScoresNotFoundMarker();
       await globalThis.SWP_Cache.saveToCache(cached);
+      console.log(`${LOG_PREFIX} Review scores no match for appid ${appid} (cached as not found)`);
     }
-    console.log(`${LOG_PREFIX} Review scores no match for appid ${appid} (cached as not found)`);
     return { success: true, data: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -475,6 +481,15 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
 
   if (!globalThis.SWP_ReviewScoresClient) {
     return { success: false, reviewScoresResults: {}, error: 'Review scores client not loaded' };
+  }
+
+  // Skip if no API key — return null for all requested games so the content
+  // script clears in-flight state and loaders resolve instead of hanging
+  if (!globalThis.SWP_ReviewScoresClient.hasApiKey()) {
+    console.log(`${LOG_PREFIX} Review scores skipped (no API key)`);
+    const emptyResults: Record<string, ReviewScoreData | null> = {};
+    for (const { appid } of games) { emptyResults[appid] = null; }
+    return { success: true, reviewScoresResults: emptyResults };
   }
 
   console.log(`${LOG_PREFIX} Review scores batch request for ${games.length} games`);
@@ -629,4 +644,31 @@ async function getDeckDataBatch(message: GetDeckDataBatchRequest): Promise<GetDe
 }
 
 chrome.runtime.onMessage.addListener(handleMessage);
-console.log(`${LOG_PREFIX} Service worker initialized (v0.8.0)`);
+
+// Load API key from settings and pass to review scores client
+async function loadApiKeyFromSettings(): Promise<void> {
+  try {
+    const result = await chrome.storage.sync.get('scpwSettings');
+    const key = result?.scpwSettings?.openCriticApiKey || '';
+    if (globalThis.SWP_ReviewScoresClient) {
+      globalThis.SWP_ReviewScoresClient.setApiKey(key);
+      if (key) console.log(`${LOG_PREFIX} OpenCritic API key loaded`);
+    }
+  } catch {
+    // Settings not available yet — key will remain empty
+  }
+}
+
+// Re-load API key when settings change
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.scpwSettings) {
+    const key = changes.scpwSettings.newValue?.openCriticApiKey || '';
+    if (globalThis.SWP_ReviewScoresClient) {
+      globalThis.SWP_ReviewScoresClient.setApiKey(key);
+      console.log(`${LOG_PREFIX} OpenCritic API key ${key ? 'updated' : 'cleared'}`);
+    }
+  }
+});
+
+loadApiKeyFromSettings();
+console.log(`${LOG_PREFIX} Service worker initialized (v0.8.1)`);

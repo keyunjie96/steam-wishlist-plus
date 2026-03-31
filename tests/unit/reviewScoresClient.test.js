@@ -41,7 +41,7 @@ function createOpenCriticFetchMock(options = {}) {
 
   return jest.fn().mockImplementation((url) => {
     // Search endpoint
-    if (url.includes('/api/game/search')) {
+    if (url.includes('/game/search')) {
       if (searchStatus !== 200) {
         return Promise.resolve({ ok: false, status: searchStatus, headers: mockHeaders });
       }
@@ -53,7 +53,7 @@ function createOpenCriticFetchMock(options = {}) {
       });
     }
     // Game reviews endpoint (must come before game details to match correctly)
-    if (url.match(/\/api\/review\/game\/\d+$/)) {
+    if (url.match(/\/review\/game\/\d+$/)) {
       if (reviewsStatus !== 200) {
         return Promise.resolve({ ok: false, status: reviewsStatus, headers: mockHeaders });
       }
@@ -65,7 +65,7 @@ function createOpenCriticFetchMock(options = {}) {
       });
     }
     // Game details endpoint
-    if (url.match(/\/api\/game\/\d+$/)) {
+    if (url.match(/\/game\/\d+$/)) {
       if (detailsStatus !== 200) {
         return Promise.resolve({ ok: false, status: detailsStatus, headers: mockHeaders });
       }
@@ -127,6 +127,8 @@ describe('reviewScoresClient.js', () => {
 
   beforeEach(() => {
     originalFetch = globalThis.fetch;
+    // Set a test API key so requests aren't skipped
+    ReviewScoresClient.setApiKey('test-rapidapi-key');
   });
 
   afterEach(() => {
@@ -145,6 +147,28 @@ describe('reviewScoresClient.js', () => {
       expect(ReviewScoresClient.calculateSimilarity).toBeInstanceOf(Function);
       expect(ReviewScoresClient.formatScore).toBeInstanceOf(Function);
       expect(ReviewScoresClient.getTierColor).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.setApiKey).toBeInstanceOf(Function);
+      expect(ReviewScoresClient.hasApiKey).toBeInstanceOf(Function);
+    });
+  });
+
+  describe('API key management', () => {
+    it('should return false when no API key is set', () => {
+      ReviewScoresClient.setApiKey('');
+      expect(ReviewScoresClient.hasApiKey()).toBe(false);
+    });
+
+    it('should return true when API key is set', () => {
+      ReviewScoresClient.setApiKey('test-key');
+      expect(ReviewScoresClient.hasApiKey()).toBe(true);
+    });
+
+    it('should return null from search when no API key', async () => {
+      ReviewScoresClient.setApiKey('');
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+      // Restore key for other tests
+      ReviewScoresClient.setApiKey('test-rapidapi-key');
     });
   });
 
@@ -360,6 +384,47 @@ describe('reviewScoresClient.js', () => {
       globalThis.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
       const result = await ReviewScoresClient.queryByGameName('Test Game');
       expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 429 rate limit from search endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchStatus: 429 });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 403 unauthorized from search endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchStatus: 403 });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 429 rate limit from game details endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        detailsStatus: 429
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 403 from game details endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        detailsStatus: 403
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 429 from reviews endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'Mighty', numTopCriticReviews: 50 },
+        reviewsStatus: 429
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      // Still returns result (reviews are optional)
+      expect(result).not.toBeNull();
     }, 15000);
 
     it('should parse tier string correctly for mighty', async () => {
@@ -796,19 +861,19 @@ describe('reviewScoresClient.js', () => {
 
     it('should handle non-array reviews response', async () => {
       globalThis.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/game/search')) {
+        if (url.includes('/game/search')) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve([{ id: 123, name: 'Test Game' }])
           });
         }
-        if (url.match(/\/api\/review\/game\/\d+$/)) {
+        if (url.match(/\/review\/game\/\d+$/)) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ error: 'not an array' }) // Non-array
           });
         }
-        if (url.match(/\/api\/game\/\d+$/)) {
+        if (url.match(/\/game\/\d+$/)) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({
@@ -831,16 +896,16 @@ describe('reviewScoresClient.js', () => {
     it('should handle reviews fetch throwing error', async () => {
       let callCount = 0;
       globalThis.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/game/search')) {
+        if (url.includes('/game/search')) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve([{ id: 123, name: 'Test Game' }])
           });
         }
-        if (url.match(/\/api\/review\/game\/\d+$/)) {
+        if (url.match(/\/review\/game\/\d+$/)) {
           return Promise.reject(new Error('Network error'));
         }
-        if (url.match(/\/api\/game\/\d+$/)) {
+        if (url.match(/\/game\/\d+$/)) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({

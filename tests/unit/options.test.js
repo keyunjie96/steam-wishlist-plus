@@ -51,8 +51,9 @@ describe('options.js', () => {
         showSteamDeck: true,
         showHltb: true,
         hltbDisplayStat: 'mainStory',
-        showReviewScores: true,
-        reviewScoreSource: 'opencritic'
+        showReviewScores: false,
+        reviewScoreSource: 'opencritic',
+        openCriticApiKey: ''
       },
       SETTING_CHECKBOX_IDS: {
         showNintendo: 'show-nintendo',
@@ -72,7 +73,7 @@ describe('options.js', () => {
           visibilityKey: 'showReviewScores'
         }
       },
-      USER_SETTING_KEYS: ['showNintendo', 'showPlaystation', 'showXbox', 'showSteamDeck', 'showHltb', 'hltbDisplayStat', 'showReviewScores', 'reviewScoreSource']
+      USER_SETTING_KEYS: ['showNintendo', 'showPlaystation', 'showXbox', 'showSteamDeck', 'showHltb', 'hltbDisplayStat', 'showReviewScores', 'reviewScoreSource', 'openCriticApiKey']
     };
   });
 
@@ -482,7 +483,8 @@ describe('options.js', () => {
           showHltb: true,
           hltbDisplayStat: 'mainStory',
           showReviewScores: true,
-          reviewScoreSource: 'opencritic'
+          reviewScoreSource: 'opencritic',
+          openCriticApiKey: 'test-key'
         }
       });
 
@@ -498,16 +500,20 @@ describe('options.js', () => {
       expect(checkboxes[5].checked).toBe(true);  // Review Scores
     });
 
-    it('should default to true when no settings saved', async () => {
+    it('should default to correct values when no settings saved', async () => {
       chrome.storage.sync.get.mockResolvedValueOnce({});
 
       await loadOptions();
 
       const checkboxes = appEl.querySelectorAll('input[type="checkbox"]');
       expect(checkboxes.length).toBe(6);
-      for (const checkbox of checkboxes) {
-        expect(checkbox.checked).toBe(true);
-      }
+      // All true except Review Scores (requires API key)
+      expect(checkboxes[0].checked).toBe(true);  // Nintendo
+      expect(checkboxes[1].checked).toBe(true);  // PlayStation
+      expect(checkboxes[2].checked).toBe(true);  // Xbox
+      expect(checkboxes[3].checked).toBe(true);  // Steam Deck
+      expect(checkboxes[4].checked).toBe(true);  // HLTB
+      expect(checkboxes[5].checked).toBe(false); // Review Scores (no API key)
     });
 
     it('should handle storage errors gracefully', async () => {
@@ -577,18 +583,16 @@ describe('options.js', () => {
       });
     });
 
-    it('should save settings when Review Scores checkbox changes', async () => {
+    it('should block enabling Review Scores without API key', async () => {
       await loadOptions();
 
       const checkboxes = appEl.querySelectorAll('input[type="checkbox"]');
-      checkboxes[5].click(); // Review Scores toggle
+      checkboxes[5].click(); // Try to enable Review Scores without API key
       await flush();
 
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
-        scpwSettings: expect.objectContaining({
-          showReviewScores: false
-        })
-      });
+      // Should NOT save because no API key is set
+      // The toggle onChange handler blocks the change
+      expect(checkboxes[5].checked).toBe(false);
     });
 
     it('should show success status after saving', async () => {
@@ -617,7 +621,7 @@ describe('options.js', () => {
       await loadOptions();
 
       const selects = appEl.querySelectorAll('.swp-inline-select');
-      expect(selects.length).toBe(2);
+      expect(selects.length).toBe(1); // Only HLTB (Review Scores disabled by default)
 
       // Change the HLTB select value (Preact uses 'change' event for selects)
       selects[0].value = 'completionist';
@@ -632,10 +636,18 @@ describe('options.js', () => {
     });
 
     it('should save review score source when select changes', async () => {
+      // Load with review scores enabled (requires API key)
+      chrome.storage.sync.get.mockResolvedValueOnce({
+        scpwSettings: {
+          showReviewScores: true,
+          openCriticApiKey: 'test-key',
+          reviewScoreSource: 'opencritic'
+        }
+      });
       await loadOptions();
 
       const selects = appEl.querySelectorAll('.swp-inline-select');
-      expect(selects.length).toBe(2);
+      expect(selects.length).toBe(2); // HLTB + Review Scores
 
       // Change the review score source select (Preact uses 'change' event for selects)
       selects[1].value = 'ign';
@@ -679,7 +691,8 @@ describe('options.js', () => {
           showHltb: true,
           hltbDisplayStat: 'mainStory',
           showReviewScores: true,
-          reviewScoreSource: 'opencritic'
+          reviewScoreSource: 'opencritic',
+          openCriticApiKey: 'test-key'
         }
       });
 
@@ -700,7 +713,8 @@ describe('options.js', () => {
           showHltb: false,
           hltbDisplayStat: 'mainStory',
           showReviewScores: true,
-          reviewScoreSource: 'opencritic'
+          reviewScoreSource: 'opencritic',
+          openCriticApiKey: 'test-key'
         }
       });
 
@@ -712,9 +726,19 @@ describe('options.js', () => {
     });
 
     it('should toggle select visibility when HLTB checkbox changes', async () => {
+      // Load with review scores enabled to start with 2 selects
+      chrome.storage.sync.get.mockResolvedValueOnce({
+        scpwSettings: {
+          showReviewScores: true,
+          openCriticApiKey: 'test-key',
+          showHltb: true,
+          hltbDisplayStat: 'mainStory',
+          reviewScoreSource: 'opencritic'
+        }
+      });
       await loadOptions();
 
-      // Initially both selects visible (all defaults are true)
+      // Initially both selects visible
       let selects = appEl.querySelectorAll('.swp-inline-select');
       expect(selects.length).toBe(2);
 

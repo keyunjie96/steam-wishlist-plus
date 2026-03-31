@@ -11,7 +11,7 @@ require('../../dist/hltbClient.js');
  * @param {Object} options - Additional options (tokenResponse, searchStatus)
  */
 function createHltbFetchMock(searchResponse, options = {}) {
-  const { tokenResponse = { token: 'test-token-123' }, searchStatus = 200, tokenStatus = 200 } = options;
+  const { tokenResponse = { token: 'test-token-123', hpKey: 'ign_test', hpVal: 'testval123' }, searchStatus = 200, tokenStatus = 200 } = options;
 
   // Mock headers object
   const mockHeaders = {
@@ -20,7 +20,7 @@ function createHltbFetchMock(searchResponse, options = {}) {
 
   return jest.fn().mockImplementation((url) => {
     // Auth token endpoint
-    if (url.includes('/api/finder/init')) {
+    if (url.includes('/api/find/init')) {
       if (tokenStatus !== 200) {
         return Promise.resolve({ ok: false, status: tokenStatus, headers: mockHeaders });
       }
@@ -290,7 +290,7 @@ describe('hltbClient.js', () => {
       let callCount = 0;
       global.fetch = jest.fn().mockImplementation((url) => {
         callCount++;
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -327,7 +327,7 @@ describe('hltbClient.js', () => {
 
     it('should return null when auth token fetch throws error', async () => {
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.reject(new Error('Network failure'));
         }
         // Should not reach search endpoint
@@ -342,7 +342,7 @@ describe('hltbClient.js', () => {
       let tokenCallCount = 0;
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           tokenCallCount++;
           return Promise.resolve({
             ok: true,
@@ -438,7 +438,7 @@ describe('hltbClient.js', () => {
     it('should return null on 429 rate limit error', async () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -472,7 +472,7 @@ describe('hltbClient.js', () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
         // Auth token endpoint
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -533,7 +533,7 @@ describe('hltbClient.js', () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
         // Auth token endpoint always succeeds
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -578,7 +578,7 @@ describe('hltbClient.js', () => {
     it('should catch non-Error objects thrown during batch processing', async () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -650,7 +650,7 @@ describe('hltbClient.js', () => {
     it('should return null when getAuthToken fails', async () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           // Auth token endpoint fails
           return Promise.resolve({
             ok: false,
@@ -673,7 +673,7 @@ describe('hltbClient.js', () => {
     it('should return null when auth token response has no token', async () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -696,7 +696,7 @@ describe('hltbClient.js', () => {
     it('should return null when getAuthToken throws exception', async () => {
       const mockHeaders = { get: () => 'application/json' };
       global.fetch = jest.fn().mockImplementation((url) => {
-        if (url.includes('/api/finder/init')) {
+        if (url.includes('/api/find/init')) {
           throw new Error('Network error during auth');
         }
         return Promise.resolve({
