@@ -454,8 +454,9 @@ async function getReviewScores(message: GetReviewScoresRequest): Promise<GetRevi
       return { success: true, data: result.data };
     }
 
-    // Only cache "not found" marker if API key is set (genuine not found vs no key)
-    if (cached && globalThis.SWP_ReviewScoresClient.hasApiKey()) {
+    // Cache "not found" marker to prevent repeated searches
+    // (safe to cache — we returned early above if no API key)
+    if (cached) {
       cached.reviewScoreData = createReviewScoresNotFoundMarker();
       await globalThis.SWP_Cache.saveToCache(cached);
       console.log(`${LOG_PREFIX} Review scores no match for appid ${appid} (cached as not found)`);
@@ -482,10 +483,13 @@ async function getBatchReviewScores(message: GetReviewScoresBatchRequest): Promi
     return { success: false, reviewScoresResults: {}, error: 'Review scores client not loaded' };
   }
 
-  // Skip entirely if no API key — don't cache "not found" markers
+  // Skip if no API key — return null for all requested games so the content
+  // script clears in-flight state and loaders resolve instead of hanging
   if (!globalThis.SWP_ReviewScoresClient.hasApiKey()) {
     console.log(`${LOG_PREFIX} Review scores skipped (no API key)`);
-    return { success: true, reviewScoresResults: {} };
+    const emptyResults: Record<string, ReviewScoreData | null> = {};
+    for (const { appid } of games) { emptyResults[appid] = null; }
+    return { success: true, reviewScoresResults: emptyResults };
   }
 
   console.log(`${LOG_PREFIX} Review scores batch request for ${games.length} games`);
