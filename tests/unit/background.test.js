@@ -83,6 +83,26 @@ describe('background.js', () => {
       expect(chrome.storage.sync.get).toHaveBeenCalledWith('scpwSettings');
     });
 
+    it('should set API key on ReviewScoresClient when key exists in settings', async () => {
+      const mockSetApiKey = jest.fn();
+      globalThis.SWP_ReviewScoresClient = { setApiKey: mockSetApiKey };
+
+      // Simulate settings with a key
+      chrome.storage.sync.get.mockResolvedValueOnce({
+        scpwSettings: { openCriticApiKey: 'loaded-key' }
+      });
+
+      // Re-run loadApiKeyFromSettings by triggering the onChanged handler
+      const onChangedHandler = chrome.storage.onChanged.addListener.mock.calls[0][0];
+      onChangedHandler(
+        { scpwSettings: { newValue: { openCriticApiKey: 'loaded-key' } } },
+        'sync'
+      );
+      expect(mockSetApiKey).toHaveBeenCalledWith('loaded-key');
+
+      delete globalThis.SWP_ReviewScoresClient;
+    });
+
     it('should pass API key to ReviewScoresClient via storage change', () => {
       const onChangedHandler = chrome.storage.onChanged.addListener.mock.calls[0][0];
       const mockSetApiKey = jest.fn();
@@ -1661,6 +1681,46 @@ describe('background.js', () => {
       }, {}, sendResponse);
 
       expect(result).toBe(true);
+    });
+
+    it('should return per-app nulls when no API key', async () => {
+      mockReviewScoresClient.hasApiKey.mockReturnValue(false);
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '111', gameName: 'Game A' },
+          { appid: '222', gameName: 'Game B' }
+        ]
+      }, {}, sendResponse);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        reviewScoresResults: { '111': null, '222': null }
+      });
+      expect(mockReviewScoresClient.batchQueryByGameNames).not.toHaveBeenCalled();
+    });
+
+    it('should cache review score data when cache entry exists', async () => {
+      // Return a cached entry so the "if (cached)" branch is hit
+      mockCache.getFromCache = jest.fn().mockResolvedValue({
+        resolvedAt: Date.now(),
+        ttlDays: 7,
+        platforms: {}
+      });
+
+      const sendResponse = jest.fn();
+      messageHandler({
+        type: 'GET_REVIEW_SCORES_BATCH',
+        games: [
+          { appid: '12345', gameName: 'Game 1' }
+        ]
+      }, {}, sendResponse);
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(mockCache.saveToCache).toHaveBeenCalled();
     });
 
     it('should fail when games is missing', async () => {

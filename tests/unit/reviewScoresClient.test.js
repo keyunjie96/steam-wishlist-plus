@@ -386,6 +386,47 @@ describe('reviewScoresClient.js', () => {
       expect(result).toBeNull();
     }, 15000);
 
+    it('should handle 429 rate limit from search endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchStatus: 429 });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 403 unauthorized from search endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({ searchStatus: 403 });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 429 rate limit from game details endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        detailsStatus: 429
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 403 from game details endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        detailsStatus: 403
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      expect(result).toBeNull();
+    }, 15000);
+
+    it('should handle 429 from reviews endpoint', async () => {
+      globalThis.fetch = createOpenCriticFetchMock({
+        searchResults: [{ id: 123, name: 'Test Game' }],
+        gameDetails: { id: 123, name: 'Test Game', topCriticScore: 85, tier: 'Mighty', numTopCriticReviews: 50 },
+        reviewsStatus: 429
+      });
+      const result = await ReviewScoresClient.queryByGameName('Test Game');
+      // Still returns result (reviews are optional)
+      expect(result).not.toBeNull();
+    }, 15000);
+
     it('should parse tier string correctly for mighty', async () => {
       globalThis.fetch = createOpenCriticFetchMock({
         searchResults: [{ id: 123, name: 'Test Game' }],
