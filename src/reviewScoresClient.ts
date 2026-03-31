@@ -243,11 +243,14 @@ async function searchOpenCritic(gameName: string): Promise<SearchResultWithError
   try {
     const url = `${OPENCRITIC_API_BASE}/game/search?criteria=${encodeURIComponent(gameName)}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: { ...rapidHeaders }
-    });
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      }
       let errorBody = '';
       try { errorBody = await response.text(); } catch { /* ignore */ }
       if (DEBUG) console.log(`${LOG_PREFIX} Search failed: ${response.status} - ${errorBody}`); /* istanbul ignore if */
@@ -276,22 +279,16 @@ async function getGameDetails(gameId: number): Promise<OpenCriticGameDetails | n
   try {
     const url = `${OPENCRITIC_API_BASE}/game/${gameId}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching details: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: { ...rapidHeaders }
-    });
-
-    if (response.status === 429) {
-      console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
-      return null;
-    }
-
-    if (response.status === 403) {
-      console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
-      return null;
-    }
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
-      if (DEBUG) console.log(`${LOG_PREFIX} Game details failed with status ${response.status}`); /* istanbul ignore if */
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      } else if (DEBUG) {
+        console.log(`${LOG_PREFIX} Game details failed with status ${response.status}`); /* istanbul ignore if */
+      }
       return null;
     }
 
@@ -317,12 +314,16 @@ async function getGameReviews(gameId: number): Promise<OpenCriticReviewItem[]> {
   try {
     const url = `${OPENCRITIC_API_BASE}/review/game/${gameId}`;
     if (DEBUG) console.log(`${LOG_PREFIX} Fetching reviews: ${url}`); /* istanbul ignore if */
-    const response = await fetch(url, {
-      headers: { ...rapidHeaders }
-    });
+    const response = await fetch(url, { headers: rapidHeaders });
 
     if (!response.ok) {
-      if (DEBUG) console.log(`${LOG_PREFIX} Game reviews failed with status ${response.status}`); /* istanbul ignore if */
+      if (response.status === 429) {
+        console.warn(`${LOG_PREFIX} Rate limited by OpenCritic API`);
+      } else if (response.status === 403) {
+        console.warn(`${LOG_PREFIX} Invalid API key or unauthorized`);
+      } else if (DEBUG) {
+        console.log(`${LOG_PREFIX} Game reviews failed with status ${response.status}`); /* istanbul ignore if */
+      }
       return [];
     }
 

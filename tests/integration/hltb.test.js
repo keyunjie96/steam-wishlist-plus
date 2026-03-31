@@ -39,7 +39,7 @@ function delay(ms) {
  * Gets auth token from HLTB init endpoint
  */
 async function getAuthToken() {
-  const url = `${HLTB_BASE}/api/finder/init?t=${Date.now()}`;
+  const url = `${HLTB_BASE}/api/find/init?t=${Date.now()}`;
   const response = await fetch(url, {
     headers: {
       'Accept': 'application/json',
@@ -142,7 +142,7 @@ describe('HLTB Integration (Sanity Check)', () => {
       // The extension works because it runs in a real browser context
       if (!authToken) return;
 
-      const response = await fetch(`${HLTB_BASE}/api/finder`, {
+      const response = await fetch(`${HLTB_BASE}/api/find`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
