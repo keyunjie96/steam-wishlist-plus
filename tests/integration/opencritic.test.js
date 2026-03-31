@@ -16,8 +16,14 @@
 // Use native fetch from undici for Node.js compatibility
 const { fetch } = require('undici');
 
-const OPENCRITIC_API_BASE = 'https://api.opencritic.com/api';
+// OpenCritic now requires a RapidAPI key. Use env var if available, skip tests otherwise.
+const RAPIDAPI_KEY = process.env.OPENCRITIC_RAPIDAPI_KEY || '';
+const OPENCRITIC_API_BASE = RAPIDAPI_KEY
+  ? 'https://opencritic-api.p.rapidapi.com'
+  : 'https://api.opencritic.com/api';
 const REQUEST_DELAY_MS = 500; // Delay between requests to avoid rate limiting
+
+const describeIfKey = RAPIDAPI_KEY ? describe : describe.skip;
 
 // 5 representative games with known OpenCritic IDs (from Wikidata)
 const TEST_GAMES = [
@@ -38,14 +44,18 @@ function delay(ms) {
 /**
  * Gets game details from OpenCritic
  */
+function apiHeaders() {
+  const headers = { 'Accept': 'application/json' };
+  if (RAPIDAPI_KEY) {
+    headers['x-rapidapi-key'] = RAPIDAPI_KEY;
+    headers['x-rapidapi-host'] = 'opencritic-api.p.rapidapi.com';
+  }
+  return headers;
+}
+
 async function getGameDetails(gameId) {
   const url = `${OPENCRITIC_API_BASE}/game/${gameId}`;
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0',
-    },
-  });
+  const response = await fetch(url, { headers: apiHeaders() });
 
   if (!response.ok) {
     return null;
@@ -59,12 +69,7 @@ async function getGameDetails(gameId) {
  */
 async function getGameReviews(gameId) {
   const url = `${OPENCRITIC_API_BASE}/review/game/${gameId}`;
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0',
-    },
-  });
+  const response = await fetch(url, { headers: apiHeaders() });
 
   if (!response.ok) {
     return [];
@@ -104,7 +109,7 @@ function extractOutletScores(reviews) {
   return outletScores;
 }
 
-describe('OpenCritic Integration (Sanity Check)', () => {
+describeIfKey('OpenCritic Integration (Sanity Check)', () => {
   // Increase timeout for integration tests
   jest.setTimeout(120000); // 2 minutes
 
@@ -150,9 +155,8 @@ describe('OpenCritic Integration (Sanity Check)', () => {
 
   describe('API endpoint', () => {
     it('should be reachable via game details endpoint', async () => {
-      // Use game details endpoint (search now requires API key)
       const response = await fetch(`${OPENCRITIC_API_BASE}/game/7324`, {
-        headers: { 'User-Agent': 'SteamWishlistPlus-JestIntegration/1.0' }
+        headers: apiHeaders()
       });
 
       expect(response.status).toBe(200);
